@@ -2,5 +2,7 @@ namespace Message.Contracts;
 
 public interface IEncryptMessage
 {
-    IMessageBuilder Encrypt();
+    IOnionBuilder Seal(string key);
+
+    IOnionBuilder SealEx(string keyPath);
 }
