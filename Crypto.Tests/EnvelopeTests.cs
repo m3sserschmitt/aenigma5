@@ -3,7 +3,6 @@ using Xunit;
 
 public class EnvelopeTests
 {
-    private static readonly int PKEY_BITS = 2048;
     private static readonly string PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" +
         "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt93z0JRoIKt0f+Yoy6KB\n" +
         "c3AYlN2LiA4NH3EsVtVFdPyOboEpDIKMQwuSP9Gi/+hBHgHnO8YXU/ytBygAzE93\n" +
@@ -50,8 +49,8 @@ jyOYYdWz/iFvQPvkJvXhRQ==
     public void Seal_Unseal_Success()
     {
         // Arrange
-        using var seal = Envelope.Factory.CreateSeal(PUBLIC_KEY, PKEY_BITS);
-        using var unseal = Envelope.Factory.CreateUnseal(PRIVATE_KEY, "12345678", PKEY_BITS);
+        using var seal = Envelope.Factory.CreateSeal(PUBLIC_KEY);
+        using var unseal = Envelope.Factory.CreateUnseal(PRIVATE_KEY, "12345678");
 
         byte[] plaintext = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
         

@@ -32,7 +32,7 @@ public class OnionBuilder
 
         public IOnionBuilder Seal(string key)
         {
-            using var seal = Envelope.Factory.CreateSeal(key, 2048);
+            using var seal = Envelope.Factory.CreateSeal(key);
             Seal(seal.Seal);
 
             return this;
@@ -40,7 +40,7 @@ public class OnionBuilder
 
         public IOnionBuilder SealEx(string keyPath)
         {
-            using var seal = Envelope.Factory.CreateSealFromFile(keyPath, 2048);
+            using var seal = Envelope.Factory.CreateSealFromFile(keyPath);
             Seal(seal.Seal);
 
             return this;
