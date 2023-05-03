@@ -1,18 +1,15 @@
 using System.Runtime.InteropServices;
 using Crypto.Contracts;
-using Crypto.Factories;
 
 namespace Crypto;
 
-public class Envelope : IEnvelopeUnseal, IEnvelopeSeal
+public class Envelope : IDisposable, IEnvelopeUnseal, IEnvelopeSeal
 {
-    private bool disposed = false;
-
-    private IntPtr handle;
+    private EnvelopeContext handle;
 
     public int pKeySizeBits { get; private set; }
 
-    private Envelope(IntPtr handle, int pKeySizeBits)
+    private Envelope(EnvelopeContext handle, int pKeySizeBits)
     {
         this.handle = handle;
         this.pKeySizeBits = pKeySizeBits;
@@ -23,9 +20,6 @@ public class Envelope : IEnvelopeUnseal, IEnvelopeSeal
 
     [DllImport("cryptography")]
     private static extern IntPtr RsaDecrypt(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
-
-    [DllImport("cryptography")]
-    private static extern void FreeContext(IntPtr ctx);
 
     [DllImport("cryptography")]
     private static extern uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
@@ -67,51 +61,29 @@ public class Envelope : IEnvelopeUnseal, IEnvelopeSeal
 
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposed)
-        {
-            if (disposing)
-            {
-                // Release managed resources here
-            }
-
-            // Release unmanaged resources here
-            FreeContext(handle);
-
-            disposed = true;
-        }
-    }
-
-    ~Envelope()
-    {
-        Dispose(false);
+        handle.Dispose();
     }
 
     public static class Factory 
     {
         public static IEnvelopeSeal CreateSealFromFile(string path, int pKeySizeBits)
         {
-            return new Envelope(EnvelopeContextFactory.CreateAsymmetricEncryptionContextFromFile(path.ToArray()), pKeySizeBits);
+            return new Envelope(EnvelopeContext.Factory.CreateAsymmetricEncryptionContextFromFile(path), pKeySizeBits);
         }
 
         public static IEnvelopeUnseal CreateUnsealFromFile(string path, string passphrase, int pKeySizeBits)
         {
-            return new Envelope(EnvelopeContextFactory.CreateAsymmetricDecryptionContextFromFile(path.ToArray(), passphrase.ToArray()), pKeySizeBits);
+            return new Envelope(EnvelopeContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase), pKeySizeBits);
         }
 
         public static IEnvelopeSeal CreateSeal(string key, int pKeySizeBits)
         {
-            return new Envelope(EnvelopeContextFactory.CreateAsymmetricEncryptionContext(key.ToArray()), pKeySizeBits);
+            return new Envelope(EnvelopeContext.Factory.CreateAsymmetricEncryptionContext(key), pKeySizeBits);
         }
 
         public static IEnvelopeUnseal CreateUnseal(string key, string passphrase, int pKeySizeBits)
         {
-            return new Envelope(EnvelopeContextFactory.CreateAsymmetricDecryptionContext(key.ToArray(), passphrase.ToArray()), pKeySizeBits);
+            return new Envelope(EnvelopeContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase), pKeySizeBits);
         }
     }
 }
