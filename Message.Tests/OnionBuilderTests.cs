@@ -24,7 +24,7 @@ public class OnionBuilderTests
         // Act
         var onion = OnionBuilder.Create().SetMessageContent(content).SetNextAddress(next).Seal(PUBLIC_KEY).Build();
 
-        Assert.Equal(300, onion.Content.Length);
+        Assert.Equal(302, onion.Content.Length);
     }
 
     [Fact]
