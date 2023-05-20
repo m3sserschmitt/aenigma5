@@ -15,7 +15,7 @@ public class OnionBuilder
 
         public IOnion Build()
         {
-            Onion.Content = EncodeUshort((ushort)Onion.Content.Length).Concat(Onion.Content).ToArray();
+            Onion.Content = EncodeSize((ushort)Onion.Content.Length).Concat(Onion.Content).ToArray();
             return Onion;
         }
 
@@ -64,12 +64,9 @@ public class OnionBuilder
             return this;
         }
 
-        private static byte[] EncodeUshort(ushort value)
+        private static byte[] EncodeSize(ushort size)
         {
-            byte[] buffer = new byte[2];
-            buffer[0] = (byte)(value & 0xFF);
-            buffer[1] = (byte)((value >> 8) & 0xFF);
-            return buffer;
+            return BitConverter.GetBytes(size);
         }
     }
 
