@@ -16,8 +16,8 @@ public class OnionBuilderTests
         var onion = OnionBuilder.Create().SetMessageContent(content).SetNextAddress(next).Seal(PKey.PublicKey).Build();
 
         Assert.Equal(302, onion.Content.Length);
-        Assert.Equal(44, onion.Content[0]);
-        Assert.Equal(1, onion.Content[1]);
+        Assert.Equal(1, onion.Content[0]);
+        Assert.Equal(44, onion.Content[1]);
     }
 
     [Fact]

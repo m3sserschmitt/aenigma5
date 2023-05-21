@@ -67,8 +67,9 @@ public class OnionBuilder
         private static byte[] EncodeSize(ushort size)
         {
             byte[] buffer = new byte[2];
-            buffer[0] = (byte)(size & 0xFF);
-            buffer[1] = (byte)((size >> 8) & 0xFF);
+            buffer[0] = (byte)(size / 256);
+            buffer[1] = (byte)(size % 256);
+
             return buffer;
         }
     }
