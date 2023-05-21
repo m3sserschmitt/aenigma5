@@ -14,20 +14,22 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using var context = new AddressContext(nextAddress.Length);
+        using (new AddressContext(nextAddress.Length))
+        {
 
-        // Act
-        Action action = () => OnionBuilder
-            .Create()
-            .SetMessageContent(content)
-            .SetNextAddress(nextAddress)
-            .Seal(PKey.PublicKey)
-            .Build();
+            // Act
+            Action action = () => OnionBuilder
+                .Create()
+                .SetMessageContent(content)
+                .SetNextAddress(nextAddress)
+                .Seal(PKey.PublicKey)
+                .Build();
 
-        // Assert
-        var exception = Record.Exception(action);
+            // Assert
+            var exception = Record.Exception(action);
 
-        Assert.Null(exception);
+            Assert.Null(exception);
+        }
     }
 
     [Theory]
@@ -39,19 +41,20 @@ public class OnionBuilderTests
         ushort expectedTotalSize)
     {
         // Arrange
-        using var context = new AddressContext(nextAddress.Length);
+        using (new AddressContext(nextAddress.Length))
+        {
+            // Act
+            var onion = OnionBuilder
+                .Create()
+                .SetMessageContent(content)
+                .SetNextAddress(nextAddress)
+                .Seal(PKey.PublicKey)
+                .Build();
 
-        // Act
-        var onion = OnionBuilder
-            .Create()
-            .SetMessageContent(content)
-            .SetNextAddress(nextAddress)
-            .Seal(PKey.PublicKey)
-            .Build();
-
-        // Assert
-        Assert.Equal(expectedEncodedSize, new byte[] { onion.Content[0], onion.Content[1] });
-        Assert.Equal(expectedTotalSize, onion.Content.Length);
+            // Assert
+            Assert.Equal(expectedEncodedSize, new byte[] { onion.Content[0], onion.Content[1] });
+            Assert.Equal(expectedTotalSize, onion.Content.Length);
+        }
     }
 
     [Theory]
@@ -62,24 +65,25 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using var context = new AddressContext(nextAddress.Length);
+        using (new AddressContext(nextAddress.Length))
+        {
+            // Act
+            var onion1 = OnionBuilder
+                .Create()
+                .SetMessageContent(content)
+                .SetNextAddress(nextAddress)
+                .Seal(PKey.PublicKey)
+                .Build();
+            var onion2 = OnionBuilder
+                .Create()
+                .SetMessageContent(content)
+                .SetNextAddress(nextAddress)
+                .Seal(PKey.PublicKey)
+                .Build();
 
-        // Act
-        var onion1 = OnionBuilder
-            .Create()
-            .SetMessageContent(content)
-            .SetNextAddress(nextAddress)
-            .Seal(PKey.PublicKey)
-            .Build();
-        var onion2 = OnionBuilder
-            .Create()
-            .SetMessageContent(content)
-            .SetNextAddress(nextAddress)
-            .Seal(PKey.PublicKey)
-            .Build();
-
-        // Assert
-        Assert.NotEqual(onion1.Content, onion2.Content);
+            // Assert
+            Assert.NotEqual(onion1.Content, onion2.Content);
+        }
     }
 
     [Theory]
@@ -90,21 +94,22 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using var context = new AddressContext(nextAddress.Length);
+        using (new AddressContext(nextAddress.Length))
+        {
+            // Act
+            Action action = () => OnionBuilder
+                .Create()
+                .SetMessageContent(OnionBuilderTestData.GenerateBytes(ushort.MaxValue + 1))
+                .SetNextAddress(nextAddress)
+                .Seal(PKey.PublicKey)
+                .Build();
 
-        // Act
-        Action action = () => OnionBuilder
-            .Create()
-            .SetMessageContent(OnionBuilderTestData.GenerateBytes(ushort.MaxValue + 1))
-            .SetNextAddress(nextAddress)
-            .Seal(PKey.PublicKey)
-            .Build();
-
-        // Assert
-        var exception = Assert.Throws<ArgumentException>(action);
-        Assert.Equal(
-            $"Message content should not exceed {ushort.MaxValue} bytes.",
-            exception.Message);
+            // Assert
+            var exception = Assert.Throws<ArgumentException>(action);
+            Assert.Equal(
+                $"Maximum size for content exceeded.",
+                exception.Message);
+        }
     }
 
     [Theory]
@@ -115,21 +120,22 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using var context = new AddressContext(nextAddress.Length * 2);
+        using (new AddressContext(nextAddress.Length * 2))
+        {
+            // Act
+            Action action = () => OnionBuilder
+                .Create()
+                .SetMessageContent(content)
+                .SetNextAddress(nextAddress)
+                .Seal(PKey.PublicKey)
+                .Build();
 
-        // Act
-        Action action = () => OnionBuilder
-            .Create()
-            .SetMessageContent(content)
-            .SetNextAddress(nextAddress)
-            .Seal(PKey.PublicKey)
-            .Build();
-
-        // Assert
-        var exception = Assert.Throws<ArgumentException>(action);
-        Assert.Equal(
-            $"Destination address length should be exactly {AddressContext.Current.AddressSize} bytes long.",
-            exception.Message);
+            // Assert
+            var exception = Assert.Throws<ArgumentException>(action);
+            Assert.Equal(
+                $"Destination address length should be exactly {AddressContext.Current.AddressSize} bytes long.",
+                exception.Message);
+        }
     }
 
     [Theory]
@@ -140,20 +146,22 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using var context = new AddressContext(nextAddress.Length);
+        using (new AddressContext(nextAddress.Length))
+        {
 
-        // Act
-        Action action = () => OnionBuilder
-            .Create()
-            .SetMessageContent(content)
-            .SetNextAddress(nextAddress)
-            .Seal("dGhpcyBpcyBhbiBpbnZhbGlkIHB1YmxpYyBrZXk=")
-            .Build();
+            // Act
+            Action action = () => OnionBuilder
+                .Create()
+                .SetMessageContent(content)
+                .SetNextAddress(nextAddress)
+                .Seal("dGhpcyBpcyBhbiBpbnZhbGlkIHB1YmxpYyBrZXk=")
+                .Build();
 
-        // Assert
-        var exception = Assert.Throws<Exception>(action);
-        Assert.Equal(
-            "Message encryption failed.",
-            exception.Message);
+            // Assert
+            var exception = Assert.Throws<Exception>(action);
+            Assert.Equal(
+                "Message encryption failed.",
+                exception.Message);
+        }
     }
 }

@@ -8,7 +8,12 @@ public sealed class AddressContext : IDisposable
 
     static AddressContext()
     {
-        stack.Push(new AddressContext(DefaultAddressSize));
+        stack.Push(new AddressContext());
+    }
+
+    private AddressContext()
+    {
+        AddressSize = DefaultAddressSize;
     }
 
     public AddressContext(int addressSize)
