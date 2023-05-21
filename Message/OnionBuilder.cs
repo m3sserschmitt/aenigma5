@@ -25,7 +25,7 @@ public class OnionBuilder
 
             if (ciphertext == null)
             {
-                throw new Exception("Encryption failed.");
+                throw new Exception("Message encryption failed.");
             }
 
             Onion.Content = ciphertext;
@@ -49,9 +49,9 @@ public class OnionBuilder
 
         public IEncryptMessage SetNextAddress(byte[] address)
         {
-            if (address.Length > 32)
+            if (address.Length != AddressContext.Current.AddressSize)
             {
-                throw new ArgumentException("Destination address length cannot exceed 32 bytes.");
+                throw new ArgumentException($"Destination address length should be exactly {AddressContext.Current.AddressSize} bytes long.");
             }
 
             Onion.Content = address.Concat(Onion.Content).ToArray();
@@ -60,6 +60,11 @@ public class OnionBuilder
 
         public ISetMessageNextAddress SetMessageContent(byte[] content)
         {
+            if(content.Length > ushort.MaxValue)
+            {
+                throw new ArgumentException($"Message content should not exceed {ushort.MaxValue} bytes.");
+            }
+
             Onion.Content = (byte[])content.Clone();
             return this;
         }

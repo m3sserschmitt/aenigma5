@@ -39,8 +39,12 @@ public class OnionParser : IDisposable
         }
 
         Size = size;
-        Next = new ArraySegment<byte>(decryptedData, 0, 32).ToArray();
-        Content = new ArraySegment<byte>(decryptedData, 32, decryptedData.Length - 32).ToArray();
+        Next = new ArraySegment<byte>(decryptedData, 0, AddressContext.Current.AddressSize).ToArray();
+        Content = new ArraySegment<byte>(
+            decryptedData,
+            AddressContext.Current.AddressSize,
+            decryptedData.Length - AddressContext.Current.AddressSize
+            ).ToArray();
 
         return true;
     }
