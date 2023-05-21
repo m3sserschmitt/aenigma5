@@ -19,6 +19,14 @@ public class OnionBuilder
             return Onion;
         }
 
+        public ISetMessageNextAddress AddPeel()
+        {
+            Build();
+            SetMessageContent(Onion.Content);
+
+            return this;
+        }
+
         private void Seal(Func<byte[], byte[]?> executor)
         {
             var ciphertext = executor(Onion.Content);
@@ -33,16 +41,20 @@ public class OnionBuilder
 
         public IOnionBuilder Seal(string key)
         {
-            using var seal = Envelope.Factory.CreateSeal(key);
-            Seal(seal.Seal);
+            using (var seal = Envelope.Factory.CreateSeal(key))
+            {
+                Seal(seal.Seal);
+            }
 
             return this;
         }
 
         public IOnionBuilder SealEx(string keyPath)
         {
-            using var seal = Envelope.Factory.CreateSealFromFile(keyPath);
-            Seal(seal.Seal);
+            using (var seal = Envelope.Factory.CreateSealFromFile(keyPath))
+            {
+                Seal(seal.Seal);
+            }
 
             return this;
         }
@@ -60,22 +72,34 @@ public class OnionBuilder
 
         public ISetMessageNextAddress SetMessageContent(byte[] content)
         {
-            if(content.Length > ushort.MaxValue)
+            if (MessageSizeExceeded(content))
             {
-                throw new ArgumentException($"Message content should not exceed {ushort.MaxValue} bytes.");
+                throw new ArgumentException($"Maximum size for content exceeded.");
+            }
+
+            if (ReferenceEquals(Onion.Content, content))
+            {
+                return this;
             }
 
             Onion.Content = (byte[])content.Clone();
             return this;
         }
 
-        private static byte[] EncodeSize(ushort size)
+        public static byte[] EncodeSize(ushort size)
         {
             byte[] buffer = new byte[2];
             buffer[0] = (byte)(size / 256);
             buffer[1] = (byte)(size % 256);
 
             return buffer;
+        }
+
+        public bool MessageSizeExceeded(byte[] content)
+        {
+            return content.Length >= ushort.MaxValue
+                ? true
+                : SealProvider.GetEnvelopeSize(2048, (ushort)content.Length) > ushort.MaxValue;
         }
     }
 

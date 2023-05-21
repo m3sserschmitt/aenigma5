@@ -19,10 +19,10 @@ public sealed class SealProvider : IEnvelopeSeal, IEnvelopeUnseal
     private static extern IntPtr RsaDecrypt(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
 
     [DllImport("cryptography")]
-    private static extern uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
+    public static extern uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
 
     [DllImport("cryptography")]
-    private static extern uint GetOpenEnvelopeSize(uint pkeySizeBits, uint envelopeSize);
+    public static extern uint GetOpenEnvelopeSize(uint pkeySizeBits, uint envelopeSize);
 
     public byte[]? Seal(byte[] plaintext)
     {
