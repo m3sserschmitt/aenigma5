@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Crypto\Crypto.csproj" />
+    <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,5 +1,6 @@
 using Enigma5.Message.Contracts;
 using Enigma5.Crypto;
+using Enigma5.Core;
 
 namespace Enigma5.Message;
 

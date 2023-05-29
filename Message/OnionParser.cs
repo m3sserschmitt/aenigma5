@@ -1,3 +1,4 @@
+using Enigma5.Core;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Message.Contracts;

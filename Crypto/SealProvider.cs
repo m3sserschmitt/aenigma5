@@ -1,3 +1,4 @@
+using Enigma5.Core;
 using Enigma5.Crypto.Contracts;
 using System.Runtime.InteropServices;
 
@@ -27,7 +28,7 @@ public sealed class SealProvider : IEnvelopeSeal, IEnvelopeUnseal
     public byte[]? Seal(byte[] plaintext)
     {
         IntPtr ciphertextPtr = RsaEncrypt(ctx, plaintext, (uint)plaintext.Length);
-        uint ciphertextLen = GetEnvelopeSize((uint)2048, (uint)plaintext.Length);
+        uint ciphertextLen = GetEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)plaintext.Length);
         byte[] ciphertext = new byte[ciphertextLen];
 
         if(ciphertextPtr == IntPtr.Zero)
@@ -43,7 +44,7 @@ public sealed class SealProvider : IEnvelopeSeal, IEnvelopeUnseal
     public byte[]? Unseal(byte[] ciphertext)
     {
         IntPtr plaintextPtr = RsaDecrypt(ctx, ciphertext, (uint)ciphertext.Length);
-        uint plaintextLen = GetOpenEnvelopeSize((uint)2048, (uint)ciphertext.Length);
+        uint plaintextLen = GetOpenEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)ciphertext.Length);
         byte[] plaintext = new byte[plaintextLen];
 
         if(plaintextPtr == IntPtr.Zero)

@@ -1,3 +1,4 @@
+using Enigma5.Core;
 using Enigma5.Message.Tests.TestData;
 using Enigma5.Crypto.DataProviders;
 using Xunit;
