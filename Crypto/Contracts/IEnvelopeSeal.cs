@@ -1,4 +1,4 @@
-namespace Crypto.Contracts;
+namespace Enigma5.Crypto.Contracts;
 
 public interface IEnvelopeSeal : IDisposable
 {

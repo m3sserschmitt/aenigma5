@@ -1,8 +1,8 @@
-using Crypto;
-using Crypto.Contracts;
-using Message.Contracts;
+using Enigma5.Crypto;
+using Enigma5.Crypto.Contracts;
+using Enigma5.Message.Contracts;
 
-namespace Message;
+namespace Enigma5.Message;
 
 public class OnionParser : IDisposable
 {

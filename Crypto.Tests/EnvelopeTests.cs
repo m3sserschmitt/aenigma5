@@ -1,5 +1,5 @@
-using Crypto.DataProviders;
-using Crypto;
+using Enigma5.Crypto.DataProviders;
+using Enigma5.Crypto;
 using Xunit;
 
 public class EnvelopeTests

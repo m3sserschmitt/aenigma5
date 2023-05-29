@@ -1,8 +1,8 @@
-using Message.Tests.TestData;
-using Crypto.DataProviders;
+using Enigma5.Message.Tests.TestData;
+using Enigma5.Crypto.DataProviders;
 using Xunit;
 
-namespace Message.Tests;
+namespace Enigma5.Message.Tests;
 
 public class OnionBuilderTests
 {

@@ -1,4 +1,4 @@
-namespace Crypto.DataProviders;
+namespace Enigma5.Crypto.DataProviders;
 
 public static class PKey
 {

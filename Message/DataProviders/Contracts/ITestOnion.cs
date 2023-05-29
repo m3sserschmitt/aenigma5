@@ -1,6 +1,6 @@
-using Message.Contracts;
+using Enigma5.Message.Contracts;
 
-namespace Message.DataProviders.Contracts;
+namespace Enigma5.Message.DataProviders.Contracts;
 
 public interface ITestOnion : IOnion
 {

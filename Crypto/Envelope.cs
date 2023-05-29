@@ -1,6 +1,6 @@
-using Crypto.Contracts;
+using Enigma5.Crypto.Contracts;
 
-namespace Crypto;
+namespace Enigma5.Crypto;
 
 public sealed class Envelope : IDisposable, IEnvelopeUnseal, IEnvelopeSeal
 {

@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Message.Tests;
+namespace Enigma5.Message.Tests;
 
 public class AddressContextTests
 {

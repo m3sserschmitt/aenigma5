@@ -1,11 +1,11 @@
 using Autofac;
-using Message.Contracts;
-using Message.DataProviders.Contracts;
-using Message.DataProviders;
-using Crypto.DataProviders;
+using Enigma5.Message.Contracts;
+using Enigma5.Message.DataProviders.Contracts;
+using Enigma5.Message.DataProviders;
+using Enigma5.Crypto.DataProviders;
 using Xunit;
 
-namespace Message.Tests;
+namespace Enigma5.Message.Tests;
 
 public class OnionParserTests
 {

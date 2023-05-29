@@ -1,4 +1,4 @@
-namespace Message;
+namespace Enigma5.Message;
 
 public sealed class AddressContext : IDisposable
 {

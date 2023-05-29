@@ -1,6 +1,6 @@
-﻿using Message.Contracts;
+﻿using Enigma5.Message.Contracts;
 
-namespace Message;
+namespace Enigma5.Message;
 
 public class Onion : IOnion
 {

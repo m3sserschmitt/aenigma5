@@ -1,8 +1,8 @@
-using Message.Contracts;
-using Message.DataProviders.Contracts;
-using Crypto.DataProviders;
+using Enigma5.Message.Contracts;
+using Enigma5.Message.DataProviders.Contracts;
+using Enigma5.Crypto.DataProviders;
 
-namespace Message.DataProviders;
+namespace Enigma5.Message.DataProviders;
 
 public class TestOnion : ITestOnion
 {

@@ -1,7 +1,7 @@
-using Crypto.Contracts;
+using Enigma5.Crypto.Contracts;
 using System.Runtime.InteropServices;
 
-namespace Crypto;
+namespace Enigma5.Crypto;
 
 public sealed class SealProvider : IEnvelopeSeal, IEnvelopeUnseal
 {

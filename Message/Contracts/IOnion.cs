@@ -1,4 +1,4 @@
-namespace Message.Contracts;
+namespace Enigma5.Message.Contracts;
 
 public interface IOnion
 {

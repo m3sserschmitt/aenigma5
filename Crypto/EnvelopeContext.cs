@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Crypto;
+namespace Enigma5.Crypto;
 
 public class EnvelopeContext : IDisposable
 {

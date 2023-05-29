@@ -1,7 +1,7 @@
-using Message.Contracts;
-using Crypto;
+using Enigma5.Message.Contracts;
+using Enigma5.Crypto;
 
-namespace Message;
+namespace Enigma5.Message;
 
 public class OnionBuilder
 {
