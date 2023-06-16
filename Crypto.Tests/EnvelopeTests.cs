@@ -8,8 +8,8 @@ public class EnvelopeTests
     public void Seal_Unseal_Success()
     {
         // Arrange
-        using var seal = Envelope.Factory.CreateSeal(PKey.PublicKey);
-        using var unseal = Envelope.Factory.CreateUnseal(PKey.PrivateKey, PKey.Passphrase);
+        using var seal = Envelope.Factory.CreateSeal(PKey.PublicKey1);
+        using var unseal = Envelope.Factory.CreateUnseal(PKey.PrivateKey1, PKey.Passphrase);
 
         byte[] plaintext = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
         

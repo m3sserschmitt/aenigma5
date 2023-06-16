@@ -14,8 +14,11 @@ public class OnionParserTests
     public OnionParserTests()
     {
         var containerBuilder = new ContainerBuilder();
+
         containerBuilder.Register(c => { return OnionBuilder.Create(); }).As<ISetMessageContent>();
         containerBuilder.RegisterType<TestOnion>().As<ITestOnion>();
+        containerBuilder.RegisterType<TestOnionPeel>().As<ITestOnionPeel>();
+
         container = containerBuilder.Build();
     }
 
@@ -25,7 +28,7 @@ public class OnionParserTests
         // Arrange
         using var scope = container.BeginLifetimeScope();
         var onion = scope.Resolve<ITestOnion>();
-        var onionParser = OnionParser.Factory.Create(PKey.PrivateKey, PKey.Passphrase);
+        var onionParser = OnionParser.Factory.Create(PKey.PrivateKey1, PKey.Passphrase);
 
         // Act
         var result = onionParser.Parse(onion);
@@ -34,6 +37,12 @@ public class OnionParserTests
         Assert.True(result);
         Assert.Equal(onion.ExpectedNextAddress, onionParser.Next);
         Assert.Equal(onion.ExpectedContent, onionParser.Content);
+    }
+
+    [Fact]
+    public void OnionParser_ShoulRemovePeel()
+    {
+        
     }
 
     [Theory]

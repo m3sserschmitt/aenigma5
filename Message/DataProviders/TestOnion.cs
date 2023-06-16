@@ -6,7 +6,7 @@ namespace Enigma5.Message.DataProviders;
 
 public class TestOnion : ITestOnion
 {
-    IOnion onion;
+    private IOnion onion;
 
     public TestOnion(ISetMessageContent builder)
     {
@@ -18,7 +18,7 @@ public class TestOnion : ITestOnion
         onion = builder
             .SetMessageContent(ExpectedContent)
             .SetNextAddress(ExpectedNextAddress)
-            .Seal(PKey.PublicKey)
+            .Seal(PKey.PublicKey1)
             .Build();
     }
 
@@ -27,5 +27,4 @@ public class TestOnion : ITestOnion
     public byte[] ExpectedContent { get; set; }
 
     public byte[] Content { get => onion.Content; set => throw new NotImplementedException(); }
-    
 }

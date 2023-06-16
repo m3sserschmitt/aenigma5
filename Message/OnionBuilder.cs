@@ -12,17 +12,25 @@ public class OnionBuilder
         IEncryptMessage,
         IOnionBuilder
     {
-        private IOnion Onion = new Onion();
+        private IOnion Onion;
+
+        public Impl()
+        {
+            Onion = new Onion();
+        }
+
+        public Impl(IOnion onion)
+        {
+            Onion = onion;
+        }
 
         public IOnion Build()
         {
-            Onion.Content = EncodeSize((ushort)Onion.Content.Length).Concat(Onion.Content).ToArray();
             return Onion;
         }
 
         public ISetMessageNextAddress AddPeel()
         {
-            Build();
             SetMessageContent(Onion.Content);
 
             return this;
@@ -38,6 +46,7 @@ public class OnionBuilder
             }
 
             Onion.Content = ciphertext;
+            Onion.Content = EncodeSize((ushort)Onion.Content.Length).Concat(Onion.Content).ToArray();
         }
 
         public IOnionBuilder Seal(string key)
@@ -107,5 +116,10 @@ public class OnionBuilder
     public static ISetMessageContent Create()
     {
         return new Impl();
+    }
+
+    public static IOnionBuilder Create(IOnion onion)
+    {
+        return new Impl(onion);
     }
 }

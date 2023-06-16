@@ -23,7 +23,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -49,7 +49,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -73,13 +73,13 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
             var onion2 = OnionBuilder
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -102,7 +102,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(OnionBuilderTestData.GenerateBytes(ushort.MaxValue + 1))
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -128,7 +128,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert

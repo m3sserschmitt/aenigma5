@@ -2,7 +2,7 @@ namespace Enigma5.Crypto.DataProviders;
 
 public static class PKey
 {
-    public static readonly string PublicKey = "-----BEGIN PUBLIC KEY-----\n" +
+    public static readonly string PublicKey1 = "-----BEGIN PUBLIC KEY-----\n" +
         "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt93z0JRoIKt0f+Yoy6KB\n" +
         "c3AYlN2LiA4NH3EsVtVFdPyOboEpDIKMQwuSP9Gi/+hBHgHnO8YXU/ytBygAzE93\n" +
         "o/BzMtNNgQS+FDDiuD19+65525rI+IZL+vulhvUVsUZgHmW7r0ACB8qxmQdmotLr\n" +
@@ -12,7 +12,18 @@ public static class PKey
         "OwIDAQAB\n" +
         "-----END PUBLIC KEY-----\n";
 
-        public static readonly string PrivateKey = 
+    public static readonly string PublicKey2 =
+@"-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq7blJyEN+tbWMLjVOPak
+rUDkerRwBdYy+pFGzQnYxD4tjWGMv3h8GgGLsVL7nwdjY5viFoG5V8xzzQSDOH09
+lcOR+0yXUA/k09vzo/JZ+LJMi926lkwXZYSa6ic2fCVIc/QRJ5HvXPBgIvxWeEf0
+mVdRHYl+/d9APBKA8nvIDAJW3Drlbi28nrMqfFNw6k3cip7rTjmXm0DV76G4eNsd
+ZVnKvhwfXTFGSbGigf3YTiH4t5uWYb1Cj+Ze3CR1PIjwj8jKfQFHKqZyi1MdkXFQ
++ofASzyi6weZjHMyNifGI9dvVnexon/564+grG+vxahBZMXHygb+vTXoAkgHK+8d
+8QIDAQAB
+-----END PUBLIC KEY-----";
+
+    public static readonly string PrivateKey1 =
 @"-----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIFHDBOBgkqhkiG9w0BBQ0wQTApBgkqhkiG9w0BBQwwHAQIgeAn0zx2m+8CAggA
 MAwGCCqGSIb3DQIJBQAwFAYIKoZIhvcNAwcECKD9Qn6/xcfoBIIEyF6JEPQKoF09
@@ -43,6 +54,38 @@ sALPDkmBGBzYv/t+PJk4R/ETpxZQc+x/JqUnpzo2HadKT+ZRzSQ+0vPaV+X7CTRz
 8BRQIr328o5OIEaUyWrgGUw2kPfY6JvI0qRUaIxc8KIZm4pJlIXICWTmufvpgG2H
 jyOYYdWz/iFvQPvkJvXhRQ==
 -----END ENCRYPTED PRIVATE KEY-----";
+
+    public static readonly string PrivateKey2 =
+@"-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-256-CBC,CD0387D29AB00E4242898F0CDBAB176C
+
+yKjpQRw5wXOldR8EQtKmoF0VAjBoIdj46qNCedzDAXAOynhAUMKgWgAPSwU4FT0t
+9ZKzm3P6aT7uiS5OJmbulGHlc2tNUC1Nn4xU6Gki2YIipgK3Oo2QwWZdDJwHeu8a
+MGYM4Ynr5NHU0VUSLlcEptWSwlf0a4HG+g73PNNqdDyn08TD1WViI0m4aHaMbeA9
+vx48RvkOGAvtXMhezJMs8jRrbYx6ttSjkdyp4GteK49Xmjkx6FIvrzpObH/gdC4H
+R/XyhLv9MIe3/kel0+0WHu5fxU49JlwDWvDNtTHqzvggjbF2wUtZE67au66JjlH2
+a7t0nVGRu5y+1cSFtYwIbqmBL7t2ZaQb0IlGnC4NVFfkODtw4NE5wxSUwu71aci3
+IBuxSAEEEf5AXfIV3HsFaA3HC8EDq0iibV2TcD+GFejACcgp7zN04htD4Lv/B4lq
+KKV6scDJv0csa+bBXL3yu0vbq8vvxbTZZxCP0CVh34mvppHDslbPmcY2Lslbafg+
+lYWWXw2hlLhY4xpfu8hMwq4vFVYf5Fl5vIN7Luasd0/f1bSjBzKGxl3rl7wczPYb
+sIwhhO6fLOsVw2M7j3gKACjLZFcrirERH60HryGohKsOEYgcKNW8pu4/UFVhNoau
+X9qFNhBMrYDiFAfNwg4rAQxWAywxW/27G6CKaD8H/yh9azK596FA8Scitol8rL9k
+SsXRyPi5gZ/Z5sQnSBlKiCR3wZzU0aJa9Tdj+F3uvT4Xk+ySwXLjtf2tz1C5WY/5
+U30WpUvkLmEZm5JsorVWVuctKotfQq9pAl0rmuLvvMj3NL2nA2AOVO2tmL2GkKyY
+Wwg8J1PSjJuHnngnpEtHNXPTMw4jIxcLHlNUX+E8tKxxfkcVdxxYSJwlZsx7qhpj
+xBjxefjY9iQABl39Hid1BZ6d4gv13wA/Qyz2Wmdp//dMKEy2zRa5GiXnLDPTDO2n
+MdhupXFOclQOo/caGETKlVgr+wzpKkto0F3e8/sACknLHLRsWQ5C+Oc08zfUzkTr
+3J5R5me/0zs5ix6/W9hbKW7TnpR3S8HnPhUxF4KvuYER30dxZGXHgMFklXtq239G
+xfIzOjxD/UAB4SKsmYdE46tO0O46Os+htZaioSq3ZNm9FGciOnz9DWSIBJq3xpDg
+CTNPLh7zqNOkip+EDgxlegZpBDRVlIvxe8qpw5JD+nT0X8A/D5ZaXQF+L5QKtH1p
+bkODGqMa3pNWmELsHBX7lFAZBUUC1oS8CQMiY8YZOvUK3ceFePvgpfSj40GevbDd
+onYTi1w7u0NNdsR4Cm8LwLL25KrQaXJ1+X42tj5d4t/A3jrPeQv7qWCFfyiOoMeD
+AJjfnJ/6bbuJFcYdlcpjjnIOwyN74SbBny4NQ6l3/Ufsc0SnPpHcSIPkpl7NqF2a
+01VTfcTdEX8FsWl8/hhq35F63b3pEh9D77I5G/LowavUVpTrMSmYi4fKt7H+/TU/
+hoUwppDbo2SJLvAnG6j1a/W6u5tEDgR1gqflL0H3XoBzH4HplmFGujj2GpyedJth
+iaajoTjUVi6kAfTHpjTkVzH6N92zoz/oADUGlb8FT+VNL0UA+1NiE37yT9E97nTQ
+-----END RSA PRIVATE KEY-----";
 
     public static readonly string Passphrase = "12345678";
 }
