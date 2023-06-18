@@ -9,5 +9,10 @@ public class Onion : IOnion
         Content = new byte[1] { 0x00 };
     }
 
+    public Onion(byte[] content)
+    {
+        Content = content;
+    }
+
     public byte[] Content { get; set; }
 }

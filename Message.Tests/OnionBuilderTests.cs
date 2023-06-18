@@ -2,6 +2,7 @@ using Enigma5.Core;
 using Enigma5.Message.Tests.TestData;
 using Enigma5.Crypto.DataProviders;
 using Xunit;
+using Enigma5.Crypto;
 
 namespace Enigma5.Message.Tests;
 
@@ -23,7 +24,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -49,7 +50,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -73,13 +74,13 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
             var onion2 = OnionBuilder
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -102,7 +103,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(OnionBuilderTestData.GenerateBytes(ushort.MaxValue + 1))
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -128,7 +129,7 @@ public class OnionBuilderTests
                 .Create()
                 .SetMessageContent(content)
                 .SetNextAddress(nextAddress)
-                .Seal(PKey.PublicKey)
+                .Seal(PKey.PublicKey1)
                 .Build();
 
             // Assert
@@ -149,7 +150,6 @@ public class OnionBuilderTests
         // Arrange
         using (new AddressContext(nextAddress.Length))
         {
-
             // Act
             Action action = () => OnionBuilder
                 .Create()
@@ -163,6 +163,29 @@ public class OnionBuilderTests
             Assert.Equal(
                 "Message encryption failed.",
                 exception.Message);
+        }
+    }
+
+    [Fact]
+    public void OnionBuilder_ShouldAddPeel()
+    {
+        // Arrange
+        using (new AddressContext(PKey.Address2.Length / 2))
+        {
+            // Act
+            Action action = () => OnionBuilder.Create()
+                .SetMessageContent(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 })
+                .SetNextAddress(HashProvider.FromHexString(PKey.Address2))
+                .Seal(PKey.PublicKey2)
+                .AddPeel()
+                .SetNextAddress(HashProvider.FromHexString(PKey.Address2))
+                .Seal(PKey.PublicKey1)
+                .Build();
+
+            // Assert
+            var exception = Record.Exception(action);
+
+            Assert.Null(exception);
         }
     }
 }

@@ -13,6 +13,8 @@ public class OnionParser : IDisposable
 
     public byte[]? Next { get; private set; }
 
+    public string NextAddress { get; private set; } = string.Empty;
+
     public byte[]? Content { get; private set; }
 
     private OnionParser(IEnvelopeUnseal unseal)
@@ -41,6 +43,7 @@ public class OnionParser : IDisposable
 
         Size = size;
         Next = new ArraySegment<byte>(decryptedData, 0, AddressContext.Current.AddressSize).ToArray();
+        NextAddress = HashProvider.ToHex(Next);
         Content = new ArraySegment<byte>(
             decryptedData,
             AddressContext.Current.AddressSize,

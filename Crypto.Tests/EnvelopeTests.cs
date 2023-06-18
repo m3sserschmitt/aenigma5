@@ -1,6 +1,7 @@
 using Enigma5.Crypto.DataProviders;
-using Enigma5.Crypto;
 using Xunit;
+
+namespace Enigma5.Crypto.Tests;
 
 public class EnvelopeTests
 {
@@ -8,14 +9,14 @@ public class EnvelopeTests
     public void Seal_Unseal_Success()
     {
         // Arrange
-        using var seal = Envelope.Factory.CreateSeal(PKey.PublicKey);
-        using var unseal = Envelope.Factory.CreateUnseal(PKey.PrivateKey, PKey.Passphrase);
+        using var seal = Envelope.Factory.CreateSeal(PKey.PublicKey1);
+        using var unseal = Envelope.Factory.CreateUnseal(PKey.PrivateKey1, PKey.Passphrase);
 
         byte[] plaintext = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
-        
+
         var ciphertext = seal.Seal(plaintext);
         var decrypted = unseal.Unseal(ciphertext!);
-        
+
         Assert.NotNull(ciphertext);
         Assert.NotNull(decrypted);
         Assert.Equal(plaintext, decrypted);

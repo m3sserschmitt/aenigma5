@@ -6,5 +6,5 @@ public interface ITestOnion : IOnion
 {
     public byte[] ExpectedContent { get; set; }
 
-    public byte[] ExpectedNextAddress { get; set; }
+    public string ExpectedNextAddress { get; set; }
 }

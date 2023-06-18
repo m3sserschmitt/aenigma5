@@ -1,24 +1,24 @@
 using Enigma5.Message.Contracts;
-using Enigma5.Message.DataProviders.Contracts;
 using Enigma5.Crypto.DataProviders;
+using Enigma5.Message.DataProviders.Contracts;
 using Enigma5.Crypto;
 
 namespace Enigma5.Message.DataProviders;
 
-public class TestOnion : ITestOnion
+public class TestOnionPeel : ITestOnion
 {
     private IOnion onion;
 
-    public TestOnion(ISetMessageContent builder)
+    public TestOnionPeel(ITestOnion testOnion)
     {
-        ExpectedContent = new byte[128];
         ExpectedNextAddress = PKey.Address2;
-        new Random().NextBytes(ExpectedContent);
+        ExpectedContent = (byte[])testOnion.Content.Clone();
 
-        onion = builder
-            .SetMessageContent(ExpectedContent)
+        onion = OnionBuilder
+            .Create(testOnion)
+            .AddPeel()
             .SetNextAddress(HashProvider.FromHexString(ExpectedNextAddress))
-            .Seal(PKey.PublicKey1)
+            .Seal(PKey.PublicKey2)
             .Build();
     }
 

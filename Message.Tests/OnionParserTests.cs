@@ -14,8 +14,11 @@ public class OnionParserTests
     public OnionParserTests()
     {
         var containerBuilder = new ContainerBuilder();
-        containerBuilder.Register(c => { return OnionBuilder.Create(); }).As<ISetMessageContent>();
+
+        containerBuilder.Register<ISetMessageContent>(c => OnionBuilder.Create()).As<ISetMessageContent>();
         containerBuilder.RegisterType<TestOnion>().As<ITestOnion>();
+        containerBuilder.Register<TestOnionPeel>(c => new TestOnionPeel(c.Resolve<ITestOnion>()));
+
         container = containerBuilder.Build();
     }
 
@@ -23,17 +26,42 @@ public class OnionParserTests
     public void OnionParser_ShouldParse()
     {
         // Arrange
-        using var scope = container.BeginLifetimeScope();
-        var onion = scope.Resolve<ITestOnion>();
-        var onionParser = OnionParser.Factory.Create(PKey.PrivateKey, PKey.Passphrase);
+        using (var onionParser = OnionParser.Factory.Create(PKey.PrivateKey1, PKey.Passphrase))
+        {
+            using (var scope = container.BeginLifetimeScope())
+            {
+                var onion = scope.Resolve<ITestOnion>();
 
-        // Act
-        var result = onionParser.Parse(onion);
+                // Act
+                var result = onionParser.Parse(onion);
 
-        // Assert
-        Assert.True(result);
-        Assert.Equal(onion.ExpectedNextAddress, onionParser.Next);
-        Assert.Equal(onion.ExpectedContent, onionParser.Content);
+                // Assert
+                Assert.True(result);
+                Assert.Equal(onion.ExpectedNextAddress, onionParser.NextAddress);
+                Assert.Equal(onion.ExpectedContent, onionParser.Content);
+            }
+        }
+    }
+
+    [Fact]
+    public void OnionParser_ShouldRemovePeel()
+    {
+        // Arrange
+        using (var onionParser = OnionParser.Factory.Create(PKey.PrivateKey2, PKey.Passphrase))
+        {
+            using (var scope = container.BeginLifetimeScope())
+            {
+                var onion = scope.Resolve<TestOnionPeel>();
+
+                // Act
+                var result = onionParser.Parse(onion);
+
+                // Assert
+                Assert.True(result);
+                Assert.Equal(onion.ExpectedNextAddress, onionParser.NextAddress);
+                Assert.Equal(onion.ExpectedContent, onionParser.Content);
+            }
+        }
     }
 
     [Theory]
