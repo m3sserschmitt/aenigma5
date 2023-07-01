@@ -26,7 +26,7 @@ public class OnionParserTests
     public void OnionParser_ShouldParse()
     {
         // Arrange
-        using (var onionParser = OnionParser.Factory.Create(PKey.PrivateKey1, PKey.Passphrase))
+        using (var onionParser = OnionParser.Factory.Create(PKey.PrivateKey2, PKey.Passphrase))
         {
             using (var scope = container.BeginLifetimeScope())
             {
@@ -47,7 +47,7 @@ public class OnionParserTests
     public void OnionParser_ShouldRemovePeel()
     {
         // Arrange
-        using (var onionParser = OnionParser.Factory.Create(PKey.PrivateKey2, PKey.Passphrase))
+        using (var onionParser = OnionParser.Factory.Create(PKey.ServerPrivateKey, PKey.Passphrase))
         {
             using (var scope = container.BeginLifetimeScope())
             {

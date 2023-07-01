@@ -2,6 +2,7 @@ using Enigma5.Message.Contracts;
 using Enigma5.Message.DataProviders.Contracts;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto;
+using System.Text;
 
 namespace Enigma5.Message.DataProviders;
 
@@ -11,14 +12,14 @@ public class TestOnion : ITestOnion
 
     public TestOnion(ISetMessageContent builder)
     {
-        ExpectedContent = new byte[128];
+        ExpectedContent = Encoding.UTF8.GetBytes("Test Onion");
         ExpectedNextAddress = PKey.Address2;
         new Random().NextBytes(ExpectedContent);
 
         onion = builder
             .SetMessageContent(ExpectedContent)
             .SetNextAddress(HashProvider.FromHexString(ExpectedNextAddress))
-            .Seal(PKey.PublicKey1)
+            .Seal(PKey.PublicKey2)
             .Build();
     }
 

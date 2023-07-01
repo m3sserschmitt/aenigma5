@@ -18,7 +18,7 @@ public class TestOnionPeel : ITestOnion
             .Create(testOnion)
             .AddPeel()
             .SetNextAddress(HashProvider.FromHexString(ExpectedNextAddress))
-            .Seal(PKey.PublicKey2)
+            .Seal(PKey.ServerPublicKey)
             .Build();
     }
 
