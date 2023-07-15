@@ -4,7 +4,11 @@ using System.Runtime.InteropServices;
 
 namespace Enigma5.Crypto;
 
-public sealed class SealProvider : IEnvelopeSeal, IEnvelopeUnseal
+public sealed class SealProvider :
+    IEnvelopeSeal,
+    IEnvelopeUnseal,
+    IEnvelopeSign,
+    IEnvelopeVerify
 {
     private EnvelopeContext ctx;
 
@@ -14,49 +18,61 @@ public sealed class SealProvider : IEnvelopeSeal, IEnvelopeUnseal
     }
 
     [DllImport("cryptography")]
-    private static extern IntPtr RsaEncrypt(IntPtr ctx, byte[] plaintext, uint plaintextLen);
+    private static extern IntPtr EncryptData(IntPtr ctx, byte[] plaintext, uint plaintextLen);
 
     [DllImport("cryptography")]
-    private static extern IntPtr RsaDecrypt(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
+    private static extern IntPtr DecryptData(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
 
     [DllImport("cryptography")]
-    public static extern uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
+    private static extern IntPtr SignData(IntPtr ctx, byte[] plaintext, uint plaintextLen);
 
     [DllImport("cryptography")]
-    public static extern uint GetOpenEnvelopeSize(uint pkeySizeBits, uint envelopeSize);
+    private static extern bool VerifySignature(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
+
+    [DllImport("cryptography")]
+    private static extern uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
+
+    [DllImport("cryptography")]
+    private static extern uint GetOpenEnvelopeSize(uint pkeySizeBits, uint envelopeSize);
+
+    public static int GetEnvelopeSize(int plaintextLen)
+    => (int)GetEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)plaintextLen);
+
+    public static int GetOpenEnvelopeSize(int envelopeSize)
+    => (int)GetOpenEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)envelopeSize);
+
+    public static int GetSignedDataSize(int plaintextLen)
+    => plaintextLen + PKeyContext.Current.PKeySize / 8;
+
+    private byte[]? Execute(byte[] input, Func<IntPtr, byte[], uint, IntPtr> encryptionProvider, Func<int, int> sizeComputer)
+    {
+        IntPtr outputPtr = encryptionProvider(ctx, input, (uint)input.Length);
+
+        if (outputPtr == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        var outLen = sizeComputer(input.Length);
+        var output = new byte[outLen];
+
+        Marshal.Copy(outputPtr, output, 0, outLen);
+
+        return output;
+    }
 
     public byte[]? Seal(byte[] plaintext)
-    {
-        IntPtr ciphertextPtr = RsaEncrypt(ctx, plaintext, (uint)plaintext.Length);
-        uint ciphertextLen = GetEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)plaintext.Length);
-        byte[] ciphertext = new byte[ciphertextLen];
-
-        if(ciphertextPtr == IntPtr.Zero)
-        {
-            return null;
-        }
-
-        Marshal.Copy(ciphertextPtr, ciphertext, 0, (int) ciphertextLen);
-
-        return ciphertext;
-    }
+    => Execute(plaintext, EncryptData, GetEnvelopeSize);
 
     public byte[]? Unseal(byte[] ciphertext)
-    {
-        IntPtr plaintextPtr = RsaDecrypt(ctx, ciphertext, (uint)ciphertext.Length);
-        uint plaintextLen = GetOpenEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)ciphertext.Length);
-        byte[] plaintext = new byte[plaintextLen];
+    => Execute(ciphertext, DecryptData, GetOpenEnvelopeSize);
 
-        if(plaintextPtr == IntPtr.Zero)
-        {
-            return null;
-        }
+    public byte[]? Sign(byte[] plaintext)
+    => Execute(plaintext, SignData, GetSignedDataSize);
 
-        Marshal.Copy(plaintextPtr, plaintext, 0, (int) plaintextLen);
-
-        return plaintext;
-    }
-
+    public bool Verify(byte[] ciphertext)
+    => VerifySignature(ctx, ciphertext, (uint)ciphertext.Length);
+    
     public void Dispose() => ctx.Dispose();
 
     public static SealProvider Create(EnvelopeContext ctx) => new SealProvider(ctx);

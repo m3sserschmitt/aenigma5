@@ -105,11 +105,10 @@ public class OnionBuilder
             return buffer;
         }
 
-        public bool MessageSizeExceeded(byte[] content)
+        public static bool MessageSizeExceeded(byte[] content)
         {
             return content.Length >= ushort.MaxValue
-                ? true
-                : SealProvider.GetEnvelopeSize(2048, (ushort)content.Length) > ushort.MaxValue;
+|| SealProvider.GetEnvelopeSize(content.Length) > ushort.MaxValue;
         }
     }
 

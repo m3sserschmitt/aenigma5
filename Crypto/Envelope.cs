@@ -2,7 +2,12 @@ using Enigma5.Crypto.Contracts;
 
 namespace Enigma5.Crypto;
 
-public sealed class Envelope : IDisposable, IEnvelopeUnseal, IEnvelopeSeal
+public sealed class Envelope :
+    IDisposable,
+    IEnvelopeUnseal,
+    IEnvelopeSeal,
+    IEnvelopeSign,
+    IEnvelopeVerify
 {
     private SealProvider sealProvider;
 
@@ -12,31 +17,39 @@ public sealed class Envelope : IDisposable, IEnvelopeUnseal, IEnvelopeSeal
     }
 
     public byte[]? Seal(byte[] plaintext) => sealProvider.Seal(plaintext);
-    
+
     public byte[]? Unseal(byte[] ciphertext) => sealProvider.Unseal(ciphertext);
+
+    public byte[]? Sign(byte[] plaintext) => sealProvider.Sign(plaintext);
+
+    public bool Verify(byte[] ciphertext) => sealProvider.Verify(ciphertext);
 
     public void Dispose() => sealProvider.Dispose();
 
-    public static class Factory 
+    public static class Factory
     {
         public static IEnvelopeSeal CreateSealFromFile(string path)
-        {
-            return new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricEncryptionContextFromFile(path)));
-        }
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricEncryptionContextFromFile(path)));
 
         public static IEnvelopeUnseal CreateUnsealFromFile(string path, string passphrase)
-        {
-            return new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase)));
-        }
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase)));
 
         public static IEnvelopeSeal CreateSeal(string key)
-        {
-            return new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricEncryptionContext(key)));
-        }
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricEncryptionContext(key)));
 
         public static IEnvelopeUnseal CreateUnseal(string key, string passphrase)
-        {
-            return new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase)));
-        }
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase)));
+
+        public static IEnvelopeSign CreateSignature(string key, string passphrase)
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureContext(key, passphrase)));
+        
+        public static IEnvelopeSign CreateSignatureFromFile(string path, string passphrase)
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureContextFromFile(path, passphrase)));
+
+        public static IEnvelopeVerify CreateSignatureVerification(string key)
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureVerificationContext(key)));
+
+        public static IEnvelopeVerify CreateSignatureVerificationFromFile(string path, string passphrase)
+        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureVerificationContextFromFile(path)));
     }
 }
