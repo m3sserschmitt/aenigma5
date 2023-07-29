@@ -4,26 +4,25 @@ using Enigma5.Crypto.DataProviders;
 using Enigma5.Message;
 using Microsoft.AspNetCore.SignalR.Client;
 
+namespace Client;
+
 public class Program
 {
     public static async Task Main(string[] args)
     {
         string publicKey;
         string privateKey;
-        string certificate;
         string passphrase = PKey.Passphrase;
 
         if (args[0] == "1")
         {
-            publicKey = PKey.PrivateKey1;
+            publicKey = PKey.PublicKey1;
             privateKey = PKey.PrivateKey1;
-            certificate = PKey.Certificate1;
         }
         else
         {
-            publicKey = PKey.PrivateKey2;
+            publicKey = PKey.PublicKey2;
             privateKey = PKey.PrivateKey2;
-            certificate = PKey.Certificate2;
         }
 
         var connection = new HubConnectionBuilder()
@@ -35,26 +34,41 @@ public class Program
             Console.WriteLine($"Message received");
             var decodedData = Convert.FromBase64String(message);
 
-            using (var onionParser = OnionParser.Factory.Create(privateKey, passphrase))
+            using var onionParser = OnionParser.Factory.Create(privateKey, passphrase);
+
+            if (onionParser.Parse(new Onion { Content = decodedData }))
             {
-                if (onionParser.Parse(new Onion { Content = decodedData }))
+                Console.WriteLine($"Message: {Encoding.UTF8.GetString(onionParser.Content!, 0, onionParser.Content!.Length)}");
+            }
+            else
+            {
+                Console.WriteLine("There was an error on decrypting the message");
+            }
+        });
+
+        connection.On<string?>("GenerateToken", async token =>
+        {
+            Console.WriteLine($"Token Generated: {token}");
+
+            if (token != null)
+            {
+                using var signature = Envelope.Factory.CreateSignature(privateKey, passphrase);
+                var data = signature.Sign(Convert.FromBase64String(token));
+
+                if (data != null)
                 {
-                    Console.WriteLine($"Message: {System.Text.Encoding.UTF8.GetString(onionParser.Content!, 0, onionParser.Content!.Length)}");
-                }
-                else
-                {
-                    Console.WriteLine("There was an error on decrypting the message");
+                    await connection.InvokeAsync("Authenticate", publicKey, Convert.ToBase64String(data));
                 }
             }
         });
 
-        connection.On<bool>("ValidateCertificate", status =>
+        connection.On<bool>("Authenticate", authenticated =>
         {
-            Console.WriteLine($"Identity confirmation status: {status}");
+            Console.WriteLine($"Authenticated: {authenticated}");
         });
 
         await connection.StartAsync();
-        await connection.InvokeAsync("ValidateCertificate", certificate);
+        await connection.InvokeAsync("GenerateToken");
 
         var message = "Test";
 
@@ -77,7 +91,7 @@ public class Program
 
             Console.ReadLine();
         }
-        
+
         Console.ReadLine();
         await connection.StopAsync();
     }

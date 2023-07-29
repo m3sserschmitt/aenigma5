@@ -177,9 +177,9 @@ db7cFfEKl9W8B5h08ffk/jqBOjk+hP6sKFw/Y5bwyCxx5SqmsnRXRnbJMVBuePTp
 DBpp9W5pQSvGfEMCvi/j3JFtVy3yO3tQlkwl0mcOQOEljnjmk9qsC9jyxWh6Ojc2
 -----END RSA PRIVATE KEY-----";
 
-    public static readonly string Address1 = "ea1982e9a3ac6570bd3c1689f8efa5174ec091536a97ed0a17c62e35cd1e39d2";
+    public static readonly string Address1 = "cbff2e12fb1f752cb17185f080f2b40301165a1051531cc0614e495ee2620ef9";
 
-    public static readonly string Address2 = "387048440f4629428f69b34717fc15590e4d7b063222e2f74bd30504c21e0be4";
+    public static readonly string Address2 = "a186a6fba0ff7570b116b3df639e3713fab0a21f1cf62fb616d84c19217c8023";
     
     public static readonly string Passphrase = "12345678";
 }

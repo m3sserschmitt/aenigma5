@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace Enigma5.Crypto;
 
@@ -7,40 +6,20 @@ public static class CertificateHelper
 {
     public static byte[] GetAddressFromPublicKey(string publicKey)
     {
-        using (var cryptoProvider = new RSACryptoServiceProvider())
-        {
-            cryptoProvider.ImportFromPem(publicKey);
-            var publicKeyBytes = cryptoProvider.ExportRSAPublicKey();
+        string[] lines = publicKey.Split('\n');
 
-            return HashProvider.Sha256(publicKeyBytes);
+        StringBuilder base64ContentBuilder = new();
+        for (int i = 1; i < lines.Length - 1; i++)
+        {
+            base64ContentBuilder.Append(lines[i].Trim());
         }
+
+        return HashProvider.Sha256(Convert.FromBase64String(base64ContentBuilder.ToString()));
     }
 
     public static string GetHexAddressFromPublicKey(string publicKey)
     {
         var hash = GetAddressFromPublicKey(publicKey);
         return BitConverter.ToString(hash).Replace("-", string.Empty).ToLower();
-    }
-
-    public static string? ValidateSelfSignedCertificate(string certificatePem)
-    {
-        try
-        {
-            var certificate = X509Certificate2.CreateFromPem(certificatePem);
-
-            /*if(!certificate.Verify())
-            {
-                return null;
-            }
-            */
-
-            var publicKey = certificate.GetPublicKey();
-
-            return HashProvider.Sha256Hex(publicKey);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
     }
 }

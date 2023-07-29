@@ -2,17 +2,17 @@ using Microsoft.AspNetCore.SignalR;
 
 using Enigma5.App.Attributes;
 using Enigma5.App.Hubs.Contracts;
-using Enigma5.App.Contracts;
+using Enigma5.App.Hubs.Sessions;
 
 namespace Enigma5.App.Hubs.Filters;
 
 public class OnionRoutingFilter : BaseFilter<IOnionParsingHub, OnionRoutingAttribute>
 {
-    private readonly IConnectionsMapper connectionsMapper;
+    private readonly SessionManager sessionManager;
 
-    public OnionRoutingFilter(IConnectionsMapper connectionsMapper)
+    public OnionRoutingFilter(SessionManager sessionManager)
     {
-        this.connectionsMapper = connectionsMapper;    
+        this.sessionManager = sessionManager;    
     }
 
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
@@ -23,7 +23,7 @@ public class OnionRoutingFilter : BaseFilter<IOnionParsingHub, OnionRoutingAttri
         {
             var onionRouterHub = new OnionRoutingHubAdapter(invocationContext.Hub);
 
-            if(connectionsMapper.TryGetConnectionId(onionParserHub.Next, out string? connectionId))
+            if(sessionManager.TryGetConnectionId(onionParserHub.Next, out string? connectionId))
             {
                 onionRouterHub.DestinationConnectionId = connectionId;
             }

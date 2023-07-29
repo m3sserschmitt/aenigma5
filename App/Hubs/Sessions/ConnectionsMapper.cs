@@ -1,10 +1,8 @@
-using Enigma5.App.Contracts;
+namespace Enigma5.App.Hubs.Sessions;
 
-namespace Enigma5.App;
-
-public class ConnectionsMapper : IConnectionsMapper
+public class ConnectionsMapper
 {
-    private Dictionary<string, string> connections = new();
+    private readonly Dictionary<string, string> connections = new();
 
     public bool TryAdd(string address, string connectionId)
     {

@@ -1,16 +1,20 @@
 using Enigma5.App.Hubs.Contracts;
-using Enigma5.App.Contracts;
 using Enigma5.App.Attributes;
+using Enigma5.App.Hubs.Sessions;
 
 namespace Enigma5.App.Hubs;
 
 public class RoutingHub :
     RoutingHubBase<RoutingHub>,
-    ICertificateValidationHub,
     IOnionParsingHub,
     IOnionRoutingHub
 {
-    public RoutingHub(IConnectionsMapper connectionsMapper) : base(connectionsMapper) { }
+    private readonly SessionManager sessionManager;
+
+    public RoutingHub(SessionManager sessionManager)
+    {
+        this.sessionManager = sessionManager;
+    }
 
     public string? Address { get; set; }
 
@@ -22,10 +26,16 @@ public class RoutingHub :
 
     public byte[]? Content { get; set; }
 
-    [CertificateValidation]
-    public async Task ValidateCertificate(string certificatePem)
+    public async Task GenerateToken()
     {
-        await RespondAsync(nameof(ValidateCertificate), Address != null);
+        var token = sessionManager.AddPending(Context.ConnectionId);
+        await RespondAsync(nameof(GenerateToken), token);
+    }
+
+    public async Task Authenticate(string publicKey, string signature)
+    {
+        var authenticated = sessionManager.Authenticate(Context.ConnectionId, publicKey, signature);
+        await RespondAsync(nameof(Authenticate), authenticated);
     }
 
     [OnionParsing]

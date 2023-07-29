@@ -1,20 +1,20 @@
-using Enigma5.App.Contracts;
+using Enigma5.App.Hubs.Sessions;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs.Filters;
 
 public class ClientDisconnectFilter : IHubFilter
 {
-    private readonly IConnectionsMapper connectionsMapper;
+    private readonly SessionManager sessionManager;
 
-    public ClientDisconnectFilter(IConnectionsMapper connectionsMapper)
+    public ClientDisconnectFilter(SessionManager sessionManager)
     {
-        this.connectionsMapper = connectionsMapper;
+        this.sessionManager = sessionManager;
     }
 
     public async Task OnDisconnectedAsync(HubLifetimeContext context, Exception? exception, Func<HubLifetimeContext, Exception?, Task> next)
     {
-        connectionsMapper.Remove(context.Hub.Context.ConnectionId);
+        sessionManager.Remove(context.Hub.Context.ConnectionId);
 
         await context.Hub.OnDisconnectedAsync(exception);
         await next(context, exception);

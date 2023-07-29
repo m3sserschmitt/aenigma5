@@ -9,7 +9,7 @@ public sealed class Envelope :
     IEnvelopeSign,
     IEnvelopeVerify
 {
-    private SealProvider sealProvider;
+    private readonly SealProvider sealProvider;
 
     private Envelope(SealProvider sealProvider)
     {
@@ -49,7 +49,7 @@ public sealed class Envelope :
         public static IEnvelopeVerify CreateSignatureVerification(string key)
         => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureVerificationContext(key)));
 
-        public static IEnvelopeVerify CreateSignatureVerificationFromFile(string path, string passphrase)
+        public static IEnvelopeVerify CreateSignatureVerificationFromFile(string path)
         => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureVerificationContextFromFile(path)));
     }
 }
