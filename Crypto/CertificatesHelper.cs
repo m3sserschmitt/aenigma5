@@ -1,3 +1,4 @@
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Enigma5.Crypto;
@@ -6,7 +7,7 @@ public static class CertificateHelper
 {
     public static byte[] GetAddressFromPublicKey(string publicKey)
     {
-        string[] lines = publicKey.Split('\n');
+        string[] lines = publicKey.Split('\n').Where(l => l.Length != 0).ToArray();
 
         StringBuilder base64ContentBuilder = new();
         for (int i = 1; i < lines.Length - 1; i++)
