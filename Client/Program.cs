@@ -77,11 +77,12 @@ public class Program
             var serverPublicKey = PKey.ServerPublicKey;
             var destinationPublicKey = PKey.PublicKey2;
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
+            var localAddress = HashProvider.FromHexString(PKey.Address1);
 
             var onion = OnionBuilder
                 .Create()
                 .SetMessageContent(Encoding.UTF8.GetBytes(message))
-                .SetNextAddress(destinationAddress)
+                .SetNextAddress(localAddress)
                 .Seal(destinationPublicKey)
                 .AddPeel()
                 .SetNextAddress(destinationAddress)
