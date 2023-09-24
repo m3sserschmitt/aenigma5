@@ -1,6 +1,7 @@
 using Enigma5.App.Hubs.Contracts;
 using Enigma5.App.Attributes;
 using Enigma5.App.Hubs.Sessions;
+using Enigma5.App.Hubs.Queues;
 
 namespace Enigma5.App.Hubs;
 
@@ -11,9 +12,12 @@ public class RoutingHub :
 {
     private readonly SessionManager sessionManager;
 
-    public RoutingHub(SessionManager sessionManager)
+    private readonly OnionQueue onionQueue;
+
+    public RoutingHub(SessionManager sessionManager, OnionQueue onionQueue)
     {
         this.sessionManager = sessionManager;
+        this.onionQueue = onionQueue;
     }
 
     public string? Address { get; set; }
@@ -38,6 +42,18 @@ public class RoutingHub :
         await RespondAsync(nameof(Authenticate), authenticated);
     }
 
+    public async Task Synchronize()
+    {
+        if(sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
+        {
+            var onions = onionQueue.Get(address!)
+            .Select(item => Convert.ToBase64String(item.Content))
+            .ToList();
+
+            await RespondAsync(nameof(Synchronize), onions);
+        }
+    }
+
     [OnionParsing]
     [OnionRouting]
     public async Task RouteMessage(string data)
@@ -45,6 +61,14 @@ public class RoutingHub :
         if (DestinationConnectionId != null && Content != null)
         {
             await SendAsync(DestinationConnectionId, Content);
+        }
+        else if (Content != null)
+        {
+            onionQueue.Enqueue(new OnionQueueItem
+            {
+                Content = Content,
+                Destination = Next!
+            });
         }
     }
 }

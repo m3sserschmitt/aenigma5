@@ -13,9 +13,9 @@ public class ConnectionsMapper
     {
         string? address = null;
 
-        foreach(var pair in connections)
+        foreach (var pair in connections)
         {
-            if(pair.Value == connectionId)
+            if (pair.Value == connectionId)
             {
                 address = pair.Key;
                 break;
@@ -28,5 +28,20 @@ public class ConnectionsMapper
     public bool TryGetConnectionId(string address, out string? connectionId)
     {
         return connections.TryGetValue(address, out connectionId);
+    }
+
+    public bool TryGetAddress(string connectionId, out string? address)
+    {
+        try
+        {
+            var item = connections.First(item => item.Value == connectionId);
+            address = item.Key;
+            return true;
+        }
+        catch
+        {
+            address = null;
+        }
+        return false;
     }
 }

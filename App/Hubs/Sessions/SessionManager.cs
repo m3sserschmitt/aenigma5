@@ -53,4 +53,7 @@ public class SessionManager
 
     public bool TryGetConnectionId(string address, out string? connectionId)
     => connectionsMapper.TryGetConnectionId(address, out connectionId);
+
+    public bool TryGetAddress(string connectionId, out string? address)
+    => connectionsMapper.TryGetAddress(connectionId, out address);
 }

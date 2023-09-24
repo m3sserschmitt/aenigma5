@@ -8,6 +8,23 @@ namespace Client;
 
 public class Program
 {
+    private static void HandleMessage(string message, string privateKey, string passphrase)
+    {
+        Console.WriteLine($"Message received");
+        var decodedData = Convert.FromBase64String(message);
+
+        using var onionParser = OnionParser.Factory.Create(privateKey, passphrase);
+
+        if (onionParser.Parse(new Onion { Content = decodedData }))
+        {
+            Console.WriteLine($"Message: {Encoding.UTF8.GetString(onionParser.Content!, 0, onionParser.Content!.Length)}");
+        }
+        else
+        {
+            Console.WriteLine("There was an error on decrypting the message");
+        }
+    }
+
     public static async Task Main(string[] args)
     {
         string publicKey;
@@ -31,18 +48,14 @@ public class Program
 
         connection.On<string>("RouteMessage", message =>
         {
-            Console.WriteLine($"Message received");
-            var decodedData = Convert.FromBase64String(message);
+            HandleMessage(message, privateKey, passphrase);
+        });
 
-            using var onionParser = OnionParser.Factory.Create(privateKey, passphrase);
-
-            if (onionParser.Parse(new Onion { Content = decodedData }))
+        connection.On<List<string>>("Synchronize", messages =>
+        {
+            foreach (var message in messages)
             {
-                Console.WriteLine($"Message: {Encoding.UTF8.GetString(onionParser.Content!, 0, onionParser.Content!.Length)}");
-            }
-            else
-            {
-                Console.WriteLine("There was an error on decrypting the message");
+                HandleMessage(message, privateKey, passphrase);
             }
         });
 
@@ -62,9 +75,10 @@ public class Program
             }
         });
 
-        connection.On<bool>("Authenticate", authenticated =>
+        connection.On<bool>("Authenticate", async authenticated =>
         {
             Console.WriteLine($"Authenticated: {authenticated}");
+            await connection.InvokeAsync("Synchronize");
         });
 
         await connection.StartAsync();

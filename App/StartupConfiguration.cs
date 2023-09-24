@@ -1,9 +1,12 @@
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
+using Enigma5.App.Hubs.Queues;
 using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Security;
+using Enigma5.Crypto;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,6 +33,7 @@ public class StartupConfiguration
 #endif
         services.AddSingleton<OnionParsingFilter>();
         services.AddSingleton<OnionRoutingFilter>();
+        services.AddSingleton<OnionQueue>();
     }
 
     public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -39,6 +43,13 @@ public class StartupConfiguration
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHub<RoutingHub>("/OnionRouting");
+            
+            endpoints.MapGet("/ServerInfo", (CertificateManager certificateManager) => {
+                return Results.Ok(new {
+                    certificateManager.PublicKey,
+                    Address = CertificateHelper.GetHexAddressFromPublicKey(certificateManager.PublicKey)
+                });
+            });
         });
     }
 }
