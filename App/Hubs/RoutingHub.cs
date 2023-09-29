@@ -60,7 +60,7 @@ public class RoutingHub :
     {
         if (DestinationConnectionId != null && Content != null)
         {
-            await SendAsync(DestinationConnectionId, Content);
+            await RouteMessage(DestinationConnectionId, Content);
         }
         else if (Content != null)
         {
