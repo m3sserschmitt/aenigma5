@@ -1,4 +1,4 @@
-namespace Enigma5.App.Hubs.Queues;
+namespace Enigma5.App.MemoryStorage;
 
 public class OnionQueueItem {
 
