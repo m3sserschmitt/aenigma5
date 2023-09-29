@@ -8,6 +8,8 @@ public class OnionQueue : IEphemeralCollection<OnionQueueItem>
 
     private readonly List<OnionQueueItem> queue = new();
 
+    public int Count => queue.Count;
+
     public void Add(OnionQueueItem item)
     {
         mutex.WaitOne();

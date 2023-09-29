@@ -75,10 +75,9 @@ public class Program
             }
         });
 
-        connection.On<bool>("Authenticate", async authenticated =>
+        connection.On<bool>("Authenticate", authenticated =>
         {
             Console.WriteLine($"Authenticated: {authenticated}");
-            await connection.InvokeAsync("Synchronize");
         });
 
         await connection.StartAsync();

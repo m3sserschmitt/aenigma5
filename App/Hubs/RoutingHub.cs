@@ -41,17 +41,16 @@ public class RoutingHub :
     {
         var authenticated = sessionManager.Authenticate(Context.ConnectionId, publicKey, signature);
         await RespondAsync(nameof(Authenticate), authenticated);
-    }
 
-    public async Task Synchronize()
-    {
-        if(sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
+        if (sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
         {
             var onions = onionQueue.Where(item => item.Destination == address)
-            .Select(item => Convert.ToBase64String(item.Content))
-            .ToList();
+            .Select(item => Convert.ToBase64String(item.Content));
 
-            await RespondAsync(nameof(Synchronize), onions);
+            if (onions.Any())
+            {
+                await RespondAsync("Synchronize", onions);
+            }
         }
     }
 
