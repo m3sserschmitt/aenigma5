@@ -4,7 +4,6 @@ using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Security;
 using Enigma5.Crypto;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,12 +26,12 @@ public class StartupConfiguration
                     options.AddFilter<OnionRoutingFilter>();
                 });
 
-        services.AddSingleton(typeof(ConnectionsMapper));
-        services.AddSingleton(typeof(SessionManager));
+        services.AddSingleton<ConnectionsMapper>();
+        services.AddSingleton<SessionManager>();
 
-#if DEBUG
-        services.AddSingleton(_ => CertificateManager.CreateTestingManager());
-#endif
+
+        services.AddSingleton<CertificateManager>();
+
         services.AddSingleton<OnionParsingFilter>();
         services.AddSingleton<OnionRoutingFilter>();
         services.AddSingleton(typeof(IEphemeralCollection<OnionQueueItem>), typeof(OnionQueue));
@@ -40,7 +39,7 @@ public class StartupConfiguration
         services.SetupHangfire();
     }
 
-    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IWebHostEnvironment env)
+    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
     {
         app.UseRouting();
 

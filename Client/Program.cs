@@ -43,7 +43,16 @@ public class Program
         }
 
         var connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5000/OnionRouting")
+            .WithUrl("https://localhost:5001/OnionRouting", options =>
+            {
+                options.HttpMessageHandlerFactory = message =>
+                {
+                    if (message is HttpClientHandler clientHandler)
+                        clientHandler.ServerCertificateCustomValidationCallback +=
+                            (sender, certificate, chain, sslPolicyErrors) => { return true; };
+                    return message;
+                };
+            })
             .Build();
 
         connection.On<string>("RouteMessage", message =>
