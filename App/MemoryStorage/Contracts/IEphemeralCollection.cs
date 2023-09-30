@@ -7,4 +7,6 @@ public interface IEphemeralCollection<TItem>
     IEnumerable<TItem> Where(Func<TItem, bool> condition);
 
     void Cleanup(TimeSpan deadline);
+
+    void Cleanup(Predicate<TItem> condition);
 }

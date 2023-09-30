@@ -41,7 +41,7 @@ public class OnionQueueTests
     }
 
     [Fact]
-    public void OnionQueue_ShouldRemoveCorrectItems()
+    public void OnionQueue_ShouldRemoveCorrectItemsWhenDeadlineProvided()
     {
         // Arrange
         var currentTime = DateTime.Now;
@@ -60,6 +60,26 @@ public class OnionQueueTests
         {
             (currentTime - item.DateReceived).Should().BeLessThan(timeSpan);
             item.Destination.Should().Be("destination-1");
+        }
+    }
+
+    [Fact]
+    public void OnionQueue_ShouldRemoveCorrectItemsWhenConditionProvided()
+    {
+        // Arrange
+        var onionQueue = new OnionQueue();
+        onionQueue.Add(new OnionQueueItem { Destination = "destination-1" });
+        onionQueue.Add(new OnionQueueItem { Destination = "destination-1" });
+        onionQueue.Add(new OnionQueueItem { Destination = "destination-2" });
+
+        // Act
+        onionQueue.Cleanup(item => item.Destination == "destination-1");
+
+        // Assert
+        onionQueue.Count.Should().Be(1);
+        foreach(var item in onionQueue.Where(item => true))
+        {
+            item.Destination.Should().Be("destination-2");
         }
     }
 }

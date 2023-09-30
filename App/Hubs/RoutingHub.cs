@@ -3,6 +3,7 @@ using Enigma5.App.Attributes;
 using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.MemoryStorage;
 using Enigma5.App.MemoryStorage.Contracts;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Enigma5.App.Hubs;
 
@@ -44,12 +45,12 @@ public class RoutingHub :
 
         if (sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
         {
-            var onions = onionQueue.Where(item => item.Destination == address)
-            .Select(item => Convert.ToBase64String(item.Content));
+            var onions = onionQueue.Where(item => item.Destination == address);
 
             if (onions.Any())
             {
-                await RespondAsync("Synchronize", onions);
+                await RespondAsync("Synchronize", onions.Select(item => Convert.ToBase64String(item.Content)));
+                onionQueue.Cleanup(item => onions.Contains(item));
             }
         }
     }

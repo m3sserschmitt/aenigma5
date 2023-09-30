@@ -32,4 +32,11 @@ public class OnionQueue : IEphemeralCollection<OnionQueueItem>
         queue.RemoveAll(item => (DateTime.Now - item.DateReceived) > deadline);
         mutex.ReleaseMutex();
     }
+
+    public void Cleanup(Predicate<OnionQueueItem> condition)
+    {
+        mutex.WaitOne();
+        queue.RemoveAll(condition);
+        mutex.ReleaseMutex();
+    }
 }
