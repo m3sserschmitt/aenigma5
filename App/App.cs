@@ -22,13 +22,10 @@ public class App
                 {
                     kestrelOptions.ConfigureHttpsDefaults(listenOptions =>
                     {
-#if DEBUG
                         listenOptions.ServerCertificate = new X509Certificate2(PKey.ServerCertificateByteArray, PKey.Passphrase);
-#else
-                    // TODO: Implement this!
-#endif
                     });
                 });
                 webBuilder.UseStartup<StartupConfiguration>();
+                webBuilder.UseUrls("http://localhost:80", "https://localhost:443");
             });
 }

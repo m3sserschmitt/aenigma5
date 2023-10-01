@@ -16,7 +16,6 @@ public sealed class CertificateManager
 
     public string Passphrase { get; private set; }
 
-#if DEBUG
     public CertificateManager()
     {
         PublicKey = PKey.ServerPublicKey;
@@ -25,16 +24,4 @@ public sealed class CertificateManager
         PublicKeyFile = string.Empty;
         PrivateKeyFile = string.Empty;
     }
-
-#else
-    public CertificateManager(IConfiguration config)
-    {
-        PublicKeyFile = config.GetValue<string>("PublicKeyFile");
-        PrivateKeyFile = config.GetValue<string>("PrivateKeyFile");
-
-        PublicKey = File.ReadAllText(PublicKeyFile);
-        PrivateKey = File.ReadAllText(PrivateKeyFile);
-        // TODO: implement key retrieval functionality!!
-    }
-#endif
 }
