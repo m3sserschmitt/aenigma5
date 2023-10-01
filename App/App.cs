@@ -26,6 +26,6 @@ public class App
                     });
                 });
                 webBuilder.UseStartup<StartupConfiguration>();
-                webBuilder.UseUrls("https://localhost:8081");
+                webBuilder.UseUrls("http://10.0.0.4:8080", "https://10.0.0.4:8081");                
             });
 }

@@ -43,7 +43,7 @@ public class Program
         }
 
         var connection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:5001/OnionRouting", options =>
+            .WithUrl("http://40.113.105.169:8080/OnionRouting", options =>
             {
                 options.HttpMessageHandlerFactory = message =>
                 {
