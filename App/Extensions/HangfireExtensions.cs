@@ -1,7 +1,9 @@
+using Enigma5.App.Hangfire;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
-namespace Enigma5.App;
+namespace Enigma5.App.Extensions;
 
 public static class HangfireExtensions
 {
@@ -10,6 +12,9 @@ public static class HangfireExtensions
         services.AddHangfire(configuration =>
                 {
                     configuration.UseInMemoryStorage();
+                    configuration.UseSerializerSettings(new JsonSerializerSettings {
+                        TypeNameHandling = TypeNameHandling.All
+                    });
                 });
         services.AddHangfireServer();
 

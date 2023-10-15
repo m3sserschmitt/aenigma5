@@ -1,9 +1,10 @@
 using Enigma5.App.Hubs.Contracts;
 using Enigma5.App.Attributes;
 using Enigma5.App.Hubs.Sessions;
-using Enigma5.App.MemoryStorage;
-using Enigma5.App.MemoryStorage.Contracts;
-using Microsoft.AspNetCore.Http.Features;
+using Enigma5.App.Resources.Commands;
+using MediatR;
+using Enigma5.App.Resources.Queries;
+using System.Text.Json;
 
 namespace Enigma5.App.Hubs;
 
@@ -12,14 +13,14 @@ public class RoutingHub :
     IOnionParsingHub,
     IOnionRoutingHub
 {
-    private readonly SessionManager sessionManager;
+    private readonly SessionManager _sessionManager;
 
-    private readonly IEphemeralCollection<OnionQueueItem> onionQueue;
+    private readonly IMediator _commandRouter;
 
-    public RoutingHub(SessionManager sessionManager, IEphemeralCollection<OnionQueueItem> onionQueue)
+    public RoutingHub(SessionManager sessionManager, IMediator commandRouter)
     {
-        this.sessionManager = sessionManager;
-        this.onionQueue = onionQueue;
+        _sessionManager = sessionManager;
+        _commandRouter = commandRouter;
     }
 
     public string? Address { get; set; }
@@ -34,25 +35,44 @@ public class RoutingHub :
 
     public async Task GenerateToken()
     {
-        var token = sessionManager.AddPending(Context.ConnectionId);
+        var token = _sessionManager.AddPending(Context.ConnectionId);
         await RespondAsync(nameof(GenerateToken), token);
+    }
+
+    private async Task Synchronize()
+    {
+        if (_sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
+        {
+            var query = new GetPendingMessagesByDestinationQuery
+            {
+                Destination = address!
+            };
+
+            var onions = await _commandRouter.Send(query);
+
+            if (onions.Any())
+            {
+                await RespondAsync("Synchronize", onions.Select(item => JsonSerializer.Serialize(new
+                {
+                    item.Content,
+                    item.DateReceived
+                })));
+
+                var command = new MarkMessagesAsDeliveredCommand
+                {
+                    Destination = address!
+                };
+
+                await _commandRouter.Send(command);
+            }
+        }
     }
 
     public async Task Authenticate(string publicKey, string signature)
     {
-        var authenticated = sessionManager.Authenticate(Context.ConnectionId, publicKey, signature);
+        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, publicKey, signature);
         await RespondAsync(nameof(Authenticate), authenticated);
-
-        if (sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
-        {
-            var onions = onionQueue.Where(item => item.Destination == address);
-
-            if (onions.Any())
-            {
-                await RespondAsync("Synchronize", onions.Select(item => Convert.ToBase64String(item.Content)));
-                onionQueue.Cleanup(item => onions.Contains(item));
-            }
-        }
+        await Synchronize();
     }
 
     [OnionParsing]
@@ -65,11 +85,13 @@ public class RoutingHub :
         }
         else if (Content != null)
         {
-            onionQueue.Add(new OnionQueueItem
+            var createPendingMessageCommand = new CreatePendingMessageCommand
             {
-                Content = Content,
+                Content = Convert.ToBase64String(Content),
                 Destination = Next!
-            });
+            };
+
+            await _commandRouter.Send(createPendingMessageCommand);
         }
     }
 }

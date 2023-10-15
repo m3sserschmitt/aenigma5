@@ -10,7 +10,6 @@ public class App
 {
     public static void Main(string[] args)
     {
-
         CreateHostBuilder(args).Build().Run();
     }
 
@@ -26,6 +25,5 @@ public class App
                     });
                 });
                 webBuilder.UseStartup<StartupConfiguration>();
-                webBuilder.UseUrls("http://10.0.0.4:8080", "https://10.0.0.4:8081");                
             });
 }

@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Enigma5.Crypto;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Message;
@@ -43,7 +44,7 @@ public class Program
         }
 
         var connection = new HubConnectionBuilder()
-            .WithUrl("http://40.113.105.169:8080/OnionRouting", options =>
+            .WithUrl($"http://{args[1]}/OnionRouting", options =>
             {
                 options.HttpMessageHandlerFactory = message =>
                 {
@@ -64,7 +65,11 @@ public class Program
         {
             foreach (var message in messages)
             {
-                HandleMessage(message, privateKey, passphrase);
+                var data = JsonSerializer.Deserialize<IncomingMessage>(message);
+                if (data != null)
+                {
+                    HandleMessage(data.Content, privateKey, passphrase);
+                }
             }
         });
 

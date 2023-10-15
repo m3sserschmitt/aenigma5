@@ -8,14 +8,23 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
-using Enigma5.App.MemoryStorage.Contracts;
-using Enigma5.App.MemoryStorage;
+using Microsoft.Extensions.Configuration;
+using Enigma5.App.Resources.Commands;
+using Enigma5.App.Extensions;
+using Enigma5.App.Hangfire;
 
 namespace Enigma5.App;
 
 public class StartupConfiguration
 {
-    public static void ConfigureServices(IServiceCollection services)
+    private readonly IConfiguration _configuration;
+
+    public StartupConfiguration(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public void ConfigureServices(IServiceCollection services)
     {
         services.AddSignalR()
         .AddHubOptions<RoutingHub>(
@@ -28,15 +37,12 @@ public class StartupConfiguration
 
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
-
-
         services.AddSingleton<CertificateManager>();
+        services.AddTransient<MediatorHangfireBridge>();
 
-        services.AddSingleton<OnionParsingFilter>();
-        services.AddSingleton<OnionRoutingFilter>();
-        services.AddSingleton(typeof(IEphemeralCollection<OnionQueueItem>), typeof(OnionQueue));
-        
         services.SetupHangfire();
+        services.SetupDbContext(_configuration);
+        services.SetupMediatR();
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
@@ -60,9 +66,13 @@ public class StartupConfiguration
         serviceProvider.UseAsHangfireActivator();
 
         // TODO: Refactor this!!
-        RecurringJob.AddOrUpdate<IEphemeralCollection<OnionQueueItem>>(
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
         "storage-cleanup",
-        queue => queue.Cleanup(new TimeSpan(24, 0, 0)),
-        Cron.Hourly);
+        bridge => bridge.Send(new CleanupMessagesCommand
+        {
+            RemoveDelivered = true,
+            TimeSpan = new TimeSpan(24, 0, 0)
+        }),
+        "*/15 * * * *");
     }
 }

@@ -1,6 +1,6 @@
 using Hangfire;
 
-namespace Enigma5.App;
+namespace Enigma5.App.Hangfire;
 
 public class HangfireActivator : JobActivator
 {
