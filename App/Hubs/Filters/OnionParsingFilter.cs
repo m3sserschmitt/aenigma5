@@ -10,11 +10,11 @@ namespace Enigma5.App.Hubs.Filters;
 
 public class OnionParsingFilter : BaseFilter<IOnionParsingHub, OnionParsingAttribute>
 {
-    private readonly CertificateManager certificateManager;
+    private readonly CertificateManager _certificateManager;
 
     public OnionParsingFilter(CertificateManager certificateManager)
     {
-        this.certificateManager = certificateManager;
+        _certificateManager = certificateManager;
     }
 
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
@@ -22,17 +22,16 @@ public class OnionParsingFilter : BaseFilter<IOnionParsingHub, OnionParsingAttri
         var data = invocationContext.MethodInvocationArgument<string>(0);
         if (data != null)
         {
-            using (var onionParser = OnionParser.Factory.Create(certificateManager.PrivateKey, certificateManager.Passphrase))
+            using var onionParser = OnionParser.Factory.Create(_certificateManager.PrivateKey, string.Empty);
+            var decodedData = Convert.FromBase64String(data);
+            if (onionParser.Parse(new Onion { Content = decodedData }))
             {
-                var decodedData = Convert.FromBase64String(data);
-                if (onionParser.Parse(new Onion { Content = decodedData }))
+                _ = new OnionParsingHubAdapter(invocationContext.Hub)
                 {
-                    var hub = new OnionParsingHubAdapter(invocationContext.Hub);
-
-                    hub.Content = onionParser.Content;
-                    hub.Next = onionParser.NextAddress;
-                    hub.Size = onionParser.Size;
-                }
+                    Content = onionParser.Content,
+                    Next = onionParser.NextAddress,
+                    Size = onionParser.Size
+                };
             }
         }
 
