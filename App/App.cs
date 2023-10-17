@@ -1,8 +1,6 @@
-﻿using Enigma5.Crypto.DataProviders;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Enigma5.App;
 
@@ -17,13 +15,7 @@ public class App
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
-                webBuilder.UseKestrel(kestrelOptions =>
-                {
-                    kestrelOptions.ConfigureHttpsDefaults(listenOptions =>
-                    {
-                        listenOptions.ServerCertificate = new X509Certificate2(PKey.ServerCertificateByteArray, PKey.Passphrase);
-                    });
-                });
+                webBuilder.UseKestrel();
                 webBuilder.UseStartup<StartupConfiguration>();
             });
 }
