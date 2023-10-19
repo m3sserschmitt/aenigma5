@@ -5,6 +5,8 @@ using Enigma5.App.Resources.Commands;
 using MediatR;
 using Enigma5.App.Resources.Queries;
 using System.Text.Json;
+using Enigma5.App.Network;
+using Enigma5.App.Models;
 
 namespace Enigma5.App.Hubs;
 
@@ -15,11 +17,18 @@ public class RoutingHub :
 {
     private readonly SessionManager _sessionManager;
 
+    private readonly NetworkBridge _networkBridge;
+
     private readonly IMediator _commandRouter;
 
-    public RoutingHub(SessionManager sessionManager, IMediator commandRouter)
+    public RoutingHub(
+        SessionManager sessionManager,
+        NetworkBridge networkBridge,
+        IMediator commandRouter
+        )
     {
         _sessionManager = sessionManager;
+        _networkBridge = networkBridge;
         _commandRouter = commandRouter;
     }
 
@@ -75,6 +84,11 @@ public class RoutingHub :
         await Synchronize();
     }
 
+    public async Task Broadcast(BroadcastAdjacencyList broadcastAdjacencyList)
+    {
+        // TODO: To be implemented!!
+    }
+
     [OnionParsing]
     [OnionRouting]
     public async Task RouteMessage(string data)
@@ -85,13 +99,19 @@ public class RoutingHub :
         }
         else if (Content != null)
         {
-            var createPendingMessageCommand = new CreatePendingMessageCommand
-            {
-                Content = Convert.ToBase64String(Content),
-                Destination = Next!
-            };
+            var encodedContent = Convert.ToBase64String(Content);
+            var messageRouted = await _networkBridge.RouteMessageAsync(Next!, encodedContent);
 
-            await _commandRouter.Send(createPendingMessageCommand);
+            if (messageRouted)
+            {
+                var createPendingMessageCommand = new CreatePendingMessageCommand
+                {
+                    Content = encodedContent,
+                    Destination = Next!
+                };
+
+                await _commandRouter.Send(createPendingMessageCommand);
+            }
         }
     }
 }

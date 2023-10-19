@@ -12,6 +12,8 @@ using Microsoft.Extensions.Configuration;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
+using Enigma5.App.Network;
+using Enigma5.App.Data;
 
 namespace Enigma5.App;
 
@@ -38,6 +40,8 @@ public class StartupConfiguration
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
         services.AddSingleton<CertificateManager>();
+        services.AddSingleton<NetworkBridge>();
+        services.AddSingleton<NetworkGraph>();
         services.AddTransient<MediatorHangfireBridge>();
 
         services.SetupHangfire();
@@ -58,7 +62,7 @@ public class StartupConfiguration
                 return Results.Ok(new
                 {
                     certificateManager.PublicKey,
-                    Address = CertificateHelper.GetHexAddressFromPublicKey(certificateManager.PublicKey)
+                    certificateManager.Address
                 });
             });
         });
@@ -74,5 +78,9 @@ public class StartupConfiguration
             TimeSpan = new TimeSpan(24, 0, 0)
         }),
         "*/15 * * * *");
+
+        BackgroundJob.Enqueue<NetworkBridge>(
+            bridge => bridge.ConnectToNetworkAsync()
+        );
     }
 }
