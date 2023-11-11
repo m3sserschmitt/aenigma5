@@ -2,7 +2,6 @@ using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Security;
-using Enigma5.Crypto;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
@@ -14,6 +13,7 @@ using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
 using Enigma5.App.Network;
 using Enigma5.App.Data;
+using App;
 
 namespace Enigma5.App;
 
@@ -47,6 +47,7 @@ public class StartupConfiguration
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
+        services.AddAutoMapper(typeof(MappingProfile));
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
@@ -64,6 +65,11 @@ public class StartupConfiguration
                     certificateManager.PublicKey,
                     certificateManager.Address
                 });
+            });
+
+            endpoints.MapGet("/Graph", (NetworkGraph networkGraph) =>
+            {
+                return Results.Ok(networkGraph.Vertices);
             });
         });
 

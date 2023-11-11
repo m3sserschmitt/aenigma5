@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Enigma5.App.Extensions;
@@ -9,7 +8,7 @@ public static class MediatRExtensions
     {
         services.AddMediatR(config =>
         {
-            config.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly());
+            config.RegisterServicesFromAssemblies(typeof(StartupConfiguration).Assembly);
         });
 
         return services;

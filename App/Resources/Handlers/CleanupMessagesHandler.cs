@@ -24,6 +24,6 @@ public class CleanupMessagesHandler
             (command.RemoveDelivered && item.Sent));
 
         _context.Messages.RemoveRange(messages);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

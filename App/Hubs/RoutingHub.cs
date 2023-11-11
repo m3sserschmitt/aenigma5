@@ -86,7 +86,13 @@ public class RoutingHub :
 
     public async Task Broadcast(BroadcastAdjacencyList broadcastAdjacencyList)
     {
-        // TODO: To be implemented!!
+        // Console.WriteLine(broadcastAdjacencyList.PublicKey);
+        // Console.WriteLine(broadcastAdjacencyList.SignedData);
+        // Console.WriteLine(broadcastAdjacencyList.GetAdjacencyList()?.ToString());
+        await _commandRouter.Send(new SynchronizeConnectionsCommand
+        {
+            BroadcastAdjacencyList = broadcastAdjacencyList
+        });
     }
 
     [OnionParsing]

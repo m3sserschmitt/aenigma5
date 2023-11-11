@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Enigma5.App.Security;
+using Enigma5.Core;
 using Enigma5.Crypto;
 using Microsoft.Extensions.Configuration;
 
@@ -12,30 +13,60 @@ public class BroadcastAdjacencyList
     {
     }
 
-    public BroadcastAdjacencyList(List<string> neighbors, CertificateManager certificateManager, IConfiguration configuration)
+    public BroadcastAdjacencyList(
+        List<string> neighbors,
+        CertificateManager certificateManager,
+        IConfiguration configuration)
     {
-        AdjacencyList = new(neighbors, certificateManager, configuration);
+        _adjacencyList = new(neighbors, certificateManager, configuration);
+        _signedData = Sign(certificateManager);
         PublicKey = certificateManager.PublicKey;
-        Signature = Sign(certificateManager);
     }
 
-    public AdjacencyList? AdjacencyList { get; set; }
+    private AdjacencyList? _adjacencyList;
+
+    private string? _signedData;
 
     public string? PublicKey { get; set; }
 
-    public string? Signature { get; set; }
+    public string? SignedData
+    {
+        get => _signedData;
+        set
+        {
+            if (value == null)
+            {
+                _signedData = null;
+                _adjacencyList = null;
+
+                return;
+            }
+
+            try
+            {
+                var decodedData = Convert.FromBase64String(value);
+                var adjacencyList = Encoding.UTF8.GetString(decodedData[..^(PKeyContext.Current.PKeySize / 8)]);
+
+                _adjacencyList = JsonSerializer.Deserialize<AdjacencyList>(adjacencyList);
+                _signedData = value;
+            }
+            catch
+            {
+                _adjacencyList = null;
+                _signedData = null;
+            }
+        }
+    }
+
+    public AdjacencyList? GetAdjacencyList() => _adjacencyList;
 
     private string Sign(CertificateManager certificateManager)
     {
-        var serializedList = JsonSerializer.Serialize(AdjacencyList);
-        var signature = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty)
-                .Sign(Encoding.ASCII.GetBytes(serializedList)) ?? throw new Exception("Could not sign the adjacency list");
+        var serializedList = JsonSerializer.Serialize(_adjacencyList);
+        using var envelope = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
+        var signature = envelope.Sign(Encoding.ASCII.GetBytes(serializedList))
+        ?? throw new Exception("Could not sign the adjacency list");
 
         return Convert.ToBase64String(signature);
-    }
-
-    public override string ToString()
-    {
-        return JsonSerializer.Serialize(this);
     }
 }

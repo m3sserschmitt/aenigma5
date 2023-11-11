@@ -24,6 +24,6 @@ public class MarkMessagesAsDeliveredHandler
         }
 
         _context.UpdateRange(messages);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

@@ -23,8 +23,8 @@ public class CreatePendingMessageHandler : IRequestHandler<CreatePendingMessageC
             Sent = false
         };
 
-        await _context.AddAsync(pendingMessage);
-        await _context.SaveChangesAsync();
+        await _context.AddAsync(pendingMessage, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
         return pendingMessage;
     }
 }
