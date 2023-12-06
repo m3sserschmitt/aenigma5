@@ -12,7 +12,7 @@ public static class DbContextExtensions
         var connectionString = configuration.GetConnectionString("DbConnectionString");
         services.AddDbContext<EnigmaDbContext>(options =>
         {
-            options.UseSqlite(connectionString);
+            options.UseSqlite(connectionString!);
         });
         
         return services;

@@ -19,6 +19,7 @@ public class Neighborhood
 
     public string? Hostname { get; set; }
 
+    // TODO: Possible refactoring to use hash sets
     public List<string> Neighbors { get; set; }
 
     public static bool operator ==(Neighborhood? obj1, Neighborhood? obj2)

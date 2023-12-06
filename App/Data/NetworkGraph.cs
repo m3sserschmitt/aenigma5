@@ -1,4 +1,4 @@
-using System.Text.Json;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Security;
 using Enigma5.Crypto;
 using Microsoft.Extensions.Configuration;
@@ -23,12 +23,25 @@ public class NetworkGraph
         {
             _mutex.WaitOne();
 
-            var serializedData = JsonSerializer.Serialize(_vertices);
-            var vertices = JsonSerializer.Deserialize<List<Vertex>>(serializedData);
+            var vertices = _vertices.CopyBySerialization();
 
             _mutex.ReleaseMutex();
 
             return vertices!;
+        }
+    }
+
+    public Vertex LocalVertex
+    {
+        get
+        {
+            _mutex.WaitOne();
+
+            var vertex = _localVertex.CopyBySerialization();
+
+            _mutex.ReleaseMutex();
+
+            return vertex!;
         }
     }
 
@@ -37,12 +50,31 @@ public class NetworkGraph
         _mutex = new();
         _certificateManager = certificateManager;
         _configuration = configuration;
-        _localVertex = Vertex.Create(
-            _certificateManager,
-            new List<string>(),
-            _configuration.GetValue<string>("Hostname")
-            );
+        _localVertex = Vertex.Factory.CreateWithEmptyNeighborhood(_certificateManager, _configuration.GetHostname());
         _vertices = new() { _localVertex };
+    }
+
+    public Vertex Add(string address)
+    {
+        _mutex.WaitOne();
+
+        if (!_localVertex.Neighborhood.Neighbors.Contains(address))
+        {
+            _vertices.Remove(_localVertex);
+            _localVertex = Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager);
+            _vertices.Add(_localVertex);
+        }
+
+        _mutex.ReleaseMutex();
+
+
+        return LocalVertex;
+    }
+
+    public Task<Vertex> AddAsync(string address, CancellationToken cancellationToken = default)
+    {
+        Vertex task() => Add(address);
+        return Task.Run(task, cancellationToken);
     }
 
     public (IList<Vertex> vertices, Delta delta) Add(Vertex vertex)
@@ -82,45 +114,15 @@ public class NetworkGraph
         }
         else
         {
-            _vertices.Remove(_localVertex);
-            _localVertex = vertex;
-            _vertices.Add(_localVertex);
+            ReplaceLocalVertex(vertex);
             vertices.Add(_localVertex);
         }
+
+        CleanupGraph();
 
         _mutex.ReleaseMutex();
 
         return (vertices, delta);
-    }
-
-    public void Revert(Delta delta)
-    {
-        if (delta.Vertex == null)
-        {
-            return;
-        }
-
-        _mutex.WaitOne();
-
-        if (delta.Added)
-        {
-            _vertices.Remove(_localVertex);
-            var newNeighborhood = _localVertex.Neighborhood.Neighbors.Where(item => item != delta.Vertex.Neighborhood.Address);
-            _localVertex = Vertex.Create(_certificateManager, newNeighborhood.ToList(), _localVertex.Neighborhood.Hostname);
-            _vertices.Add(_localVertex);
-        }
-        else
-        {
-            _vertices.Remove(_localVertex);
-            var newNeighborhood = new List<string>(_localVertex.Neighborhood.Neighbors)
-            {
-                delta.Vertex.Neighborhood.Address
-            };
-            _localVertex = Vertex.Create(_certificateManager, newNeighborhood, _localVertex.Neighborhood.Hostname);
-            _vertices.Add(_localVertex);
-        }
-
-        _mutex.ReleaseMutex();
     }
 
     public Task<(IList<Vertex> vertices, Delta delta)> AddAsync(Vertex vertex, CancellationToken cancellationToken = default)
@@ -137,15 +139,16 @@ public class NetworkGraph
         var result = LocalAdjacencyChanged(source);
         bool added = false;
 
+        Vertex? newLocalVertex = null;
+
         if (result < 0)
         {
-            _localVertex.Neighborhood.Neighbors.Add(source.Neighborhood.Address);
+            newLocalVertex = Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _certificateManager);
             added = true;
         }
         else if (result > 0)
         {
-            _localVertex.Neighborhood.Neighbors.Remove(source.Neighborhood.Address);
-            CleanupGraph(source.Neighborhood.Address);
+            newLocalVertex = Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _certificateManager);
         }
 
         if (result == 0)
@@ -153,18 +156,21 @@ public class NetworkGraph
             return (false, new());
         }
 
-        _vertices.Remove(_localVertex);
-        _localVertex = Vertex.Create(
-            _certificateManager,
-            _localVertex.Neighborhood.Neighbors,
-            _localVertex.Neighborhood.Hostname);
-        _vertices.Add(_localVertex);
+        ReplaceLocalVertex(newLocalVertex!);
 
         return (true, new Delta { Vertex = source, Added = added });
     }
 
-    private void CleanupGraph(string address)
+    private void ReplaceLocalVertex(Vertex vertex)
     {
+        _vertices.Remove(_localVertex);
+        _localVertex = vertex;
+        _vertices.Add(_localVertex);
+    }
+
+    private void CleanupGraph()
+    {
+
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)

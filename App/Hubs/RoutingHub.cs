@@ -1,35 +1,45 @@
-using Enigma5.App.Hubs.Contracts;
 using Enigma5.App.Attributes;
 using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 using Enigma5.App.Resources.Queries;
-using System.Text.Json;
-using Enigma5.App.Network;
 using Enigma5.App.Models;
+using Enigma5.Crypto;
+using Enigma5.App.Security;
+using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.App.Data;
+using AutoMapper;
 
 namespace Enigma5.App.Hubs;
 
 public class RoutingHub :
     RoutingHubBase<RoutingHub>,
+    IHub,
     IOnionParsingHub,
     IOnionRoutingHub
 {
     private readonly SessionManager _sessionManager;
 
-    private readonly NetworkBridge _networkBridge;
+    private readonly CertificateManager _certificateManager;
+
+    private readonly NetworkGraph _networkGraph;
 
     private readonly IMediator _commandRouter;
 
+    private readonly IMapper _mapper;
+
     public RoutingHub(
         SessionManager sessionManager,
-        NetworkBridge networkBridge,
-        IMediator commandRouter
-        )
+        CertificateManager certificateManager,
+        NetworkGraph networkGraph,
+        IMediator commandRouter,
+        IMapper mapper)
     {
         _sessionManager = sessionManager;
-        _networkBridge = networkBridge;
+        _certificateManager = certificateManager;
+        _networkGraph = networkGraph;
         _commandRouter = commandRouter;
+        _mapper = mapper;
     }
 
     public string? Address { get; set; }
@@ -61,11 +71,12 @@ public class RoutingHub :
 
             if (onions.Any())
             {
-                await RespondAsync("Synchronize", onions.Select(item => JsonSerializer.Serialize(new
+                await RespondAsync(nameof(Synchronize), onions.Select(item => new Models.PendingMessage
                 {
-                    item.Content,
-                    item.DateReceived
-                })));
+                    Content = item.Content,
+                    Destination = item.Destination,
+                    DateReceived = item.DateReceived
+                }));
 
                 var command = new MarkMessagesAsDeliveredCommand
                 {
@@ -77,22 +88,102 @@ public class RoutingHub :
         }
     }
 
-    public async Task Authenticate(string publicKey, string signature)
+    private async Task<(Vertex? localVertex, BroadcastAdjacencyList? broadcasts)> AddNewAdjacency(string publicKey)
     {
-        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, publicKey, signature);
-        await RespondAsync(nameof(Authenticate), authenticated);
-        await Synchronize();
+        var command = new UpdateLocalAdjacencyCommand
+        {
+            Address = CertificateHelper.GetHexAddressFromPublicKey(publicKey),
+            Add = true
+        };
+
+        return await _commandRouter.Send(command);
     }
+
+    public async Task<bool> Authenticate(AuthenticationRequest request)
+    {
+        if (request.PublicKey == null || request.Signature == null)
+        {
+            return false;
+        }
+
+        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey, request.Signature);
+
+        if (!authenticated)
+        {
+            return false;
+        }
+
+        if (request.SyncMessagesOnSuccess)
+        {
+            await Synchronize();
+        }
+
+        if (request.UpdateNetworkGraph)
+        {
+            await AddNewAdjacency(request.PublicKey);
+        }
+
+        return true;
+    }
+
+    public async Task SignToken(string token)
+    {
+        if (token != null)
+        {
+            using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
+            var data = signature.Sign(Convert.FromBase64String(token));
+
+            if (data != null)
+            {
+                var signedData = Convert.ToBase64String(data);
+                await RespondAsync(nameof(Authenticate), new AuthenticationRequest
+                {
+                    PublicKey = _certificateManager.PublicKey,
+                    Signature = signedData
+                });
+            }
+        }
+    }
+
+    private async Task SendBroadcast(IEnumerable<BroadcastAdjacencyList> broadcasts, IEnumerable<string> addresses)
+    {
+        foreach (var address in addresses)
+        {
+            if (_sessionManager.TryGetConnectionId(address, out string? connectionId))
+            {
+                foreach (var broadcast in broadcasts)
+                {
+                    await SendAsync(connectionId!, nameof(Broadcast), broadcast);
+                }
+            }
+        }
+    }
+
+    private async Task SendBroadcast(BroadcastAdjacencyList broadcast, IEnumerable<string> addresses)
+    => await SendBroadcast(new List<BroadcastAdjacencyList> { broadcast }, addresses);
 
     public async Task Broadcast(BroadcastAdjacencyList broadcastAdjacencyList)
     {
-        // Console.WriteLine(broadcastAdjacencyList.PublicKey);
-        // Console.WriteLine(broadcastAdjacencyList.SignedData);
-        // Console.WriteLine(broadcastAdjacencyList.GetAdjacencyList()?.ToString());
-        await _commandRouter.Send(new SynchronizeConnectionsCommand
+        var (localVertex, broadcasts) = await _commandRouter.Send(new HandleBroadcastCommand
         {
             BroadcastAdjacencyList = broadcastAdjacencyList
         });
+
+        if (localVertex != null && broadcasts != null)
+        {
+            await SendBroadcast(broadcasts, localVertex.Neighborhood.Neighbors);
+        }
+    }
+
+    public async Task TriggerBroadcast()
+    {
+        if (_sessionManager.TryGetAddress(Context.ConnectionId, out _))
+        {
+            var localVertex = _networkGraph.LocalVertex;
+            var broadcast = _mapper.Map<BroadcastAdjacencyList>(localVertex);
+
+            await SendBroadcast(broadcast, localVertex.Neighborhood.Neighbors);
+        }
     }
 
     [OnionParsing]
@@ -106,18 +197,34 @@ public class RoutingHub :
         else if (Content != null)
         {
             var encodedContent = Convert.ToBase64String(Content);
-            var messageRouted = await _networkBridge.RouteMessageAsync(Next!, encodedContent);
 
-            if (messageRouted)
+            var createPendingMessageCommand = new CreatePendingMessageCommand
             {
-                var createPendingMessageCommand = new CreatePendingMessageCommand
-                {
-                    Content = encodedContent,
-                    Destination = Next!
-                };
+                Content = encodedContent,
+                Destination = Next!
+            };
 
-                await _commandRouter.Send(createPendingMessageCommand);
-            }
+            await _commandRouter.Send(createPendingMessageCommand);
         }
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var removedAddress = _sessionManager.Remove(Context.ConnectionId);
+
+        var command = new UpdateLocalAdjacencyCommand
+        {
+            Address = removedAddress,
+            Add = false
+        };
+
+        var (localVertex, broadcast) = await _commandRouter.Send(command);
+
+        if (broadcast != null)
+        {
+            await SendBroadcast(broadcast, localVertex.Neighborhood.Neighbors);
+        }
+
+        await base.OnDisconnectedAsync(exception);
     }
 }

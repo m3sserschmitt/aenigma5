@@ -11,9 +11,8 @@ using Microsoft.Extensions.Configuration;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
-using Enigma5.App.Network;
 using Enigma5.App.Data;
-using App;
+using Enigma5.App.Common.Constants;
 
 namespace Enigma5.App;
 
@@ -32,7 +31,6 @@ public class StartupConfiguration
         .AddHubOptions<RoutingHub>(
             options =>
                 {
-                    options.AddFilter<ClientDisconnectFilter>();
                     options.AddFilter<OnionParsingFilter>();
                     options.AddFilter<OnionRoutingFilter>();
                 });
@@ -40,7 +38,6 @@ public class StartupConfiguration
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
         services.AddSingleton<CertificateManager>();
-        services.AddSingleton<NetworkBridge>();
         services.AddSingleton<NetworkGraph>();
         services.AddTransient<MediatorHangfireBridge>();
 
@@ -56,9 +53,9 @@ public class StartupConfiguration
 
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapHub<RoutingHub>("/OnionRouting");
+            endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
 
-            endpoints.MapGet("/ServerInfo", (CertificateManager certificateManager) =>
+            endpoints.MapGet(Endpoints.ServerInfoEndpoint, (CertificateManager certificateManager) =>
             {
                 return Results.Ok(new
                 {
@@ -67,7 +64,7 @@ public class StartupConfiguration
                 });
             });
 
-            endpoints.MapGet("/Graph", (NetworkGraph networkGraph) =>
+            endpoints.MapGet(Endpoints.NetworkGraphEndpoint, (NetworkGraph networkGraph) =>
             {
                 return Results.Ok(networkGraph.Vertices);
             });
@@ -84,9 +81,5 @@ public class StartupConfiguration
             TimeSpan = new TimeSpan(24, 0, 0)
         }),
         "*/15 * * * *");
-
-        BackgroundJob.Enqueue<NetworkBridge>(
-            bridge => bridge.ConnectToNetworkAsync()
-        );
     }
 }

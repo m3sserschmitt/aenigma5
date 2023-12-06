@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.SignalR;
-
 using Enigma5.App.Attributes;
-using Enigma5.App.Hubs.Contracts;
 using Enigma5.Message;
 using Enigma5.App.Hubs.Extensions;
 using Enigma5.App.Security;
+using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.App.Hubs.Adapters;
 
 namespace Enigma5.App.Hubs.Filters;
 

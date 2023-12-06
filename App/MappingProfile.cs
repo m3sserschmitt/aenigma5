@@ -2,7 +2,7 @@
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 
-namespace App;
+namespace Enigma5.App;
 
 public class MappingProfile : Profile
 {
@@ -11,5 +11,7 @@ public class MappingProfile : Profile
         CreateMap<AdjacencyList, Neighborhood>();
         CreateMap<BroadcastAdjacencyList, Vertex>()
         .ForMember(dest => dest.Neighborhood, opt => opt.MapFrom(src => src.GetAdjacencyList()));
+        CreateMap<Vertex, BroadcastAdjacencyList>();
+        CreateMap<Neighborhood, AdjacencyList>();
     }
 }

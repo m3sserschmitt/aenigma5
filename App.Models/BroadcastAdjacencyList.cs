@@ -1,9 +1,7 @@
 using System.Text;
 using System.Text.Json;
-using Enigma5.App.Security;
 using Enigma5.Core;
 using Enigma5.Crypto;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Models;
 
@@ -15,12 +13,13 @@ public class BroadcastAdjacencyList
 
     public BroadcastAdjacencyList(
         List<string> neighbors,
-        CertificateManager certificateManager,
-        IConfiguration configuration)
+        string publicKey,
+        string privateKey,
+        string hostname)
     {
-        _adjacencyList = new(neighbors, certificateManager, configuration);
-        _signedData = Sign(certificateManager);
-        PublicKey = certificateManager.PublicKey;
+        _adjacencyList = new(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname);
+        _signedData = Sign(privateKey);
+        PublicKey = publicKey;
     }
 
     private AdjacencyList? _adjacencyList;
@@ -60,10 +59,10 @@ public class BroadcastAdjacencyList
 
     public AdjacencyList? GetAdjacencyList() => _adjacencyList;
 
-    private string Sign(CertificateManager certificateManager)
+    private string Sign(string privateKey)
     {
         var serializedList = JsonSerializer.Serialize(_adjacencyList);
-        using var envelope = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
+        using var envelope = Envelope.Factory.CreateSignature(privateKey, string.Empty);
         var signature = envelope.Sign(Encoding.ASCII.GetBytes(serializedList))
         ?? throw new Exception("Could not sign the adjacency list");
 

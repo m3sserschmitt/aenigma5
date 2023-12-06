@@ -1,4 +1,4 @@
-namespace Enigma5.App.Hubs.Contracts;
+namespace Enigma5.App.Common.Contracts.Hubs;
 
 public interface IOnionRoutingHub
 {

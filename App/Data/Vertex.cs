@@ -27,30 +27,63 @@ public class Vertex
 
     public Neighborhood Neighborhood { get; set; }
 
-    public static Vertex Create(
+    public static class Factory
+    {
+        public static Vertex Create(
         string publicKey,
         string privateKey,
         string address,
         List<string> neighbors,
         string? passphrase = null,
         string? hostname = null)
-    {
-        var neighborhood = new Neighborhood(neighbors, address, hostname);
-        var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
-        using var envelope = Envelope.Factory.CreateSignature(privateKey, passphrase ?? string.Empty);
-        var signature = envelope.Sign(serializedNeighborhood);
+        {
+            var neighborhood = new Neighborhood(neighbors, address, hostname);
+            var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
+            using var envelope = Envelope.Factory.CreateSignature(privateKey, passphrase ?? string.Empty);
+            var signature = envelope.Sign(serializedNeighborhood);
 
-        return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature!));
+            return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature!));
+        }
+
+        public static Vertex Create(CertificateManager certificateManager, List<string> neighbors, string? hostname = null)
+        => Create(
+            certificateManager.PublicKey,
+            certificateManager.PrivateKey,
+            certificateManager.Address,
+            neighbors,
+            null,
+            hostname);
+
+        public static Vertex CreateWithEmptyNeighborhood(CertificateManager certificateManager, string? hostname = null)
+        => Create(certificateManager, new List<string>(), hostname);
+
+        public static class Prototype
+        {
+            public static Vertex AddNeighbor(Vertex vertex, string address, CertificateManager certificateManager)
+            {
+                var newNeighbors = new List<string>(vertex.Neighborhood.Neighbors)
+            {
+                address
+            };
+
+                return Create(certificateManager, newNeighbors, vertex.Neighborhood.Hostname);
+            }
+
+            public static Vertex AddNeighbor(Vertex vertex, Vertex newNeighbor, CertificateManager certificateManager)
+            => AddNeighbor(vertex, newNeighbor.Neighborhood.Address, certificateManager);
+
+            public static Vertex RemoveNeighbor(Vertex vertex, string address, CertificateManager certificateManager)
+            {
+                var newNeighbors = new List<string>(vertex.Neighborhood.Neighbors);
+                newNeighbors.Remove(address);
+
+                return Create(certificateManager, newNeighbors, vertex.Neighborhood.Hostname);
+            }
+
+            public static Vertex RemoveNeighbor(Vertex vertex, Vertex neighbor, CertificateManager certificateManager)
+            => RemoveNeighbor(vertex, neighbor, certificateManager);
+        }
     }
-
-    public static Vertex Create(CertificateManager certificateManager, List<string> neighbors, string? hostname = null)
-    => Create(
-        certificateManager.PublicKey,
-        certificateManager.PrivateKey,
-        certificateManager.Address,
-        neighbors,
-        null,
-        hostname);
 
     public static bool operator ==(Vertex? obj1, Vertex? obj2)
     {

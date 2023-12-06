@@ -9,7 +9,7 @@ public class ConnectionsMapper
         return connections.TryAdd(address, connectionId);
     }
 
-    public bool Remove(string connectionId)
+    public string? Remove(string connectionId)
     {
         string? address = null;
 
@@ -22,7 +22,12 @@ public class ConnectionsMapper
             }
         }
 
-        return address != null && connections.Remove(address);
+        if (address == null || !connections.Remove(address))
+        {
+            return null;
+        }
+
+        return address;
     }
 
     public bool TryGetConnectionId(string address, out string? connectionId)

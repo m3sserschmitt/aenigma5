@@ -44,11 +44,11 @@ public class SessionManager
         return false;
     }
 
-    public void Remove(string connectionId)
+    public string? Remove(string connectionId)
     {
         pending.Remove(connectionId);
         authenticated.Remove(connectionId);
-        connectionsMapper.Remove(connectionId);
+        return connectionsMapper.Remove(connectionId);
     }
 
     public bool TryGetConnectionId(string address, out string? connectionId)

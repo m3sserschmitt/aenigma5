@@ -1,6 +1,4 @@
 using System.Text.Json;
-using Enigma5.App.Security;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Models;
 
@@ -10,10 +8,10 @@ public class AdjacencyList
     {
     }
 
-    public AdjacencyList(List<string> neighbors, CertificateManager certificateManager, IConfiguration configuration)
+    public AdjacencyList(List<string> neighbors, string address, string hostname)
     {
-        Address = certificateManager.Address;
-        Hostname = configuration.GetValue<string>("Hostname");
+        Address = address;
+        Hostname = hostname;
         Neighbors = neighbors;
     }
 

@@ -10,6 +10,9 @@ where TSelf : RoutingHubBase<TSelf>
     protected async Task RespondAsync(string method, object? arg1)
     => await Clients.Client(Context.ConnectionId).SendAsync(method, arg1);
 
+    protected async Task SendAsync(string connectionId, string method, object? arg1)
+    => await Clients.Client(connectionId).SendAsync(method, arg1);
+
     protected async Task RouteMessage(string destinationConnectionId, byte[] data)
     {
         var routingMethod = typeof(TSelf).GetMethods()
