@@ -52,11 +52,8 @@ public class RoutingHub :
 
     public byte[]? Content { get; set; }
 
-    public async Task GenerateToken()
-    {
-        var token = _sessionManager.AddPending(Context.ConnectionId);
-        await RespondAsync(nameof(GenerateToken), token);
-    }
+    public string? GenerateToken()
+    => _sessionManager.AddPending(Context.ConnectionId);
 
     private async Task Synchronize()
     {
@@ -78,10 +75,7 @@ public class RoutingHub :
                     DateReceived = item.DateReceived
                 }));
 
-                var command = new MarkMessagesAsDeliveredCommand
-                {
-                    Destination = address!
-                };
+                var command = new MarkMessagesAsDeliveredCommand(address!);
 
                 await _commandRouter.Send(command);
             }
@@ -90,11 +84,7 @@ public class RoutingHub :
 
     private async Task<(Vertex? localVertex, BroadcastAdjacencyList? broadcasts)> AddNewAdjacency(string publicKey)
     {
-        var command = new UpdateLocalAdjacencyCommand
-        {
-            Address = CertificateHelper.GetHexAddressFromPublicKey(publicKey),
-            Add = true
-        };
+        var command = new UpdateLocalAdjacencyCommand(CertificateHelper.GetHexAddressFromPublicKey(publicKey), true);
 
         return await _commandRouter.Send(command);
     }
@@ -126,23 +116,22 @@ public class RoutingHub :
         return true;
     }
 
-    public async Task SignToken(string token)
+    public Signature? SignToken(string token)
     {
-        if (token != null)
+        if (token == null)
         {
-            using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-            var data = signature.Sign(Convert.FromBase64String(token));
-
-            if (data != null)
-            {
-                var signedData = Convert.ToBase64String(data);
-                await RespondAsync(nameof(Authenticate), new AuthenticationRequest
-                {
-                    PublicKey = _certificateManager.PublicKey,
-                    Signature = signedData
-                });
-            }
+            return null;
         }
+
+        using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
+        var data = signature.Sign(Convert.FromBase64String(token));
+
+        if (data == null)
+        {
+            return null;
+        }
+
+        return new Signature(Convert.ToBase64String(data), _certificateManager.PublicKey);
     }
 
     private async Task SendBroadcast(IEnumerable<BroadcastAdjacencyList> broadcasts, IEnumerable<string> addresses)
@@ -164,10 +153,7 @@ public class RoutingHub :
 
     public async Task Broadcast(BroadcastAdjacencyList broadcastAdjacencyList)
     {
-        var (localVertex, broadcasts) = await _commandRouter.Send(new HandleBroadcastCommand
-        {
-            BroadcastAdjacencyList = broadcastAdjacencyList
-        });
+        var (localVertex, broadcasts) = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
         if (localVertex != null && broadcasts != null)
         {
@@ -198,11 +184,7 @@ public class RoutingHub :
         {
             var encodedContent = Convert.ToBase64String(Content);
 
-            var createPendingMessageCommand = new CreatePendingMessageCommand
-            {
-                Content = encodedContent,
-                Destination = Next!
-            };
+            var createPendingMessageCommand = new CreatePendingMessageCommand(Next!, encodedContent);
 
             await _commandRouter.Send(createPendingMessageCommand);
         }
@@ -212,11 +194,12 @@ public class RoutingHub :
     {
         var removedAddress = _sessionManager.Remove(Context.ConnectionId);
 
-        var command = new UpdateLocalAdjacencyCommand
+        if(removedAddress == null)
         {
-            Address = removedAddress,
-            Add = false
-        };
+            return;
+        }
+
+        var command = new UpdateLocalAdjacencyCommand(removedAddress, false);
 
         var (localVertex, broadcast) = await _commandRouter.Send(command);
 

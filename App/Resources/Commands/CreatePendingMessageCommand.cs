@@ -5,7 +5,13 @@ namespace Enigma5.App.Resources.Commands;
 
 public class CreatePendingMessageCommand : IRequest<PendingMessage>
 {
-    public string Destination { get; set; } = string.Empty;
+    public CreatePendingMessageCommand(string destination, string content)
+    {
+        Destination = destination;
+        Content = content;
+    }
 
-    public string Content { get; set; } = string.Empty;
+    public string Destination { get; private set; }
+
+    public string Content { get; private set; }
 }

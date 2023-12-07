@@ -75,11 +75,7 @@ public class StartupConfiguration
         // TODO: Refactor this!!
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
         "storage-cleanup",
-        bridge => bridge.Send(new CleanupMessagesCommand
-        {
-            RemoveDelivered = true,
-            TimeSpan = new TimeSpan(24, 0, 0)
-        }),
+        bridge => bridge.Send(new CleanupMessagesCommand(new TimeSpan(24, 0, 0), true)),
         "*/15 * * * *");
     }
 }

@@ -7,7 +7,7 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class BroadcastHandler
-: IRequestHandler<HandleBroadcastCommand, (Vertex? localVertex, IEnumerable<BroadcastAdjacencyList>? broadcasts)>
+: IRequestHandler<HandleBroadcastCommand, (Vertex localVertex, IEnumerable<BroadcastAdjacencyList> broadcasts)>
 {
     private readonly NetworkGraph _networkGraph;
 
@@ -19,13 +19,8 @@ public class BroadcastHandler
         _mapper = mapper;
     }
 
-    public async Task<(Vertex? localVertex, IEnumerable<BroadcastAdjacencyList>? broadcasts)> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken)
+    public async Task<(Vertex localVertex, IEnumerable<BroadcastAdjacencyList> broadcasts)> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken)
     {
-        if (request.BroadcastAdjacencyList == null)
-        {
-            return (null, null);
-        }
-
         var vertex = _mapper.Map<Vertex>(request.BroadcastAdjacencyList);
         var (vertices, _) = await _networkGraph.AddAsync(vertex, cancellationToken);
 

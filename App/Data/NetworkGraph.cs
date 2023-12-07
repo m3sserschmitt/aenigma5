@@ -158,7 +158,7 @@ public class NetworkGraph
 
         ReplaceLocalVertex(newLocalVertex!);
 
-        return (true, new Delta { Vertex = source, Added = added });
+        return (true, new Delta(source, added));
     }
 
     private void ReplaceLocalVertex(Vertex vertex)

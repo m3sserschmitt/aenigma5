@@ -15,13 +15,7 @@ public class CreatePendingMessageHandler : IRequestHandler<CreatePendingMessageC
 
     public async Task<PendingMessage> Handle(CreatePendingMessageCommand command, CancellationToken cancellationToken)
     {
-        var pendingMessage = new PendingMessage
-        {
-            Destination = command.Destination,
-            Content = command.Content,
-            DateReceived = DateTime.Now,
-            Sent = false
-        };
+        var pendingMessage = new PendingMessage(command.Destination, command.Content, DateTime.Now, false);
 
         await _context.AddAsync(pendingMessage, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);

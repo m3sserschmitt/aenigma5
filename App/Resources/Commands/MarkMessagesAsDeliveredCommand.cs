@@ -4,5 +4,10 @@ namespace Enigma5.App.Resources.Commands;
 
 public class MarkMessagesAsDeliveredCommand : IRequest
 {
-    public string Destination { get; set; } = string.Empty;
+    public MarkMessagesAsDeliveredCommand(string destination)
+    {
+        Destination = destination;
+    }
+    
+    public string Destination { get; private set; }
 }

@@ -4,7 +4,13 @@ namespace Enigma5.App.Resources.Commands;
 
 public class CleanupMessagesCommand : IRequest
 {
-    public TimeSpan TimeSpan { get; set; }
+    public CleanupMessagesCommand(TimeSpan timeSpan, bool removeDelivered)
+    {
+        TimeSpan = timeSpan;
+        RemoveDelivered = removeDelivered;
+    }
+    
+    public TimeSpan TimeSpan { get; private set; }
 
-    public bool RemoveDelivered { get; set; }
+    public bool RemoveDelivered { get; private set; }
 }

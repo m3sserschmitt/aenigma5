@@ -4,7 +4,12 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class HandleBroadcastCommand: IRequest<(Vertex? localVertex, IEnumerable<BroadcastAdjacencyList>? broadcasts)>
+public class HandleBroadcastCommand: IRequest<(Vertex localVertex, IEnumerable<BroadcastAdjacencyList> broadcasts)>
 {
-    public BroadcastAdjacencyList? BroadcastAdjacencyList { get; set; }
+    public HandleBroadcastCommand(BroadcastAdjacencyList broadcastAdjacencyList)
+    {
+        BroadcastAdjacencyList = broadcastAdjacencyList;
+    }
+    
+    public BroadcastAdjacencyList BroadcastAdjacencyList { get; private set; }
 }

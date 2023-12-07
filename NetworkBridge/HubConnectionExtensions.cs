@@ -21,23 +21,45 @@ public static class HubConnectionExtensions
     public static void ForwardBroadcastingTo(this HubConnection connection, HubConnection other)
     => connection.ForwardTo<BroadcastAdjacencyList>(other, nameof(IHub.Broadcast));
 
-    public static void ForwardTokensForSigningTo(this HubConnection connection, HubConnection other)
-    {
-        connection.On<string>(nameof(IHub.GenerateToken), token =>
-        {
-            other.InvokeAsync(nameof(IHub.SignToken), token);
-        });
-    }
+    public static Task StartAuthentication(this (HubConnection first, HubConnection second) pair, Func<bool, Task> onCompleted)
+    => pair.StartAuthentication(true, onCompleted);
 
-    public static void ForwardAuthenticationTo(this HubConnection connection, HubConnection other, bool updateNetworkGraph, bool broadcast, bool syncMessagesOnSuccess = false)
+    private static Task StartAuthentication(
+        this (HubConnection first, HubConnection second) pair,
+        bool authenticateInReverse,
+        Func<bool, Task> onCompleted)
     {
-        connection.On<AuthenticationRequest>(nameof(IHub.Authenticate), data =>
+        return pair.second.InvokeAsync<string?>(nameof(IHub.GenerateToken))
+        .ContinueWith(async response =>
         {
-            other.InvokeAsync(nameof(IHub.Authenticate), new AuthenticationRequest {
-                PublicKey = data.PublicKey,
-                Signature = data.Signature,
-                SyncMessagesOnSuccess = syncMessagesOnSuccess,
-                UpdateNetworkGraph = updateNetworkGraph,
+            var token = await response ?? throw new Exception();
+
+            await pair.first.InvokeAsync<Signature?>(nameof(IHub.SignToken), token)
+            .ContinueWith(async response =>
+            {
+                var signature = await response ?? throw new Exception();
+
+                await pair.second.InvokeAsync<bool>(nameof(IHub.Authenticate), new AuthenticationRequest
+                {
+                    Signature = signature.SignedData,
+                    PublicKey = signature.PublicKey,
+                    UpdateNetworkGraph = !authenticateInReverse,
+                    SyncMessagesOnSuccess = false
+                })
+                .ContinueWith(async response =>
+                {
+                    var success = await response;
+                    if (authenticateInReverse && success)
+                    {
+                        (HubConnection, HubConnection) reversed = (pair.second, pair.first);
+
+                        await reversed.StartAuthentication(false, onCompleted);
+                    }
+                    else
+                    {
+                        await onCompleted(success);
+                    }
+                });
             });
         });
     }
