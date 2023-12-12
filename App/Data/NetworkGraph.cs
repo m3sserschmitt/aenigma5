@@ -58,10 +58,10 @@ public class NetworkGraph
     {
         _mutex.WaitOne();
 
-        if(Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+        if (Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
         {
             ReplaceLocalVertex(newVertex!);
-            
+
             _mutex.ReleaseMutex();
             return (LocalVertex, true);
         }
@@ -74,9 +74,10 @@ public class NetworkGraph
     {
         _mutex.WaitOne();
 
-        if(Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+        if (Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
         {
             ReplaceLocalVertex(newVertex!);
+            CleanupGraph();
 
             _mutex.ReleaseMutex();
             return (LocalVertex, true);
@@ -132,14 +133,18 @@ public class NetworkGraph
                 _vertices.Add(vertex);
                 vertices.Add(vertex);
             }
+
+            if(updated || previous != vertex)
+            {
+                CleanupGraph();
+            }
         }
         else
         {
             ReplaceLocalVertex(vertex);
+            CleanupGraph();
             vertices.Add(_localVertex);
         }
-
-        CleanupGraph();
 
         _mutex.ReleaseMutex();
 
@@ -191,7 +196,22 @@ public class NetworkGraph
 
     private void CleanupGraph()
     {
+        var nonExistentAddresses = new HashSet<string>(_vertices.Count + 1);
 
+        foreach (var vertex in _vertices)
+        {
+            nonExistentAddresses.Add(vertex.Neighborhood.Address);
+        }
+
+        foreach (var vertex in _vertices)
+        {
+            foreach (var address in vertex.Neighborhood.Neighbors)
+            {
+                nonExistentAddresses.Remove(address);
+            }
+        }
+
+        _vertices.RemoveAll(item => nonExistentAddresses.Contains(item.Neighborhood.Address));
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)
