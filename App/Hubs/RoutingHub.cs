@@ -82,9 +82,16 @@ public class RoutingHub :
         }
     }
 
-    private async Task<(Vertex? localVertex, BroadcastAdjacencyList? broadcasts)> AddNewAdjacency(string publicKey)
+    private async Task<(Vertex localVertex, BroadcastAdjacencyList? broadcast)> AddNewAdjacency(string publicKey)
     {
         var command = new UpdateLocalAdjacencyCommand(CertificateHelper.GetHexAddressFromPublicKey(publicKey), true);
+
+        return await _commandRouter.Send(command);
+    }
+
+    private async Task<(Vertex localVertex, BroadcastAdjacencyList? broadcast)> RemoveAdjacency(string address)
+    {
+        var command = new UpdateLocalAdjacencyCommand(address, false);
 
         return await _commandRouter.Send(command);
     }
@@ -192,16 +199,12 @@ public class RoutingHub :
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var removedAddress = _sessionManager.Remove(Context.ConnectionId);
-
-        if(removedAddress == null)
+        if(!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
         {
             return;
         }
 
-        var command = new UpdateLocalAdjacencyCommand(removedAddress, false);
-
-        var (localVertex, broadcast) = await _commandRouter.Send(command);
+        var (localVertex, broadcast) = await RemoveAdjacency(removedAddress!);
 
         if (broadcast != null)
         {

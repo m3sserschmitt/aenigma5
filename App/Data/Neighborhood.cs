@@ -10,7 +10,7 @@ public class Neighborhood
     
     public Neighborhood(List<string> neighbors, string address, string? hostname = null)
     {
-        Neighbors = neighbors;
+        Neighbors = new HashSet<string>(neighbors);
         Address = address;
         Hostname = hostname;    
     }
@@ -19,8 +19,7 @@ public class Neighborhood
 
     public string? Hostname { get; set; }
 
-    // TODO: Possible refactoring to use hash sets
-    public List<string> Neighbors { get; set; }
+    public HashSet<string> Neighbors { get; set; }
 
     public static bool operator ==(Neighborhood? obj1, Neighborhood? obj2)
     {

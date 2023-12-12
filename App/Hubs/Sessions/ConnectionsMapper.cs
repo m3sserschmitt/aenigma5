@@ -9,9 +9,9 @@ public class ConnectionsMapper
         return connections.TryAdd(address, connectionId);
     }
 
-    public string? Remove(string connectionId)
+    public bool Remove(string connectionId, out string? address)
     {
-        string? address = null;
+        address = null;
 
         foreach (var pair in connections)
         {
@@ -24,10 +24,10 @@ public class ConnectionsMapper
 
         if (address == null || !connections.Remove(address))
         {
-            return null;
+            return false;
         }
 
-        return address;
+        return true;
     }
 
     public bool TryGetConnectionId(string address, out string? connectionId)

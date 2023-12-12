@@ -54,30 +54,51 @@ public class NetworkGraph
         _vertices = new() { _localVertex };
     }
 
-    public Vertex Add(string address)
+    public (Vertex localVertex, bool updated) AddAdjacency(string address)
     {
         _mutex.WaitOne();
 
-        if (!_localVertex.Neighborhood.Neighbors.Contains(address))
+        if(Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
         {
-            _vertices.Remove(_localVertex);
-            _localVertex = Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager);
-            _vertices.Add(_localVertex);
+            ReplaceLocalVertex(newVertex!);
+            
+            _mutex.ReleaseMutex();
+            return (LocalVertex, true);
         }
 
         _mutex.ReleaseMutex();
-
-
-        return LocalVertex;
+        return (LocalVertex, false);
     }
 
-    public Task<Vertex> AddAsync(string address, CancellationToken cancellationToken = default)
+    public (Vertex localVertex, bool updated) RemoveAdjacency(string address)
     {
-        Vertex task() => Add(address);
+        _mutex.WaitOne();
+
+        if(Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+        {
+            ReplaceLocalVertex(newVertex!);
+
+            _mutex.ReleaseMutex();
+            return (LocalVertex, true);
+        }
+
+        _mutex.ReleaseMutex();
+        return (LocalVertex, false);
+    }
+
+    public Task<(Vertex localVertex, bool updated)> AddAdjacencyAsync(string address, CancellationToken cancellationToken = default)
+    {
+        (Vertex, bool) task() => AddAdjacency(address);
         return Task.Run(task, cancellationToken);
     }
 
-    public (IList<Vertex> vertices, Delta delta) Add(Vertex vertex)
+    public Task<(Vertex localVertex, bool updated)> RemoveAdjacencyAsync(string address, CancellationToken cancellationToken = default)
+    {
+        (Vertex, bool) task() => RemoveAdjacency(address);
+        return Task.Run(task, cancellationToken);
+    }
+
+    public (IList<Vertex> vertices, Delta delta) Update(Vertex vertex)
     {
         var vertices = new List<Vertex>();
         Delta delta = new();
@@ -125,9 +146,9 @@ public class NetworkGraph
         return (vertices, delta);
     }
 
-    public Task<(IList<Vertex> vertices, Delta delta)> AddAsync(Vertex vertex, CancellationToken cancellationToken = default)
+    public Task<(IList<Vertex> vertices, Delta delta)> UpdateAsync(Vertex vertex, CancellationToken cancellationToken = default)
     {
-        (IList<Vertex>, Delta delta) task() => Add(vertex);
+        (IList<Vertex>, Delta delta) task() => Update(vertex);
         return Task.Run(task, cancellationToken);
     }
 
@@ -143,12 +164,12 @@ public class NetworkGraph
 
         if (result < 0)
         {
-            newLocalVertex = Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _certificateManager);
+            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _certificateManager, out newLocalVertex);
             added = true;
         }
         else if (result > 0)
         {
-            newLocalVertex = Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _certificateManager);
+            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _certificateManager, out newLocalVertex);
         }
 
         if (result == 0)

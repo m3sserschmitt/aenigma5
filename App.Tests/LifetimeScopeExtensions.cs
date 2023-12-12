@@ -22,8 +22,11 @@ public static class LifetimeScopeExtensions
     {
         var certificateManager = scope.Resolve<CertificateManager>();
 
-        return scope.ResolveVertex(certificateManager.PublicKey, certificateManager.PrivateKey, certificateManager.Address, neighbors, hostname);
+        return scope.ResolveVertex(certificateManager.PublicKey, certificateManager.PrivateKey, certificateManager.Address, neighbors, null, hostname);
     }
+
+    public static Vertex ResolveLocalVertex(this ILifetimeScope scope, string? hostname = null)
+    => scope.ResolveLocalVertex(new List<string>(), hostname);
 
     public static Vertex ResolveAdjacentVertex(this ILifetimeScope scope, List<string> neighbors, string? hostname = null)
     {
@@ -35,8 +38,12 @@ public static class LifetimeScopeExtensions
         return scope.ResolveVertex(PKey.PublicKey1, PKey.PrivateKey1, PKey.Address1, l, PKey.Passphrase, hostname);
     }
 
+    public static Vertex ResolveAdjacentVertex(this ILifetimeScope scope, string? hostname = null)
+    => scope.ResolveAdjacentVertex(new List<string>(), hostname);
+
     public static Vertex ResolveNonAdjacentVertex(this ILifetimeScope scope, List<string> neighbors, string? hostname = null)
-    {
-        return scope.ResolveVertex(PKey.PublicKey1, PKey.PrivateKey1, PKey.Address1, neighbors, PKey.Passphrase, hostname);
-    }
+    => scope.ResolveVertex(PKey.PublicKey1, PKey.PrivateKey1, PKey.Address1, neighbors, PKey.Passphrase, hostname);
+
+    public static Vertex ResolveNonAdjacentVertex(this ILifetimeScope scope, string? hostname = null)
+    => scope.ResolveNonAdjacentVertex(new List<string>(), hostname);
 }

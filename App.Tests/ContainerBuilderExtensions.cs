@@ -3,7 +3,7 @@ using Autofac.Builder;
 using Enigma5.App.Data;
 using Enigma5.App.Security;
 
-namespace App.Tests;
+namespace Enigma5.App.Tests;
 
 public static class ContainerBuilderExtensions
 {

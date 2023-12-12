@@ -19,10 +19,10 @@ public class BroadcastHandler
         _mapper = mapper;
     }
 
-    public async Task<(Vertex localVertex, IEnumerable<BroadcastAdjacencyList> broadcasts)> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken)
+    public async Task<(Vertex localVertex, IEnumerable<BroadcastAdjacencyList> broadcasts)> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken = default)
     {
         var vertex = _mapper.Map<Vertex>(request.BroadcastAdjacencyList);
-        var (vertices, _) = await _networkGraph.AddAsync(vertex, cancellationToken);
+        var (vertices, _) = await _networkGraph.UpdateAsync(vertex, cancellationToken);
 
         var broadcasts = vertices.Select(item => new BroadcastAdjacencyList
         {

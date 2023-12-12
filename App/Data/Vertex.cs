@@ -59,29 +59,37 @@ public class Vertex
 
         public static class Prototype
         {
-            public static Vertex AddNeighbor(Vertex vertex, string address, CertificateManager certificateManager)
+            public static bool AddNeighbor(Vertex vertex, string address, CertificateManager certificateManager, out Vertex? newVertex)
             {
-                var newNeighbors = new List<string>(vertex.Neighborhood.Neighbors)
-            {
-                address
-            };
+                var newNeighbors = new HashSet<string>(vertex.Neighborhood.Neighbors);
+                if (newNeighbors.Add(address))
+                {
+                    newVertex = Create(certificateManager, new List<string>(newNeighbors), vertex.Neighborhood.Hostname);
+                    return true;
+                }
 
-                return Create(certificateManager, newNeighbors, vertex.Neighborhood.Hostname);
+                newVertex = null;
+                return false;
             }
 
-            public static Vertex AddNeighbor(Vertex vertex, Vertex newNeighbor, CertificateManager certificateManager)
-            => AddNeighbor(vertex, newNeighbor.Neighborhood.Address, certificateManager);
+            public static bool AddNeighbor(Vertex vertex, Vertex newNeighbor, CertificateManager certificateManager, out Vertex? newVertex)
+            => AddNeighbor(vertex, newNeighbor.Neighborhood.Address, certificateManager, out newVertex);
 
-            public static Vertex RemoveNeighbor(Vertex vertex, string address, CertificateManager certificateManager)
+            public static bool RemoveNeighbor(Vertex vertex, string address, CertificateManager certificateManager, out Vertex? newVertex)
             {
-                var newNeighbors = new List<string>(vertex.Neighborhood.Neighbors);
-                newNeighbors.Remove(address);
+                var newNeighbors = new HashSet<string>(vertex.Neighborhood.Neighbors);
+                if(newNeighbors.Remove(address))
+                {
+                    newVertex = Create(certificateManager, new List<string>(newNeighbors), vertex.Neighborhood.Hostname);
+                    return true;
+                }
 
-                return Create(certificateManager, newNeighbors, vertex.Neighborhood.Hostname);
+                newVertex = null;
+                return false;
             }
 
-            public static Vertex RemoveNeighbor(Vertex vertex, Vertex neighbor, CertificateManager certificateManager)
-            => RemoveNeighbor(vertex, neighbor, certificateManager);
+            public static bool RemoveNeighbor(Vertex vertex, Vertex neighbor, CertificateManager certificateManager, out Vertex? newVertex)
+            => RemoveNeighbor(vertex, neighbor.Neighborhood.Address, certificateManager, out newVertex);
         }
     }
 

@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class UpdateLocalAdjacencyCommand : IRequest<(Vertex localVertex, BroadcastAdjacencyList broadcast)>
+public class UpdateLocalAdjacencyCommand : IRequest<(Vertex localVertex, BroadcastAdjacencyList? broadcast)>
 {
     public UpdateLocalAdjacencyCommand(string address, bool add)    
     {
