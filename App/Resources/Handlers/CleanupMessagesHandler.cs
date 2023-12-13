@@ -16,14 +16,21 @@ public class CleanupMessagesHandler
 
     public async Task Handle(CleanupMessagesCommand command, CancellationToken cancellationToken)
     {
-        var time = DateTime.Now - command.TimeSpan;
+        try
+        {
+            var time = DateTime.Now - command.TimeSpan;
 
-        var messages = _context.Messages
-        .Where(item =>
-            time > item.DateReceived ||
-            (command.RemoveDelivered && item.Sent));
+            var messages = _context.Messages
+            .Where(item =>
+                time > item.DateReceived ||
+                (command.RemoveDelivered && item.Sent));
 
-        _context.Messages.RemoveRange(messages);
-        await _context.SaveChangesAsync(cancellationToken);
+            _context.Messages.RemoveRange(messages);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // TODO: Log exception!!
+        }
     }
 }

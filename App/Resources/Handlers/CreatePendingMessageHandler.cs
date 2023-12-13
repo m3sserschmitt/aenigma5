@@ -4,21 +4,29 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CreatePendingMessageHandler : IRequestHandler<CreatePendingMessageCommand, PendingMessage>
+public class CreatePendingMessageHandler : IRequestHandler<CreatePendingMessageCommand, PendingMessage?>
 {
     private readonly EnigmaDbContext _context;
 
-    public CreatePendingMessageHandler(EnigmaDbContext context) 
+    public CreatePendingMessageHandler(EnigmaDbContext context)
     {
         _context = context;
     }
 
-    public async Task<PendingMessage> Handle(CreatePendingMessageCommand command, CancellationToken cancellationToken)
+    public async Task<PendingMessage?> Handle(CreatePendingMessageCommand command, CancellationToken cancellationToken)
     {
-        var pendingMessage = new PendingMessage(command.Destination, command.Content, DateTime.Now, false);
+        try
+        {
+            var pendingMessage = new PendingMessage(command.Destination, command.Content, DateTime.Now, false);
 
-        await _context.AddAsync(pendingMessage, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-        return pendingMessage;
+            await _context.AddAsync(pendingMessage, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            return pendingMessage;
+        }
+        catch
+        {
+            // TODO: Log exception!!
+            return null;
+        }
     }
 }

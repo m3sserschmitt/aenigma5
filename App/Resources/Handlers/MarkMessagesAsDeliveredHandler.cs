@@ -16,14 +16,22 @@ public class MarkMessagesAsDeliveredHandler
 
     public async Task Handle(MarkMessagesAsDeliveredCommand command, CancellationToken cancellationToken)
     {
-        var messages = _context.Messages.Where(item => item.Destination == command.Destination);
-
-        foreach (var message in messages)
+        try
         {
-            message.Sent = true;
-        }
+            var messages = _context.Messages.Where(item => item.Destination == command.Destination);
 
-        _context.UpdateRange(messages);
-        await _context.SaveChangesAsync(cancellationToken);
+            foreach (var message in messages)
+            {
+                message.Sent = true;
+            }
+
+            _context.UpdateRange(messages);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            // TODO: Log exception!!
+        }
     }
 }

@@ -3,7 +3,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class CreatePendingMessageCommand : IRequest<PendingMessage>
+public class CreatePendingMessageCommand : IRequest<PendingMessage?>
 {
     public CreatePendingMessageCommand(string destination, string content)
     {

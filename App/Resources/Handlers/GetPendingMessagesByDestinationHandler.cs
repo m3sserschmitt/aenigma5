@@ -17,6 +17,14 @@ public class GetPendingMessagesByDestinationHandler
 
     public async Task<IEnumerable<PendingMessage>> Handle(GetPendingMessagesByDestinationQuery query, CancellationToken cancellationToken)
     {
-        return await _context.Messages.Where(item => item.Destination == query.Destination).ToListAsync(cancellationToken: cancellationToken);
+        try
+        {
+            return await _context.Messages.Where(item => item.Destination == query.Destination && item.Sent == false).ToListAsync(cancellationToken: cancellationToken);
+        }
+        catch
+        {
+            // TODO: Log exception!!
+            return new List<PendingMessage>();
+        }
     }
 }

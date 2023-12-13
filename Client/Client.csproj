@@ -14,6 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Message\Message.csproj" />
     <ProjectReference Include="..\Crypto\Crypto.csproj" />
+    <ProjectReference Include="..\App.Models\App.Models.csproj" />
+    <ProjectReference Include="..\App.Common\App.Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,7 @@ using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
 using Enigma5.App.Data;
 using Enigma5.App.Common.Constants;
+using Enigma5.App.Models;
 
 namespace Enigma5.App;
 
@@ -57,10 +58,10 @@ public class StartupConfiguration
 
             endpoints.MapGet(Endpoints.ServerInfoEndpoint, (CertificateManager certificateManager) =>
             {
-                return Results.Ok(new
+                return Results.Ok(new ServerInfo
                 {
-                    certificateManager.PublicKey,
-                    certificateManager.Address
+                    PublicKey = certificateManager.PublicKey,
+                    Address = certificateManager.Address
                 });
             });
 
