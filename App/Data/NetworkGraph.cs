@@ -58,7 +58,8 @@ public class NetworkGraph
     {
         _mutex.WaitOne();
 
-        if (Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+        if (Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex)
+        && NetworkGraphValidationPolicy.Validate(newVertex!))
         {
             ReplaceLocalVertex(newVertex!);
 
@@ -104,9 +105,9 @@ public class NetworkGraph
         var vertices = new List<Vertex>();
         Delta delta = new();
 
-        if (!Validate(vertex))
+        if (!NetworkGraphValidationPolicy.Validate(vertex))
         {
-            return (vertices, new());
+            return (vertices, delta);
         }
 
         _mutex.WaitOne();
@@ -134,7 +135,7 @@ public class NetworkGraph
                 vertices.Add(vertex);
             }
 
-            if(updated || previous != vertex)
+            if (updated || previous != vertex)
             {
                 CleanupGraph();
             }
@@ -211,37 +212,12 @@ public class NetworkGraph
             }
         }
 
-        _vertices.RemoveAll(item => nonExistentAddresses.Contains(item.Neighborhood.Address));
+        _vertices.RemoveAll(
+            item => item.Neighborhood.Address != _localVertex.Neighborhood.Address
+            && nonExistentAddresses.Contains(item.Neighborhood.Address));
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)
     => (_localVertex.Neighborhood.Neighbors.Contains(vertex2.Neighborhood.Address) ? 1 : 0)
        - (vertex2.Neighborhood.Neighbors.Contains(_localVertex.Neighborhood.Address) ? 1 : 0);
-
-    private static bool Validate(Vertex vertex)
-    {
-        if (!ValidateRequiredFields(vertex))
-        {
-            return false;
-        }
-
-        try
-        {
-            var decodedSignature = Convert.FromBase64String(vertex.SignedData!);
-            using var envelope = Envelope.Factory.CreateSignatureVerification(vertex.PublicKey!);
-
-            return envelope.Verify(decodedSignature);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool ValidateRequiredFields(Vertex vertex)
-    => vertex.PublicKey != null
-    && vertex.SignedData != null
-    && vertex.Neighborhood != null
-    && vertex.Neighborhood.Address != null
-    && vertex.Neighborhood.Neighbors != null;
 }
