@@ -14,6 +14,9 @@ using Enigma5.App.Hangfire;
 using Enigma5.App.Data;
 using Enigma5.App.Common.Constants;
 using Enigma5.App.Models;
+using Enigma5.Crypto;
+using System.Text;
+using System.Text.Json;
 
 namespace Enigma5.App;
 
@@ -56,18 +59,27 @@ public class StartupConfiguration
         {
             endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
 
-            endpoints.MapGet(Endpoints.ServerInfoEndpoint, (CertificateManager certificateManager) =>
+            endpoints.MapGet(Endpoints.ServerInfoEndpoint, (CertificateManager certificateManager, NetworkGraph networkGraph) =>
             {
+                var serializedGraph = JsonSerializer.Serialize(networkGraph.Vertices);
+                var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
+
                 return Results.Ok(new ServerInfo
                 {
                     PublicKey = certificateManager.PublicKey,
-                    Address = certificateManager.Address
+                    Address = certificateManager.Address,
+                    GraphVersion = graphVersion
                 });
             });
 
             endpoints.MapGet(Endpoints.NetworkGraphEndpoint, (NetworkGraph networkGraph) =>
             {
                 return Results.Ok(networkGraph.Vertices);
+            });
+
+            endpoints.MapGet(Endpoints.GraphAddressesEndpoint, (NetworkGraph networkGraph) =>
+            {
+                return Results.Ok(networkGraph.Addresses);
             });
         });
 

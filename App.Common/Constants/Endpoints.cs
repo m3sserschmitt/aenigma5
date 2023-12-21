@@ -7,4 +7,6 @@ public static class Endpoints
     public const string ServerInfoEndpoint = "ServerInfo";
 
     public const string NetworkGraphEndpoint = "NetworkGraph";
+
+    public const string GraphAddressesEndpoint = "Addresses";
 }

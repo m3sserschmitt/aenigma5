@@ -31,6 +31,20 @@ public class NetworkGraph
         }
     }
 
+    public List<string> Addresses
+    {
+        get
+        {
+            _mutex.WaitOne();
+
+            var addresses = _vertices.Select(item => item.Neighborhood.Address).ToList();
+
+            _mutex.ReleaseMutex();
+
+            return addresses!;
+        }
+    }
+
     public Vertex LocalVertex
     {
         get
