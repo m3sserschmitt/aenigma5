@@ -1,79 +1,66 @@
-using Enigma5.Core;
 using Enigma5.Crypto.Contracts;
 using System.Runtime.InteropServices;
 
 namespace Enigma5.Crypto;
 
-public sealed class SealProvider :
+internal sealed class SealProvider :
+    IDisposable,
     IEnvelopeSeal,
     IEnvelopeUnseal,
     IEnvelopeSign,
     IEnvelopeVerify
 {
-    private CryptoContext ctx;
+    private readonly CryptoContext _ctx;
 
     private SealProvider(CryptoContext ctx)
     {
-        this.ctx = ctx;
+        _ctx = ctx;
     }
 
-    [DllImport("cryptography")]
-    private static extern IntPtr EncryptData(IntPtr ctx, byte[] plaintext, uint plaintextLen);
-
-    [DllImport("cryptography")]
-    private static extern IntPtr DecryptData(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
-
-    [DllImport("cryptography")]
-    private static extern IntPtr SignData(IntPtr ctx, byte[] plaintext, uint plaintextLen);
-
-    [DllImport("cryptography")]
-    private static extern bool VerifySignature(IntPtr ctx, byte[] ciphertext, uint ciphertextLen);
-
-    [DllImport("cryptography")]
-    private static extern uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
-
-    [DllImport("cryptography")]
-    private static extern uint GetOpenEnvelopeSize(uint pkeySizeBits, uint envelopeSize);
-
-    public static int GetEnvelopeSize(int plaintextLen)
-    => (int)GetEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)plaintextLen);
-
-    public static int GetOpenEnvelopeSize(int envelopeSize)
-    => (int)GetOpenEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)envelopeSize);
-
-    public static int GetSignedDataSize(int plaintextLen)
-    => plaintextLen + PKeyContext.Current.PKeySize / 8;
-
-    private byte[]? Execute(byte[] input, Func<IntPtr, byte[], uint, IntPtr> encryptionProvider, Func<int, int> sizeComputer)
+    ~SealProvider()
     {
-        IntPtr outputPtr = encryptionProvider(ctx, input, (uint)input.Length);
+        _ctx.Dispose();
+    }
 
-        if (outputPtr == IntPtr.Zero)
+    private delegate IntPtr NativeExecutor(IntPtr ctx, byte[] inputData, uint inputSize, out int outputSize);
+
+    private byte[]? Execute(byte[] input, NativeExecutor executor)
+    {
+        IntPtr outputPtr = executor(_ctx, input, (uint)input.Length, out int outputSize);
+
+        if (outputPtr == IntPtr.Zero || outputSize < 0)
         {
             return null;
         }
 
-        var outLen = sizeComputer(input.Length);
-        var output = new byte[outLen];
+        var output = new byte[outputSize];
 
-        Marshal.Copy(outputPtr, output, 0, outLen);
+        Marshal.Copy(outputPtr, output, 0, outputSize);
 
         return output;
     }
 
     public byte[]? Seal(byte[] plaintext)
-    => Execute(plaintext, EncryptData, GetEnvelopeSize);
+    => Execute(plaintext, Native.EncryptData);
 
     public byte[]? Unseal(byte[] ciphertext)
-    => Execute(ciphertext, DecryptData, GetOpenEnvelopeSize);
+    => Execute(ciphertext, Native.DecryptData);
 
     public byte[]? Sign(byte[] plaintext)
-    => Execute(plaintext, SignData, GetSignedDataSize);
+    => Execute(plaintext, Native.SignData);
 
     public bool Verify(byte[] ciphertext)
-    => VerifySignature(ctx, ciphertext, (uint)ciphertext.Length);
+    => Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
 
-    public void Dispose() => ctx.Dispose();
+    public void Dispose()
+    {
+        _ctx.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
-    public static SealProvider Create(CryptoContext ctx) => new SealProvider(ctx);
+    public static class Factory
+    {
+        public static SealProvider Create(CryptoContext ctx) => new(ctx);
+    }
+
 }

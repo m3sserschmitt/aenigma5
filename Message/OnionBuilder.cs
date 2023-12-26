@@ -108,7 +108,7 @@ public class OnionBuilder
         public static bool MessageSizeExceeded(byte[] content)
         {
             return content.Length >= ushort.MaxValue
-|| SealProvider.GetEnvelopeSize(content.Length) > ushort.MaxValue;
+            || Envelope.GetEnvelopeSize(content.Length) > ushort.MaxValue;
         }
     }
 

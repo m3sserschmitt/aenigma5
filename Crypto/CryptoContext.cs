@@ -1,8 +1,6 @@
-using System.Runtime.InteropServices;
-
 namespace Enigma5.Crypto;
 
-public class CryptoContext : IDisposable
+internal sealed class CryptoContext : IDisposable
 {
     private bool disposed = false;
 
@@ -29,7 +27,7 @@ public class CryptoContext : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!disposed)
         {
@@ -37,85 +35,58 @@ public class CryptoContext : IDisposable
             {
             }
 
-            FreeContext(handle);
+            Native.FreeContext(handle);
             handle = IntPtr.Zero;
 
             disposed = true;
         }
     }
 
-    [DllImport("cryptography")]
-    private static extern void FreeContext(IntPtr ctx);
-
     public static implicit operator IntPtr(CryptoContext envelopeContext)
     {
         return envelopeContext.handle;
     }
 
-    public static class Factory
+    internal static class Factory
     {
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateAsymmetricEncryptionContext(char[] key);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateAsymmetricDecryptionContext(char[] key, char[] passphrase);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateAsymmetricEncryptionContextFromFile(char[] path);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateAsymmetricDecryptionContextFromFile(char[] path, char[] passphrase);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateSignatureContext(char[] key, char[] passphrase);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateVerificationContext(char[] key);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateSignatureContextFromFile(char[] path, char[] passphrase);
-
-        [DllImport("cryptography")]
-        private static extern IntPtr CreateVerificationContextFromFile(char[] path);
-
         public static CryptoContext CreateAsymmetricEncryptionContext(string key)
         {
-            return new CryptoContext(CreateAsymmetricEncryptionContext(key.ToArray()));
+            return new CryptoContext(Native.CreateAsymmetricEncryptionContext(key));
         }
 
         public static CryptoContext CreateAsymmetricDecryptionContext(string key, string passphrase)
         {
-            return new CryptoContext(CreateAsymmetricDecryptionContext(key.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(Native.CreateAsymmetricDecryptionContext(key, passphrase));
         }
 
         public static CryptoContext CreateAsymmetricEncryptionContextFromFile(string path)
         {
-            return new CryptoContext(CreateAsymmetricEncryptionContextFromFile(path.ToArray()));
+            return new CryptoContext(Native.CreateAsymmetricEncryptionContextFromFile(path));
         }
 
         public static CryptoContext CreateAsymmetricDecryptionContextFromFile(string path, string passphrase)
         {
-            return new CryptoContext(CreateAsymmetricDecryptionContextFromFile(path.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(Native.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
         }
 
         public static CryptoContext CreateSignatureContext(string key, string passphrase)
         {
-            return new CryptoContext(CreateSignatureContext(key.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(Native.CreateSignatureContext(key, passphrase));
         }
 
         public static CryptoContext CreateSignatureContextFromFile(string path, string passphrase)
         {
-            return new CryptoContext(CreateSignatureContextFromFile(path.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(Native.CreateSignatureContextFromFile(path, passphrase));
         }
 
         public static CryptoContext CreateSignatureVerificationContext(string key)
         {
-            return new CryptoContext(CreateVerificationContext(key.ToArray()));
+            return new CryptoContext(Native.CreateVerificationContext(key));
         }
 
         public static CryptoContext CreateSignatureVerificationContextFromFile(string path)
         {
-            return new CryptoContext(CreateVerificationContextFromFile(path.ToArray()));
+            return new CryptoContext(Native.CreateVerificationContextFromFile(path));
         }
     }
 }
