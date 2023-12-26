@@ -7,26 +7,43 @@ namespace Enigma5.Message;
 
 public class OnionParser : IDisposable
 {
-    private IEnvelopeUnseal unseal;
+    private readonly IEnvelopeUnseal _unseal;
 
     public int Size { get; private set; }
 
     public byte[]? Next { get; private set; }
 
-    public string NextAddress { get; private set; } = string.Empty;
+    public string? NextAddress { get; private set; }
 
     public byte[]? Content { get; private set; }
 
     private OnionParser(IEnvelopeUnseal unseal)
     {
-        this.unseal = unseal;
+        _unseal = unseal;
     }
 
-    public void Dispose() => unseal.Dispose();
+    ~OnionParser()
+    {
+        _unseal.Dispose();
+    }
+
+    public void Dispose()
+    {
+        _unseal.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    public void Reset()
+    {
+        Size = 0;
+        Next = null;
+        NextAddress = null;
+        Content = null;
+    }
 
     public bool Parse(IOnion onion)
     {
-        var size = OnionParser.DecodeSize(new ArraySegment<byte>(onion.Content, 0, 2).ToArray());
+        var size = DecodeSize(new ArraySegment<byte>(onion.Content, 0, 2).ToArray());
 
         if (onion.Content.Length - 2 != size)
         {
@@ -34,7 +51,7 @@ public class OnionParser : IDisposable
         }
 
         var envelope = new ArraySegment<byte>(onion.Content, 2, size).ToArray();
-        var decryptedData = unseal.Unseal(envelope);
+        var decryptedData = _unseal.Unseal(envelope);
 
         if (decryptedData == null)
         {

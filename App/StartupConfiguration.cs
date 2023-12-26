@@ -42,6 +42,7 @@ public class StartupConfiguration
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
         services.AddSingleton<CertificateManager>();
+        services.AddSingleton<OnionParsingService>();
         services.AddSingleton<NetworkGraph>();
         services.AddTransient<MediatorHangfireBridge>();
 

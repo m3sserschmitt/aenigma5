@@ -8,31 +8,27 @@ using Enigma5.App.Hubs.Adapters;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class OnionParsingFilter : BaseFilter<IOnionParsingHub, OnionParsingAttribute>
+public class OnionParsingFilter(OnionParsingService decryptionService) : BaseFilter<IOnionParsingHub, OnionParsingAttribute>
 {
-    private readonly CertificateManager _certificateManager;
-
-    public OnionParsingFilter(CertificateManager certificateManager)
-    {
-        _certificateManager = certificateManager;
-    }
+    private readonly OnionParsingService _decryptionService = decryptionService;
 
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         var data = invocationContext.MethodInvocationArgument<string>(0);
         if (data != null)
         {
-            using var onionParser = OnionParser.Factory.Create(_certificateManager.PrivateKey, string.Empty);
             var decodedData = Convert.FromBase64String(data);
-            if (onionParser.Parse(new Onion { Content = decodedData }))
+            if (_decryptionService.Parse(new Onion { Content = decodedData }))
             {
                 _ = new OnionParsingHubAdapter(invocationContext.Hub)
                 {
-                    Content = onionParser.Content,
-                    Next = onionParser.NextAddress,
-                    Size = onionParser.Size
+                    Content = _decryptionService.Content,
+                    Next = _decryptionService.NextAddress,
+                    Size = _decryptionService.Size
                 };
             }
+
+            _decryptionService.Reset();
         }
 
         return await next(invocationContext);
