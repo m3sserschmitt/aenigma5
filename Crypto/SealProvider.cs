@@ -10,9 +10,9 @@ public sealed class SealProvider :
     IEnvelopeSign,
     IEnvelopeVerify
 {
-    private EnvelopeContext ctx;
+    private CryptoContext ctx;
 
-    private SealProvider(EnvelopeContext ctx)
+    private SealProvider(CryptoContext ctx)
     {
         this.ctx = ctx;
     }
@@ -72,8 +72,8 @@ public sealed class SealProvider :
 
     public bool Verify(byte[] ciphertext)
     => VerifySignature(ctx, ciphertext, (uint)ciphertext.Length);
-    
+
     public void Dispose() => ctx.Dispose();
 
-    public static SealProvider Create(EnvelopeContext ctx) => new SealProvider(ctx);
+    public static SealProvider Create(CryptoContext ctx) => new SealProvider(ctx);
 }

@@ -161,7 +161,7 @@ public class OnionBuilderTests
             // Assert
             var exception = Assert.Throws<Exception>(action);
             Assert.Equal(
-                "Message encryption failed.",
+                "Encryption context is null.",
                 exception.Message);
         }
     }

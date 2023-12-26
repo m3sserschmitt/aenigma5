@@ -29,27 +29,27 @@ public sealed class Envelope :
     public static class Factory
     {
         public static IEnvelopeSeal CreateSealFromFile(string path)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricEncryptionContextFromFile(path)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateAsymmetricEncryptionContextFromFile(path)));
 
         public static IEnvelopeUnseal CreateUnsealFromFile(string path, string passphrase)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase)));
 
         public static IEnvelopeSeal CreateSeal(string key)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricEncryptionContext(key)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key)));
 
         public static IEnvelopeUnseal CreateUnseal(string key, string passphrase)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase)));
 
         public static IEnvelopeSign CreateSignature(string key, string passphrase)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureContext(key, passphrase)));
-        
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateSignatureContext(key, passphrase)));
+
         public static IEnvelopeSign CreateSignatureFromFile(string path, string passphrase)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureContextFromFile(path, passphrase)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateSignatureContextFromFile(path, passphrase)));
 
         public static IEnvelopeVerify CreateSignatureVerification(string key)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureVerificationContext(key)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateSignatureVerificationContext(key)));
 
         public static IEnvelopeVerify CreateSignatureVerificationFromFile(string path)
-        => new Envelope(SealProvider.Create(EnvelopeContext.Factory.CreateSignatureVerificationContextFromFile(path)));
+        => new Envelope(SealProvider.Create(CryptoContext.Factory.CreateSignatureVerificationContextFromFile(path)));
     }
 }

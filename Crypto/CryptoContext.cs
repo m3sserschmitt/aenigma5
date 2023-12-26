@@ -2,18 +2,23 @@ using System.Runtime.InteropServices;
 
 namespace Enigma5.Crypto;
 
-public class EnvelopeContext : IDisposable
+public class CryptoContext : IDisposable
 {
     private bool disposed = false;
 
     private IntPtr handle;
 
-    private EnvelopeContext(IntPtr handle)
+    private CryptoContext(IntPtr handle)
     {
+        if (handle == IntPtr.Zero)
+        {
+            throw new Exception("Encryption context is null.");
+        }
+
         this.handle = handle;
     }
 
-    ~EnvelopeContext()
+    ~CryptoContext()
     {
         Dispose(false);
     }
@@ -42,7 +47,7 @@ public class EnvelopeContext : IDisposable
     [DllImport("cryptography")]
     private static extern void FreeContext(IntPtr ctx);
 
-    public static implicit operator IntPtr(EnvelopeContext envelopeContext)
+    public static implicit operator IntPtr(CryptoContext envelopeContext)
     {
         return envelopeContext.handle;
     }
@@ -73,44 +78,44 @@ public class EnvelopeContext : IDisposable
         [DllImport("cryptography")]
         private static extern IntPtr CreateVerificationContextFromFile(char[] path);
 
-        public static EnvelopeContext CreateAsymmetricEncryptionContext(string key)
+        public static CryptoContext CreateAsymmetricEncryptionContext(string key)
         {
-            return new EnvelopeContext(CreateAsymmetricEncryptionContext(key.ToArray()));
+            return new CryptoContext(CreateAsymmetricEncryptionContext(key.ToArray()));
         }
 
-        public static EnvelopeContext CreateAsymmetricDecryptionContext(string key, string passphrase)
+        public static CryptoContext CreateAsymmetricDecryptionContext(string key, string passphrase)
         {
-            return new EnvelopeContext(CreateAsymmetricDecryptionContext(key.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(CreateAsymmetricDecryptionContext(key.ToArray(), passphrase.ToArray()));
         }
 
-        public static EnvelopeContext CreateAsymmetricEncryptionContextFromFile(string path)
+        public static CryptoContext CreateAsymmetricEncryptionContextFromFile(string path)
         {
-            return new EnvelopeContext(CreateAsymmetricEncryptionContextFromFile(path.ToArray()));
+            return new CryptoContext(CreateAsymmetricEncryptionContextFromFile(path.ToArray()));
         }
 
-        public static EnvelopeContext CreateAsymmetricDecryptionContextFromFile(string path, string passphrase)
+        public static CryptoContext CreateAsymmetricDecryptionContextFromFile(string path, string passphrase)
         {
-            return new EnvelopeContext(CreateAsymmetricDecryptionContextFromFile(path.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(CreateAsymmetricDecryptionContextFromFile(path.ToArray(), passphrase.ToArray()));
         }
 
-        public static EnvelopeContext CreateSignatureContext(string key, string passphrase)
+        public static CryptoContext CreateSignatureContext(string key, string passphrase)
         {
-            return new EnvelopeContext(CreateSignatureContext(key.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(CreateSignatureContext(key.ToArray(), passphrase.ToArray()));
         }
 
-        public static EnvelopeContext CreateSignatureContextFromFile(string path, string passphrase)
+        public static CryptoContext CreateSignatureContextFromFile(string path, string passphrase)
         {
-            return new EnvelopeContext(CreateSignatureContextFromFile(path.ToArray(), passphrase.ToArray()));
+            return new CryptoContext(CreateSignatureContextFromFile(path.ToArray(), passphrase.ToArray()));
         }
 
-        public static EnvelopeContext CreateSignatureVerificationContext(string key)
+        public static CryptoContext CreateSignatureVerificationContext(string key)
         {
-            return new EnvelopeContext(CreateVerificationContext(key.ToArray()));
+            return new CryptoContext(CreateVerificationContext(key.ToArray()));
         }
 
-        public static EnvelopeContext CreateSignatureVerificationContextFromFile(string path)
+        public static CryptoContext CreateSignatureVerificationContextFromFile(string path)
         {
-            return new EnvelopeContext(CreateVerificationContextFromFile(path.ToArray()));
+            return new CryptoContext(CreateVerificationContextFromFile(path.ToArray()));
         }
     }
 }
