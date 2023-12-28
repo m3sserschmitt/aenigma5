@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Enigma5.Core;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
@@ -7,7 +8,7 @@ namespace Enigma5.Message;
 
 public class OnionParser : IDisposable
 {
-    private readonly IEnvelopeUnseal _unseal;
+    private readonly IEnvelopeUnseal _unsealService;
 
     public int Size { get; private set; }
 
@@ -17,19 +18,19 @@ public class OnionParser : IDisposable
 
     public byte[]? Content { get; private set; }
 
-    private OnionParser(IEnvelopeUnseal unseal)
+    private OnionParser(IEnvelopeUnseal unsealService)
     {
-        _unseal = unseal;
+        _unsealService = unsealService;
     }
 
     ~OnionParser()
     {
-        _unseal.Dispose();
+        _unsealService.Dispose();
     }
 
     public void Dispose()
     {
-        _unseal.Dispose();
+        _unsealService.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -43,41 +44,23 @@ public class OnionParser : IDisposable
 
     public bool Parse(IOnion onion)
     {
-        var size = DecodeSize(new ArraySegment<byte>(onion.Content, 0, 2).ToArray());
+        var data = _unsealService.UnsealOnion(onion.Content, out int outLen);
 
-        if (onion.Content.Length - 2 != size)
+        if(data == IntPtr.Zero || outLen < 0)
         {
             return false;
         }
 
-        var envelope = new ArraySegment<byte>(onion.Content, 2, size).ToArray();
-        var decryptedData = _unseal.Unseal(envelope);
+        var contentLen = outLen - AddressContext.Current.AddressSize;
 
-        if (decryptedData == null)
-        {
-            return false;
-        }
+        Next = new byte[AddressContext.Current.AddressSize];
+        Content = new byte[contentLen];
 
-        Size = size;
-        Next = new ArraySegment<byte>(decryptedData, 0, AddressContext.Current.AddressSize).ToArray();
+        Marshal.Copy(data, Next, 0, AddressContext.Current.AddressSize);
+        Marshal.Copy(data + AddressContext.Current.AddressSize, Content, 0, contentLen);
         NextAddress = HashProvider.ToHex(Next);
-        Content = new ArraySegment<byte>(
-            decryptedData,
-            AddressContext.Current.AddressSize,
-            decryptedData.Length - AddressContext.Current.AddressSize
-            ).ToArray();
 
         return true;
-    }
-
-    public static ushort DecodeSize(byte[] size)
-    {
-        if (size.Length != 2)
-        {
-            throw new ArgumentException("Invalid buffer length. Expected 2 bytes.");
-        }
-
-        return (ushort)(size[0] * 256 + size[1]);
     }
 
     public static class Factory

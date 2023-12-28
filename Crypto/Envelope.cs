@@ -26,6 +26,9 @@ public sealed class Envelope :
 
     public byte[]? Unseal(byte[] ciphertext) => _sealProvider.Unseal(ciphertext);
 
+    public IntPtr UnsealOnion(byte[] onion, out int outLen)
+    => _sealProvider.UnsealOnion(onion, out outLen);
+    
     public byte[]? Sign(byte[] plaintext) => _sealProvider.Sign(plaintext);
 
     public bool Verify(byte[] ciphertext) => _sealProvider.Verify(ciphertext);
@@ -44,7 +47,7 @@ public sealed class Envelope :
         _sealProvider.Dispose();
         GC.SuppressFinalize(this);
     }
-    
+
     public static class Factory
     {
         public static IEnvelopeSeal CreateSealFromFile(string path)

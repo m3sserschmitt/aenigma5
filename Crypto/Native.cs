@@ -80,4 +80,7 @@ internal static unsafe partial class Native
 
     [LibraryImport("cryptography")]
     internal static partial uint GetSignedDataSize(uint pkeySizeBits, uint dataLen);
+
+    [LibraryImport("cryptography")]
+    internal static partial IntPtr UnsealOnion(IntPtr ctx, [In] byte[] onion, out int outLen);
 }

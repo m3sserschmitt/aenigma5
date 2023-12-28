@@ -46,6 +46,9 @@ internal sealed class SealProvider :
     public byte[]? Unseal(byte[] ciphertext)
     => Execute(ciphertext, Native.DecryptData);
 
+    public IntPtr UnsealOnion(byte[] ciphertext, out int outLen)
+    => Native.UnsealOnion(_ctx, ciphertext, out outLen);
+
     public byte[]? Sign(byte[] plaintext)
     => Execute(plaintext, Native.SignData);
 

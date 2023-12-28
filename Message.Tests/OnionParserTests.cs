@@ -63,20 +63,4 @@ public class OnionParserTests
             }
         }
     }
-
-    [Theory]
-    [InlineData(1, 44, 300)]
-    [InlineData(10, 78, 2638)]
-    [InlineData(234, 103, 60007)]
-    public void OnionParser_ShouldDecodeSize(byte first, byte second, int expected)
-    {
-        // Arrange
-        var encodedSize = new byte[] { first, second };
-
-        // Act
-        var decodedSize = OnionParser.DecodeSize(encodedSize);
-
-        // Assert
-        Assert.Equal(expected, decodedSize);
-    }
 }
