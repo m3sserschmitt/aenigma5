@@ -7,14 +7,14 @@ public static class SignatureExtensions
 {
     public static byte[]? GetDataFromSignature(this byte[]? signature)
     {
-        if(signature == null)
+        if (signature == null)
         {
             return null;
         }
 
-        var digestLength = PKeyContext.Current.PKeySize / 8;
-        
-        if(signature.Length < digestLength + 1)
+        var digestLength = PKeySize.Current.Value / 8;
+
+        if (signature.Length < digestLength + 1)
         {
             return null;
         }
@@ -26,7 +26,7 @@ public static class SignatureExtensions
     {
         var data = signature.GetDataFromSignature();
 
-        if(data == null)
+        if (data == null)
         {
             return null;
         }

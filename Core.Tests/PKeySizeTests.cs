@@ -12,17 +12,29 @@ public class PKeyContextContextTests
     public void PKeyContext_ShouldUpdateAddressSizeAccordingly(int newAddressSize)
     {
         // Arrange
-        int previous = PKeyContext.Current.PKeySize;
+        int previous = PKeySize.Current.Value;
 
         // Act
         int updated;
-        using (new PKeyContext(newAddressSize))
+        using (new PKeySize(newAddressSize))
         {
-            updated = PKeyContext.Current.PKeySize;
+            updated = PKeySize.Current.Value;
         }
 
         // Assert
-        Assert.Equal(PKeyContext.Current.PKeySize, previous);
+        Assert.Equal(PKeySize.Current.Value, previous);
         Assert.Equal(newAddressSize, updated);
+    }
+
+    [Fact]
+    public void PKeyContext_ShouldReturnDefaultValue()
+    {
+        // Arrange
+
+        // Act
+        var pkeySize = PKeySize.Current.Value;
+
+        // Assert
+        Assert.Equal(2048, pkeySize);
     }
 }

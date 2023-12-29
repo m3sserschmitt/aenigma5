@@ -46,18 +46,18 @@ public class OnionParser : IDisposable
     {
         var data = _unsealService.UnsealOnion(onion.Content, out int outLen);
 
-        if(data == IntPtr.Zero || outLen < 0)
+        if (data == IntPtr.Zero || outLen < 0)
         {
             return false;
         }
 
-        var contentLen = outLen - AddressContext.Current.AddressSize;
+        var contentLen = outLen - AddressSize.Current.Value;
 
-        Next = new byte[AddressContext.Current.AddressSize];
+        Next = new byte[AddressSize.Current.Value];
         Content = new byte[contentLen];
 
-        Marshal.Copy(data, Next, 0, AddressContext.Current.AddressSize);
-        Marshal.Copy(data + AddressContext.Current.AddressSize, Content, 0, contentLen);
+        Marshal.Copy(data, Next, 0, AddressSize.Current.Value);
+        Marshal.Copy(data + AddressSize.Current.Value, Content, 0, contentLen);
         NextAddress = HashProvider.ToHex(Next);
 
         return true;

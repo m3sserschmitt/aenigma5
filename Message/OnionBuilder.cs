@@ -71,9 +71,9 @@ public class OnionBuilder
 
         public IEncryptMessage SetNextAddress(byte[] address)
         {
-            if (address.Length != AddressContext.Current.AddressSize)
+            if (address.Length != AddressSize.Current.Value)
             {
-                throw new ArgumentException($"Destination address length should be exactly {AddressContext.Current.AddressSize} bytes long.");
+                throw new ArgumentException($"Destination address length should be exactly {AddressSize.Current.Value} bytes long.");
             }
 
             Onion.Content = address.Concat(Onion.Content).ToArray();

@@ -16,7 +16,7 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using (new AddressContext(nextAddress.Length))
+        using (new AddressSize(nextAddress.Length))
         {
 
             // Act
@@ -43,7 +43,7 @@ public class OnionBuilderTests
         ushort expectedTotalSize)
     {
         // Arrange
-        using (new AddressContext(nextAddress.Length))
+        using (new AddressSize(nextAddress.Length))
         {
             // Act
             var onion = OnionBuilder
@@ -67,7 +67,7 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using (new AddressContext(nextAddress.Length))
+        using (new AddressSize(nextAddress.Length))
         {
             // Act
             var onion1 = OnionBuilder
@@ -96,7 +96,7 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using (new AddressContext(nextAddress.Length))
+        using (new AddressSize(nextAddress.Length))
         {
             // Act
             Action action = () => OnionBuilder
@@ -122,7 +122,7 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using (new AddressContext(nextAddress.Length * 2))
+        using (new AddressSize(nextAddress.Length * 2))
         {
             // Act
             Action action = () => OnionBuilder
@@ -135,7 +135,7 @@ public class OnionBuilderTests
             // Assert
             var exception = Assert.Throws<ArgumentException>(action);
             Assert.Equal(
-                $"Destination address length should be exactly {AddressContext.Current.AddressSize} bytes long.",
+                $"Destination address length should be exactly {AddressSize.Current.Value} bytes long.",
                 exception.Message);
         }
     }
@@ -148,7 +148,7 @@ public class OnionBuilderTests
         params object[] _)
     {
         // Arrange
-        using (new AddressContext(nextAddress.Length))
+        using (new AddressSize(nextAddress.Length))
         {
             // Act
             Action action = () => OnionBuilder
@@ -170,7 +170,7 @@ public class OnionBuilderTests
     public void OnionBuilder_ShouldAddPeel()
     {
         // Arrange
-        using (new AddressContext(PKey.Address2.Length / 2))
+        using (new AddressSize(PKey.Address2.Length / 2))
         {
             // Act
             Action action = () => OnionBuilder.Create()

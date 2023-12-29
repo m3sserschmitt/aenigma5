@@ -28,19 +28,19 @@ public sealed class Envelope :
 
     public IntPtr UnsealOnion(byte[] onion, out int outLen)
     => _sealProvider.UnsealOnion(onion, out outLen);
-    
+
     public byte[]? Sign(byte[] plaintext) => _sealProvider.Sign(plaintext);
 
     public bool Verify(byte[] ciphertext) => _sealProvider.Verify(ciphertext);
 
     public static int GetEnvelopeSize(int plaintextLen)
-    => (int)Native.GetEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)plaintextLen);
+    => (int)Native.GetEnvelopeSize((uint)PKeySize.Current.Value, (uint)plaintextLen);
 
     public static int GetOpenEnvelopeSize(int envelopeSize)
-    => (int)Native.GetOpenEnvelopeSize((uint)PKeyContext.Current.PKeySize, (uint)envelopeSize);
+    => (int)Native.GetOpenEnvelopeSize((uint)PKeySize.Current.Value, (uint)envelopeSize);
 
     public static int GetSignedDataSize(int plaintextLen)
-    => (int)Native.GetSignedDataSize((uint)PKeyContext.Current.PKeySize, (uint)plaintextLen);
+    => (int)Native.GetSignedDataSize((uint)PKeySize.Current.Value, (uint)plaintextLen);
 
     public void Dispose()
     {
