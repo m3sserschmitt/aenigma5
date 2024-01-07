@@ -12,8 +12,6 @@ public class OnionParsingService(CertificateManager certificateManager): IDispos
         _onionParser.Dispose();
     }
 
-    public int Size => _onionParser.Size;
-
     public byte[]? Next => _onionParser.Next;
 
     public string? NextAddress => _onionParser.NextAddress;

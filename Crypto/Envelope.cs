@@ -1,4 +1,3 @@
-using Enigma5.Core;
 using Enigma5.Crypto.Contracts;
 
 namespace Enigma5.Crypto;
@@ -34,13 +33,7 @@ public sealed class Envelope :
     public bool Verify(byte[] ciphertext) => _sealProvider.Verify(ciphertext);
 
     public static int GetEnvelopeSize(int plaintextLen)
-    => (int)Native.GetEnvelopeSize((uint)PKeySize.Current.Value, (uint)plaintextLen);
-
-    public static int GetOpenEnvelopeSize(int envelopeSize)
-    => (int)Native.GetOpenEnvelopeSize((uint)PKeySize.Current.Value, (uint)envelopeSize);
-
-    public static int GetSignedDataSize(int plaintextLen)
-    => (int)Native.GetSignedDataSize((uint)PKeySize.Current.Value, (uint)plaintextLen);
+    => (int)Native.GetEnvelopeSize((uint)plaintextLen);
 
     public void Dispose()
     {

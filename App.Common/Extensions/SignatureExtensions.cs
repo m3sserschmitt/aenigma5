@@ -12,7 +12,7 @@ public static class SignatureExtensions
             return null;
         }
 
-        var digestLength = PKeySize.Current.Value / 8;
+        var digestLength = PKeySize.Value / 8;
 
         if (signature.Length < digestLength + 1)
         {

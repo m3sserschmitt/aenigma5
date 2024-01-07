@@ -10,8 +10,6 @@ public class OnionParser : IDisposable
 {
     private readonly IEnvelopeUnseal _unsealService;
 
-    public int Size { get; private set; }
-
     public byte[]? Next { get; private set; }
 
     public string? NextAddress { get; private set; }
@@ -36,7 +34,6 @@ public class OnionParser : IDisposable
 
     public void Reset()
     {
-        Size = 0;
         Next = null;
         NextAddress = null;
         Content = null;
@@ -51,13 +48,13 @@ public class OnionParser : IDisposable
             return false;
         }
 
-        var contentLen = outLen - AddressSize.Current.Value;
+        var contentLen = outLen - AddressSize.Value;
 
-        Next = new byte[AddressSize.Current.Value];
+        Next = new byte[AddressSize.Value];
         Content = new byte[contentLen];
 
-        Marshal.Copy(data, Next, 0, AddressSize.Current.Value);
-        Marshal.Copy(data + AddressSize.Current.Value, Content, 0, contentLen);
+        Marshal.Copy(data, Next, 0, AddressSize.Value);
+        Marshal.Copy(data + AddressSize.Value, Content, 0, contentLen);
         NextAddress = HashProvider.ToHex(Next);
 
         return true;

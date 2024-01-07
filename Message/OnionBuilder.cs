@@ -1,6 +1,7 @@
 using Enigma5.Message.Contracts;
 using Enigma5.Crypto;
 using Enigma5.Core;
+using System.Runtime.InteropServices;
 
 namespace Enigma5.Message;
 
@@ -71,9 +72,9 @@ public class OnionBuilder
 
         public IEncryptMessage SetNextAddress(byte[] address)
         {
-            if (address.Length != AddressSize.Current.Value)
+            if (address.Length != AddressSize.Value)
             {
-                throw new ArgumentException($"Destination address length should be exactly {AddressSize.Current.Value} bytes long.");
+                throw new ArgumentException($"Destination address length should be exactly {AddressSize.Value} bytes long.");
             }
 
             Onion.Content = address.Concat(Onion.Content).ToArray();
@@ -110,6 +111,29 @@ public class OnionBuilder
             return content.Length >= ushort.MaxValue
             || Envelope.GetEnvelopeSize(content.Length) > ushort.MaxValue;
         }
+    }
+
+    public static unsafe byte[]? CreateOnion(byte[] plaintext, string[] keys, string[] addresses)
+    {
+        if(keys.Length != addresses.Length)
+        {
+            throw new ArgumentException("Number of keys should be equal with the number of addresses.");
+        }
+
+        IntPtr data = Native.SealOnion(plaintext, (uint)plaintext.Length, keys, addresses, (uint)keys.Length, out int outLen);
+        
+        if(data == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        var output = new byte[outLen];
+
+        Marshal.Copy(data, output, 0, outLen);
+        Marshal.Copy(new byte[outLen], 0, data, outLen);
+        Marshal.FreeHGlobal(data);
+        
+        return output;
     }
 
     public static ISetMessageContent Create()

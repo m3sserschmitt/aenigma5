@@ -44,7 +44,7 @@ public class BroadcastAdjacencyList
             try
             {
                 var decodedData = Convert.FromBase64String(value);
-                var adjacencyList = Encoding.UTF8.GetString(decodedData[..^(PKeySize.Current.Value / 8)]);
+                var adjacencyList = Encoding.UTF8.GetString(decodedData[..^(PKeySize.Value / 8)]);
 
                 _adjacencyList = JsonSerializer.Deserialize<AdjacencyList>(adjacencyList);
                 _signedData = value;

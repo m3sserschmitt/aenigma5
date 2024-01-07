@@ -73,13 +73,13 @@ internal static unsafe partial class Native
     uint ciphertextLen);
 
     [LibraryImport("cryptography")]
-    internal static partial uint GetEnvelopeSize(uint pkeySizeBits, uint plaintextLen);
+    internal static partial uint GetEnvelopeSize(uint plaintextLen);
 
     [LibraryImport("cryptography")]
-    internal static partial uint GetOpenEnvelopeSize(uint pkeySizeBits, uint envelopeSize);
+    internal static partial uint GetOpenEnvelopeSize(uint envelopeSize);
 
     [LibraryImport("cryptography")]
-    internal static partial uint GetSignedDataSize(uint pkeySizeBits, uint dataLen);
+    internal static partial uint GetSignedDataSize(uint dataLen);
 
     [LibraryImport("cryptography")]
     internal static partial IntPtr UnsealOnion(IntPtr ctx, [In] byte[] onion, out int outLen);

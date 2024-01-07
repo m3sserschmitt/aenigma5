@@ -23,8 +23,7 @@ public class OnionParsingFilter(OnionParsingService decryptionService) : BaseFil
                 _ = new OnionParsingHubAdapter(invocationContext.Hub)
                 {
                     Content = _decryptionService.Content,
-                    Next = _decryptionService.NextAddress,
-                    Size = _decryptionService.Size
+                    Next = _decryptionService.NextAddress
                 };
             }
 

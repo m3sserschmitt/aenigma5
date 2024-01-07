@@ -23,7 +23,7 @@ public static class KeysGenerator
         var generator = new RsaKeyPairGenerator();
         var keyGenParam = new KeyGenerationParameters(
             new SecureRandom(),
-            PKeySize.Current.Value
+            PKeySize.Value
         );
         generator.Init(keyGenParam);
         return generator.GenerateKeyPair();
