@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
+
 namespace Enigma5.App.Hubs.Sessions;
 
 public class ConnectionsMapper
 {
-    private readonly Dictionary<string, string> connections = new();
+    private readonly ConcurrentDictionary<string, string> connections = [];
 
     public bool TryAdd(string address, string connectionId)
     {
@@ -22,7 +24,7 @@ public class ConnectionsMapper
             }
         }
 
-        if (address == null || !connections.Remove(address))
+        if (address == null || !connections.Remove(address, out var _))
         {
             return false;
         }

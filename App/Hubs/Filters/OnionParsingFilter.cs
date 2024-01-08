@@ -2,15 +2,16 @@ using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Attributes;
 using Enigma5.Message;
 using Enigma5.App.Hubs.Extensions;
-using Enigma5.App.Security;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Hubs.Adapters;
+using Enigma5.App.Hubs.Sessions;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class OnionParsingFilter(OnionParsingService decryptionService) : BaseFilter<IOnionParsingHub, OnionParsingAttribute>
+public class OnionParsingFilter(SessionManager sessionManager)
+: BaseFilter<IOnionParsingHub, OnionParsingAttribute>
 {
-    private readonly OnionParsingService _decryptionService = decryptionService;
+    private readonly SessionManager _sessionManager = sessionManager;
 
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
@@ -18,16 +19,18 @@ public class OnionParsingFilter(OnionParsingService decryptionService) : BaseFil
         if (data != null)
         {
             var decodedData = Convert.FromBase64String(data);
-            if (_decryptionService.Parse(new Onion { Content = decodedData }))
+
+            if (_sessionManager.TryGetParser(invocationContext.Context.ConnectionId, out var onionParser) &&
+            onionParser!.Parse(new Onion { Content = decodedData }))
             {
                 _ = new OnionParsingHubAdapter(invocationContext.Hub)
                 {
-                    Content = _decryptionService.Content,
-                    Next = _decryptionService.NextAddress
+                    Content = onionParser.Content,
+                    Next = onionParser.NextAddress
                 };
-            }
 
-            _decryptionService.Reset();
+                onionParser.Reset();
+            }
         }
 
         return await next(invocationContext);
