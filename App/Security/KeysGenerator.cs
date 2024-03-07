@@ -2,7 +2,7 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.OpenSsl;
-using Enigma5.Core;
+using Enigma5.Crypto;
 
 namespace Enigma5.App.Security;
 
@@ -23,7 +23,7 @@ public static class KeysGenerator
         var generator = new RsaKeyPairGenerator();
         var keyGenParam = new KeyGenerationParameters(
             new SecureRandom(),
-            PKeySize.Value
+            Constants.DefaultPKeySize
         );
         generator.Init(keyGenParam);
         return generator.GenerateKeyPair();

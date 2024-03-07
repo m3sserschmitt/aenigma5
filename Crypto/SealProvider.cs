@@ -49,6 +49,20 @@ internal sealed class SealProvider :
     public IntPtr UnsealOnion(byte[] ciphertext, out int outLen)
     => Native.UnsealOnion(_ctx, ciphertext, out outLen);
 
+    public static IntPtr SealOnion(
+        byte[] plaintext,
+        string[] keys,
+        string[] addresses,
+        out int outLen)
+    {
+        if (keys.Length != addresses.Length)
+        {
+            throw new ArgumentException("Number of keys should equal the number of addresses.");
+        }
+
+        return Native.SealOnion(plaintext, (uint)plaintext.Length, keys, addresses, (uint)keys.Length, out outLen);
+    }
+
     public byte[]? Sign(byte[] plaintext)
     => Execute(plaintext, Native.SignData);
 

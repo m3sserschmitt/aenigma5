@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Enigma5.Core;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Message.Contracts;
@@ -48,13 +47,13 @@ public class OnionParser : IDisposable
             return false;
         }
 
-        var contentLen = outLen - AddressSize.Value;
+        var contentLen = outLen - Constants.DefaultAddressSize;
 
-        Next = new byte[AddressSize.Value];
+        Next = new byte[Constants.DefaultAddressSize];
         Content = new byte[contentLen];
 
-        Marshal.Copy(data, Next, 0, AddressSize.Value);
-        Marshal.Copy(data + AddressSize.Value, Content, 0, contentLen);
+        Marshal.Copy(data, Next, 0, Constants.DefaultAddressSize);
+        Marshal.Copy(data + Constants.DefaultAddressSize, Content, 0, contentLen);
         NextAddress = HashProvider.ToHex(Next);
 
         return true;

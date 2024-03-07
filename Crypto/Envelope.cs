@@ -28,6 +28,13 @@ public sealed class Envelope :
     public IntPtr UnsealOnion(byte[] onion, out int outLen)
     => _sealProvider.UnsealOnion(onion, out outLen);
 
+    public static IntPtr SealOnion(
+        byte[] plaintext,
+        string[] keys,
+        string[] addresses,
+        out int outLen)
+    => SealProvider.SealOnion(plaintext, keys, addresses, out outLen);
+
     public byte[]? Sign(byte[] plaintext) => _sealProvider.Sign(plaintext);
 
     public bool Verify(byte[] ciphertext) => _sealProvider.Verify(ciphertext);

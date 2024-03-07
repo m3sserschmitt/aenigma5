@@ -1,6 +1,5 @@
 using Enigma5.Message.Contracts;
 using Enigma5.Crypto;
-using Enigma5.Core;
 using System.Runtime.InteropServices;
 
 namespace Enigma5.Message;
@@ -72,9 +71,9 @@ public class OnionBuilder
 
         public IEncryptMessage SetNextAddress(byte[] address)
         {
-            if (address.Length != AddressSize.Value)
+            if (address.Length != Constants.DefaultAddressSize)
             {
-                throw new ArgumentException($"Destination address length should be exactly {AddressSize.Value} bytes long.");
+                throw new ArgumentException($"Destination address length should be exactly {Constants.DefaultAddressSize} bytes long.");
             }
 
             Onion.Content = address.Concat(Onion.Content).ToArray();
@@ -120,7 +119,7 @@ public class OnionBuilder
             throw new ArgumentException("Number of keys should be equal with the number of addresses.");
         }
 
-        IntPtr data = Native.SealOnion(plaintext, (uint)plaintext.Length, keys, addresses, (uint)keys.Length, out int outLen);
+        IntPtr data = Envelope.SealOnion(plaintext, keys, addresses, out int outLen);
         
         if(data == IntPtr.Zero)
         {

@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using Enigma5.Core;
 using Enigma5.Crypto;
 
 namespace Enigma5.App.Models;
@@ -44,7 +43,7 @@ public class BroadcastAdjacencyList
             try
             {
                 var decodedData = Convert.FromBase64String(value);
-                var adjacencyList = Encoding.UTF8.GetString(decodedData[..^(PKeySize.Value / 8)]);
+                var adjacencyList = Encoding.UTF8.GetString(decodedData[..^(Constants.DefaultPKeySize / 8)]);
 
                 _adjacencyList = JsonSerializer.Deserialize<AdjacencyList>(adjacencyList);
                 _signedData = value;

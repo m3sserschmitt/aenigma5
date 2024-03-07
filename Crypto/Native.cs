@@ -1,9 +1,16 @@
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace Enigma5.Crypto;
 
 internal static unsafe partial class Native
 {
+    [LibraryImport("cryptography")]
+    internal static partial uint GetDefaultAddressSize();
+
+    [LibraryImport("cryptography")]
+    internal static partial uint GetDefaultPKeySize();
+    
     [LibraryImport("cryptography")]
     internal static partial IntPtr CreateAsymmetricEncryptionContext(
         [MarshalAs(UnmanagedType.LPStr)] string key);
@@ -83,4 +90,13 @@ internal static unsafe partial class Native
 
     [LibraryImport("cryptography")]
     internal static partial IntPtr UnsealOnion(IntPtr ctx, [In] byte[] onion, out int outLen);
+
+    [LibraryImport("cryptography", StringMarshallingCustomType = typeof(Utf8StringMarshaller))]
+    internal static partial IntPtr SealOnion(
+        [In] byte[] plaintext,
+        uint plaintextLen,
+        [In] string[] keys,
+        [In] string[] addresses,
+        uint count,
+        out int outLen);
 }

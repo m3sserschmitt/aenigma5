@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Enigma5.Core;
 
 namespace Enigma5.App.Common.Extensions;
 
@@ -12,7 +11,7 @@ public static class SignatureExtensions
             return null;
         }
 
-        var digestLength = PKeySize.Value / 8;
+        var digestLength = Crypto.Constants.DefaultPKeySize / 8;
 
         if (signature.Length < digestLength + 1)
         {

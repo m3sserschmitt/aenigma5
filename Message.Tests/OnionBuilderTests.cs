@@ -1,4 +1,3 @@
-using Enigma5.Core;
 using Enigma5.Message.Tests.TestData;
 using Enigma5.Crypto.DataProviders;
 using Xunit;
@@ -127,7 +126,7 @@ public class OnionBuilderTests
         // Assert
         var exception = Assert.Throws<ArgumentException>(action);
         Assert.Equal(
-            $"Destination address length should be exactly {AddressSize.Value} bytes long.",
+            $"Destination address length should be exactly {Constants.DefaultAddressSize} bytes long.",
             exception.Message);
 
     }
