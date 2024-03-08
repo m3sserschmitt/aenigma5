@@ -1,3 +1,4 @@
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Security;
 using Enigma5.Crypto;
 using Enigma5.Message;
@@ -6,7 +7,9 @@ namespace Enigma5.App.Hubs.Sessions;
 
 public class SessionManager(ConnectionsMapper connectionsMapper, CertificateManager certificateManager)
 {
-    private readonly Mutex _mutex = new();
+    private const int TOKEN_SIZE = 64;
+
+    private readonly object _locker = new();
 
     private readonly Dictionary<string, string> _pending = [];
 
@@ -19,46 +22,32 @@ public class SessionManager(ConnectionsMapper connectionsMapper, CertificateMana
     private readonly CertificateManager _certificateManager = certificateManager;
 
     private bool AddPending(string connectionId, string token)
-    {
-        _mutex.WaitOne();
-        var result = _pending.TryAdd(connectionId, token);
-        _mutex.ReleaseMutex();
-
-        return result;
-    }
+    => _pending.TryAdd(connectionId, token);
 
     private bool Authenticate(string connectionId)
-    {
-        _mutex.WaitOne();
-        var result = _pending.Remove(connectionId) && _authenticated.Add(connectionId);
-        _mutex.ReleaseMutex();
-
-        return result;
-    }
+    => _pending.Remove(connectionId) && _authenticated.Add(connectionId);
 
     public string? AddPending(string connectionId)
     {
-        var tokenData = new byte[64];
+        var tokenData = new byte[TOKEN_SIZE];
         new Random().NextBytes(tokenData);
         var token = Convert.ToBase64String(tokenData);
 
-        return AddPending(connectionId, token) ? token : null;
+        return ThreadSafeExecution.Execute(
+            () => AddPending(connectionId, token) ? token : null,
+            null,
+            _locker);
     }
 
     private bool AddParser(string connectionId)
     {
         var parser = OnionParser.Factory.Create(_certificateManager.PrivateKey, string.Empty);
 
-        _mutex.WaitOne();
-        var result = _parsers.TryAdd(connectionId, parser);
-        _mutex.ReleaseMutex();
-
-        return result;
+        return _parsers.TryAdd(connectionId, parser);
     }
 
     private bool LogOut(string connectionId, out string? address)
     {
-        _mutex.WaitOne();
         _pending.Remove(connectionId);
         _authenticated.Remove(connectionId);
         if (_parsers.TryGetValue(connectionId, out var parser))
@@ -66,10 +55,8 @@ public class SessionManager(ConnectionsMapper connectionsMapper, CertificateMana
             parser.Dispose();
         }
         _parsers.Remove(connectionId);
-        var result = _connectionsMapper.Remove(connectionId, out address);
-        _mutex.ReleaseMutex();
 
-        return result;
+        return _connectionsMapper.Remove(connectionId, out address);
     }
 
     public bool Authenticate(string connectionId, string publicKey, string signature)
@@ -77,37 +64,53 @@ public class SessionManager(ConnectionsMapper connectionsMapper, CertificateMana
         using var signatureVerifier = Envelope.Factory.CreateSignatureVerification(publicKey);
         var decodedSignature = Convert.FromBase64String(signature);
 
-        if (signatureVerifier.Verify(decodedSignature) && Authenticate(connectionId))
-        {
-            var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
-            var added = _connectionsMapper.TryAdd(address, connectionId);
-
-            if (!added)
+        return ThreadSafeExecution.Execute(
+            () =>
             {
-                return false;
-            }
+                if (!signatureVerifier.Verify(decodedSignature) || !Authenticate(connectionId))
+                {
+                    return false;
+                }
 
-            return AddParser(connectionId);
-        }
+                var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
+                var added = _connectionsMapper.TryAdd(address, connectionId);
 
-        return false;
+                return added && AddParser(connectionId);
+            },
+            false,
+            _locker
+        );
     }
 
     public bool Remove(string connectionId, out string? address)
-    => LogOut(connectionId, out address);
+    => ThreadSafeExecution.Execute(
+        (out string? addr) => LogOut(connectionId, out addr),
+        false,
+        out address,
+        _locker
+    );
 
     public bool TryGetConnectionId(string address, out string? connectionId)
-    => _connectionsMapper.TryGetConnectionId(address, out connectionId);
+    => ThreadSafeExecution.Execute(
+        (out string? connId) => _connectionsMapper.TryGetConnectionId(address, out connId),
+        false,
+        out connectionId,
+        _locker
+    );
 
     public bool TryGetAddress(string connectionId, out string? address)
-    => _connectionsMapper.TryGetAddress(connectionId, out address);
+    => ThreadSafeExecution.Execute(
+        (out string? addr) => _connectionsMapper.TryGetAddress(connectionId, out addr),
+        false,
+        out address,
+        _locker
+    );
 
     public bool TryGetParser(string connectionId, out OnionParser? onionParser)
-    {
-        _mutex.WaitOne();
-        var result = _parsers.TryGetValue(connectionId, out onionParser);
-        _mutex.ReleaseMutex();
-
-        return result;
-    }
+    => ThreadSafeExecution.Execute(
+        (out OnionParser? parser) => _parsers.TryGetValue(connectionId, out parser),
+        false,
+        out onionParser,
+        _locker
+    );
 }

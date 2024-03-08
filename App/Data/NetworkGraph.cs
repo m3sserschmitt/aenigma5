@@ -1,13 +1,13 @@
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Security;
-using Enigma5.Crypto;
 using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Data;
 
 public class NetworkGraph
 {
-    private readonly Mutex _mutex;
+    private readonly object _locker = new();
 
     private readonly CertificateManager _certificateManager;
 
@@ -19,88 +19,60 @@ public class NetworkGraph
 
     public List<Vertex> Vertices
     {
-        get
-        {
-            _mutex.WaitOne();
-
-            var vertices = _vertices.CopyBySerialization();
-
-            _mutex.ReleaseMutex();
-
-            return vertices!;
-        }
+        get => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker);
     }
 
     public List<string> Addresses
     {
-        get
-        {
-            _mutex.WaitOne();
-
-            var addresses = _vertices.Select(item => item.Neighborhood.Address).ToList();
-
-            _mutex.ReleaseMutex();
-
-            return addresses!;
-        }
+        get => ThreadSafeExecution.Execute(() => _vertices.Select(item => item.Neighborhood.Address).ToList(), [], _locker);
     }
 
     public Vertex LocalVertex
     {
-        get
-        {
-            _mutex.WaitOne();
-
-            var vertex = _localVertex.CopyBySerialization();
-
-            _mutex.ReleaseMutex();
-
-            return vertex!;
-        }
+        get => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), new Vertex(), _locker);
     }
 
     public NetworkGraph(CertificateManager certificateManager, IConfiguration configuration)
     {
-        _mutex = new();
         _certificateManager = certificateManager;
         _configuration = configuration;
         _localVertex = Vertex.Factory.CreateWithEmptyNeighborhood(_certificateManager, _configuration.GetHostname());
-        _vertices = new() { _localVertex };
+        _vertices = [_localVertex];
     }
 
     public (Vertex localVertex, bool updated) AddAdjacency(string address)
-    {
-        _mutex.WaitOne();
-
-        if (Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex)
-        && NetworkGraphValidationPolicy.Validate(newVertex!))
+    => ThreadSafeExecution.Execute(
+        () =>
         {
-            ReplaceLocalVertex(newVertex!);
+            if (Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex)
+                && NetworkGraphValidationPolicy.Validate(newVertex!))
+            {
+                ReplaceLocalVertex(newVertex!);
+                return (LocalVertex, true);
+            }
 
-            _mutex.ReleaseMutex();
-            return (LocalVertex, true);
-        }
-
-        _mutex.ReleaseMutex();
-        return (LocalVertex, false);
-    }
+            return (LocalVertex, false);
+        },
+        (LocalVertex, false),
+        _locker
+    );
 
     public (Vertex localVertex, bool updated) RemoveAdjacency(string address)
-    {
-        _mutex.WaitOne();
-
-        if (Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+    => ThreadSafeExecution.Execute(
+        () =>
         {
-            ReplaceLocalVertex(newVertex!);
-            CleanupGraph();
+            if (Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+            {
+                ReplaceLocalVertex(newVertex!);
+                CleanupGraph();
 
-            _mutex.ReleaseMutex();
-            return (LocalVertex, true);
-        }
-
-        _mutex.ReleaseMutex();
-        return (LocalVertex, false);
-    }
+                return (LocalVertex, true);
+            }
+            return (LocalVertex, false);
+        },
+        (LocalVertex, false),
+        _locker
+    );
 
     public Task<(Vertex localVertex, bool updated)> AddAdjacencyAsync(string address, CancellationToken cancellationToken = default)
     {
@@ -116,54 +88,57 @@ public class NetworkGraph
 
     public (IList<Vertex> vertices, Delta delta) Update(Vertex vertex)
     {
-        var vertices = new List<Vertex>();
-        Delta delta = new();
-
         if (!NetworkGraphValidationPolicy.Validate(vertex))
         {
-            return (vertices, delta);
+            return ([], new());
         }
 
-        _mutex.WaitOne();
-
-        if (!IsLocalVertex(vertex))
-        {
-            (bool updated, delta) = UpdateLocalNeighborhood(vertex);
-
-            if (updated)
+        return ThreadSafeExecution.Execute(
+            () =>
             {
-                vertices.Add(_localVertex);
-            }
+                var vertices = new List<Vertex>();
+                Delta delta = new();
 
-            var previous = _vertices.FirstOrDefault(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
+                if (!IsLocalVertex(vertex))
+                {
+                    (bool updated, delta) = UpdateLocalNeighborhood(vertex);
 
-            if (previous == null)
-            {
-                _vertices.Add(vertex);
-                vertices.Add(vertex);
-            }
-            else if (previous != vertex)
-            {
-                _vertices.Remove(previous);
-                _vertices.Add(vertex);
-                vertices.Add(vertex);
-            }
+                    if (updated)
+                    {
+                        vertices.Add(_localVertex);
+                    }
 
-            if (updated || previous != vertex)
-            {
-                CleanupGraph();
-            }
-        }
-        else
-        {
-            ReplaceLocalVertex(vertex);
-            CleanupGraph();
-            vertices.Add(_localVertex);
-        }
+                    var previous = _vertices.FirstOrDefault(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
 
-        _mutex.ReleaseMutex();
+                    if (previous == null)
+                    {
+                        _vertices.Add(vertex);
+                        vertices.Add(vertex);
+                    }
+                    else if (previous != vertex)
+                    {
+                        _vertices.Remove(previous);
+                        _vertices.Add(vertex);
+                        vertices.Add(vertex);
+                    }
 
-        return (vertices, delta);
+                    if (updated || previous != vertex)
+                    {
+                        CleanupGraph();
+                    }
+                }
+                else
+                {
+                    ReplaceLocalVertex(vertex);
+                    CleanupGraph();
+                    vertices.Add(_localVertex);
+                }
+
+                return (vertices, delta);
+            },
+            ([], new()),
+            _locker
+        );
     }
 
     public Task<(IList<Vertex> vertices, Delta delta)> UpdateAsync(Vertex vertex, CancellationToken cancellationToken = default)
