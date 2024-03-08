@@ -12,37 +12,26 @@ using AutoMapper;
 
 namespace Enigma5.App.Hubs;
 
-public class RoutingHub :
+public class RoutingHub(
+    SessionManager sessionManager,
+    CertificateManager certificateManager,
+    NetworkGraph networkGraph,
+    IMediator commandRouter,
+    IMapper mapper) :
     RoutingHubBase<RoutingHub>,
     IHub,
     IOnionParsingHub,
     IOnionRoutingHub
 {
-    private readonly SessionManager _sessionManager;
+    private readonly SessionManager _sessionManager = sessionManager;
 
-    private readonly CertificateManager _certificateManager;
+    private readonly CertificateManager _certificateManager = certificateManager;
 
-    private readonly NetworkGraph _networkGraph;
+    private readonly NetworkGraph _networkGraph = networkGraph;
 
-    private readonly IMediator _commandRouter;
+    private readonly IMediator _commandRouter = commandRouter;
 
-    private readonly IMapper _mapper;
-
-    public RoutingHub(
-        SessionManager sessionManager,
-        CertificateManager certificateManager,
-        NetworkGraph networkGraph,
-        IMediator commandRouter,
-        IMapper mapper)
-    {
-        _sessionManager = sessionManager;
-        _certificateManager = certificateManager;
-        _networkGraph = networkGraph;
-        _commandRouter = commandRouter;
-        _mapper = mapper;
-    }
-
-    public string? Address { get; set; }
+    private readonly IMapper _mapper = mapper;
 
     public string? DestinationConnectionId { get; set; }
 
@@ -55,29 +44,27 @@ public class RoutingHub :
     public string? GenerateToken()
     => _sessionManager.AddPending(Context.ConnectionId);
 
-    private async Task Synchronize()
+    public async Task Synchronize()
     {
         if (_sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
         {
-            var query = new GetPendingMessagesByDestinationQuery
+            var onions = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery
             {
                 Destination = address!
-            };
-
-            var onions = await _commandRouter.Send(query);
+            });
 
             if (onions.Any())
             {
-                await RespondAsync(nameof(Synchronize), onions.Select(item => new Models.PendingMessage
+                try
                 {
-                    Content = item.Content,
-                    Destination = item.Destination,
-                    DateReceived = item.DateReceived
-                }));
+                    await RespondAsync(nameof(Synchronize), _mapper.Map<List<Models.PendingMessage>>(onions));
+                }
+                catch
+                {
+                    return;
+                }
 
-                var command = new MarkMessagesAsDeliveredCommand(address!);
-
-                await _commandRouter.Send(command);
+                await _commandRouter.Send(new RemoveMessagesCommand(address!));
             }
         }
     }
@@ -156,7 +143,7 @@ public class RoutingHub :
     }
 
     private async Task SendBroadcast(BroadcastAdjacencyList broadcast, IEnumerable<string> addresses)
-    => await SendBroadcast(new List<BroadcastAdjacencyList> { broadcast }, addresses);
+    => await SendBroadcast([broadcast], addresses);
 
     public async Task Broadcast(BroadcastAdjacencyList broadcastAdjacencyList)
     {
@@ -199,7 +186,7 @@ public class RoutingHub :
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        if(!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
+        if (!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
         {
             return;
         }

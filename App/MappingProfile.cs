@@ -13,5 +13,6 @@ public class MappingProfile : Profile
         .ForMember(dest => dest.Neighborhood, opt => opt.MapFrom(src => src.GetAdjacencyList()));
         CreateMap<Vertex, BroadcastAdjacencyList>();
         CreateMap<Neighborhood, AdjacencyList>();
+        CreateMap<Data.PendingMessage, Models.PendingMessage>();
     }
 }
