@@ -1,6 +1,7 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
 using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Data;
@@ -9,7 +10,7 @@ public class NetworkGraph
 {
     private readonly object _locker = new();
 
-    private readonly CertificateManager _certificateManager;
+    private readonly ICertificateManager _certificateManager;
 
     private readonly IConfiguration _configuration;
 
@@ -32,7 +33,7 @@ public class NetworkGraph
         get => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), new Vertex(), _locker);
     }
 
-    public NetworkGraph(CertificateManager certificateManager, IConfiguration configuration)
+    public NetworkGraph(ICertificateManager certificateManager, IConfiguration configuration)
     {
         _certificateManager = certificateManager;
         _configuration = configuration;

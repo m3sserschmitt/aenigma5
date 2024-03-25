@@ -1,3 +1,4 @@
+using System.Text;
 using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 using Xunit;
@@ -13,8 +14,8 @@ public class SealUnsealOnionTests
         var keys = new string[] { PKey.PublicKey2, PKey.PublicKey1 };
         var addresses = new string[] { PKey.Address2, PKey.Address1 };
         var plaintext = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-        using var parser1 = OnionParser.Factory.Create(PKey.PrivateKey1, PKey.Passphrase);
-        using var parser2 = OnionParser.Factory.Create(PKey.PrivateKey2, PKey.Passphrase);
+        using var parser1 = OnionParser.Factory.Create(Encoding.UTF8.GetBytes(PKey.PrivateKey1), PKey.Passphrase);
+        using var parser2 = OnionParser.Factory.Create(Encoding.UTF8.GetBytes(PKey.PrivateKey2), PKey.Passphrase);
 
         // Act
         var onion = OnionBuilder.CreateOnion(plaintext, keys, addresses);

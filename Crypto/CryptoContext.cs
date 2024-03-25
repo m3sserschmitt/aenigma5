@@ -54,9 +54,13 @@ internal sealed class CryptoContext : IDisposable
             return new CryptoContext(Native.CreateAsymmetricEncryptionContext(key));
         }
 
-        public static CryptoContext CreateAsymmetricDecryptionContext(string key, string passphrase)
+        public static CryptoContext CreateAsymmetricDecryptionContext(byte[] key, string passphrase)
         {
-            return new CryptoContext(Native.CreateAsymmetricDecryptionContext(key, passphrase));
+            var nativeBuffer = KeyUtil.CopyKeyToNativeBuffer(key);
+            var ctx = new CryptoContext(Native.CreateAsymmetricDecryptionContext(nativeBuffer, passphrase));
+            KeyUtil.FreeKeyNativeBuffer(nativeBuffer, key);
+
+            return ctx;
         }
 
         public static CryptoContext CreateAsymmetricEncryptionContextFromFile(string path)
@@ -69,9 +73,13 @@ internal sealed class CryptoContext : IDisposable
             return new CryptoContext(Native.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
         }
 
-        public static CryptoContext CreateSignatureContext(string key, string passphrase)
+        public static CryptoContext CreateSignatureContext(byte[] key, string passphrase)
         {
-            return new CryptoContext(Native.CreateSignatureContext(key, passphrase));
+            var nativeBuffer = KeyUtil.CopyKeyToNativeBuffer(key);
+            var ctx = new CryptoContext(Native.CreateSignatureContext(nativeBuffer, passphrase));
+            KeyUtil.FreeKeyNativeBuffer(nativeBuffer, key);
+
+            return ctx;
         }
 
         public static CryptoContext CreateSignatureContextFromFile(string path, string passphrase)

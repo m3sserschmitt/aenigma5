@@ -10,14 +10,17 @@ internal static unsafe partial class Native
 
     [LibraryImport("cryptography")]
     internal static partial uint GetDefaultPKeySize();
-    
+
+    [LibraryImport("kernelkeys")]
+    internal static partial uint GetKernelKeyMaxSize();
+
     [LibraryImport("cryptography")]
     internal static partial IntPtr CreateAsymmetricEncryptionContext(
         [MarshalAs(UnmanagedType.LPStr)] string key);
 
     [LibraryImport("cryptography")]
     internal static partial IntPtr CreateAsymmetricDecryptionContext(
-        [MarshalAs(UnmanagedType.LPStr)] string key,
+        IntPtr key,
         [MarshalAs(UnmanagedType.LPStr)] string passphrase);
 
     [LibraryImport("cryptography")]
@@ -31,7 +34,7 @@ internal static unsafe partial class Native
 
     [LibraryImport("cryptography")]
     internal static partial IntPtr CreateSignatureContext(
-        [MarshalAs(UnmanagedType.LPStr)] string key,
+        IntPtr key,
         [MarshalAs(UnmanagedType.LPStr)] string passphrase);
 
     [LibraryImport("cryptography")]
@@ -99,4 +102,30 @@ internal static unsafe partial class Native
         [In] string[] addresses,
         uint count,
         out int outLen);
+
+    [LibraryImport("kernelkeys")]
+    internal static partial int CreateKey(
+        [In] char[] keyName,
+        IntPtr keyMaterial,
+        uint keyMaterialSize,
+        [In] char[] description,
+        KernelKeyring ringId);
+
+    [LibraryImport("kernelkeys")]
+    internal static partial int SearchKey(
+        [In] char[] keyName,
+        [In] char[] description,
+        KernelKeyring ringId
+    );
+
+    [LibraryImport("kernelkeys")]
+    internal static partial int ReadKey(
+        int keyId,
+        IntPtr keyMaterial
+    );
+
+    [LibraryImport("kernelkeys")]
+    internal static partial int RemoveKey(
+        int keyId
+    );
 }

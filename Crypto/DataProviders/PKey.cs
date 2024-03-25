@@ -24,6 +24,17 @@ uJxKtNdBZ4LL19uJSHjz18KJZEpUQ4lSHhiw8usLN4mb6cgx7tXJhr1sE5b9yDK3
 ZQIDAQAB
 -----END PUBLIC KEY-----";
 
+    public static readonly string PublicKey3 =
+    @"-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArM4ppLjJ0QjkAEXQT4Dc
+PkOnu+Jo5InDN2EhXya8epd2fXigX8Jp4DkgKg5uQ85OGRtZ+clUlX895aJv4poF
+5+Yf+nu0KQD81Mqc02orDQcec1gAi37rs6OaIH5TDRCa4bI/MZDzZ/g1pWWCGnvf
+56Z+dfPb+W2BEP+XCjWJl+3btyTnQ3Ktcp2v817M4Jyz3dAYnJxl/5/6nQwkHPWp
+F5TQG4z8piLmcE131fzfYCOtXMnK0gHvD8bqunNwEbQLjwjAk51GVX3K2MBuxo6A
+k0YOk1lGDQbQXvxlRS34wYH8F45XxXhzpEnCjsmVQRKEytmY1f8RMT0kZTcA13Wh
+SQIDAQAB
+-----END PUBLIC KEY-----";
+
     public static readonly string PrivateKey1 =
 @"-----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIFHDBOBgkqhkiG9w0BBQ0wQTApBgkqhkiG9w0BBQwwHAQIsEI2eqZjSp4CAggA
@@ -88,6 +99,36 @@ ZDg3AwToyLQF9r5kmH/1l48zJOBCEeRZgmCKRg6BoutwufhFtxBkBoGSmqlqsFRh
 sAjwH0LbWe1xhKWHRXhcvA==
 -----END ENCRYPTED PRIVATE KEY-----
 ";
+
+    public static readonly string PrivateKey3 =
+    @"-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCszimkuMnRCOQA
+RdBPgNw+Q6e74mjkicM3YSFfJrx6l3Z9eKBfwmngOSAqDm5Dzk4ZG1n5yVSVfz3l
+om/imgXn5h/6e7QpAPzUypzTaisNBx5zWACLfuuzo5ogflMNEJrhsj8xkPNn+DWl
+ZYIae9/npn5189v5bYEQ/5cKNYmX7du3JOdDcq1yna/zXszgnLPd0BicnGX/n/qd
+DCQc9akXlNAbjPymIuZwTXfV/N9gI61cycrSAe8Pxuq6c3ARtAuPCMCTnUZVfcrY
+wG7GjoCTRg6TWUYNBtBe/GVFLfjBgfwXjlfFeHOkScKOyZVBEoTK2ZjV/xExPSRl
+NwDXdaFJAgMBAAECggEALv4JeQ//YecHCcPyeAxU2GHRlVhmqe+EtOSnDJceHkBe
+KpTJGAFohV9DjexKtAnAVzeG6lSDufvWO0JHJto3zO5Zt+Y4AgaQutU2fI+ckXhk
+IX3G+ChVtI5C9Z8kuqLPW5z7bmE6sAVhoU7PaKBTLU2riiv8oAHVXWgEDPSuLDBC
+Kfg4IuE0DeCf3/I2pcAXDv9SHo5r+VXOmV7ImXmYZRbUQFoYHlngdGPhmpBt3I0T
+5ukjeEJLbw0Etc2wNqbbcLnZJgub4NjZxl/10edlbkhEYINm+dY5BhigEZoAOz6N
+y6Xgcwd4yDt4T7wQRebnifhxCzMQyBBP0J/nqJwc+QKBgQDENQ9eD8jkBbqaQnFy
+mCsVKrqG2zl/M5DoScfF5tjxf69rdWzmgVACMWJOk9T7wgIsKf9NJk4r3eklduGS
+hu/eT+jmteojFiVxRSfdUbklkvuGzYI8PH1jk7s0CMsBUGUbrNP1zMMMPsIHsTc4
+kKFvh55xvWjeSBvo7oO5b7CfuwKBgQDhd2ua6Vob8mhUzK17CLadP1w5u6ICsi13
+okeHUXV9fpGSoFiPXzNDpkAVMxKnEpU3eywE0YMogEKNv6SCjcvRNNIzGS+IiafG
+f1/4XSwgDgcYUtfDjjbRbOpJP+tQijXTqJXWrrvXf+Y9MIjLnFCZX2Kjz9DVhtVy
+uVNoYNloywKBgQCq6AUQy/MTHCJkyEeFqCKu918upLq6oDIzBEFtkx2Zjr1AfzJy
+vmTw5A9bns3A1keKLLLjguBIua2iIqFuPvel0Dlw7Tibg2jt9204DT2XCybpTw2I
+ZrBaEo7YTmh2Jo9LwgmHa+riObBNfwI41VKpkZpkPLaiGHGnPkujNTTGjQKBgHpH
+QQWf3u3fNvQemUtru1Zm4YayGzhpF72VNkPOSvEHrr2d1snS8MOUq5aTv1769hBD
+7eijFAXoIbAsqnTfoBVTF1j9JMlhFqvRsuPI7EBqOzDW5Qu62kIUVq/pSZ7BhlXH
+TZRD6b4DMIQpCVeb7B5yG9YJxBG58ZMprXGjbOWnAoGAPK/8mH1Y9aKBYoOzki93
+SyfMja6x1wi3Ntk6kKeJz6oZsRkbV3jD4ed2woqw5SHqLDbMiCQVYRbtmfcs92JQ
+0Y3RZgrgIua8AUkUkzZAyIXdtrOO6GurM+xn28Gd+mk5ugPaG3Vj4/UVd274aPm3
+8MX18fXwh04VE7pocEWTKHU=
+-----END PRIVATE KEY-----";
 
     /// <summary>
     /// Generate using command: openssl rsa -in ./private.pem -outform PEM -pubout -out ./public.pem

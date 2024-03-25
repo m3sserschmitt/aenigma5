@@ -1,11 +1,11 @@
 using Enigma5.App.Common.Utils;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
 using Enigma5.Message;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class SessionManager(ConnectionsMapper connectionsMapper, CertificateManager certificateManager)
+public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateManager certificateManager)
 {
     private const int TOKEN_SIZE = 64;
 
@@ -19,7 +19,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper, CertificateMana
 
     private readonly ConnectionsMapper _connectionsMapper = connectionsMapper;
 
-    private readonly CertificateManager _certificateManager = certificateManager;
+    private readonly ICertificateManager _certificateManager = certificateManager;
 
     private bool AddPending(string connectionId, string token)
     => _pending.TryAdd(connectionId, token);

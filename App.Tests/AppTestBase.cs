@@ -2,7 +2,8 @@
 using AutoMapper.Contrib.Autofac.DependencyInjection;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
+using Enigma5.App.Security.DataProviders;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 
@@ -19,7 +20,7 @@ public class AppTestBase
         var builder = new ContainerBuilder();
 
         builder.RegisterType<NetworkGraph>();
-        builder.RegisterType<CertificateManager>().SingleInstance();
+        builder.RegisterType<TestCertificateManager>().As<ICertificateManager>().SingleInstance();
         builder.RegisterVertex();
         builder.Register(_ => Substitute.For<IConfiguration>());
 

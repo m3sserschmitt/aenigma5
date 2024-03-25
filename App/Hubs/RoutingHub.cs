@@ -5,7 +5,7 @@ using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Models;
 using Enigma5.Crypto;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
 using AutoMapper;
@@ -14,7 +14,7 @@ namespace Enigma5.App.Hubs;
 
 public class RoutingHub(
     SessionManager sessionManager,
-    CertificateManager certificateManager,
+    ICertificateManager certificateManager,
     NetworkGraph networkGraph,
     IMediator commandRouter,
     IMapper mapper) :
@@ -25,7 +25,7 @@ public class RoutingHub(
 {
     private readonly SessionManager _sessionManager = sessionManager;
 
-    private readonly CertificateManager _certificateManager = certificateManager;
+    private readonly ICertificateManager _certificateManager = certificateManager;
 
     private readonly NetworkGraph _networkGraph = networkGraph;
 

@@ -1,19 +1,19 @@
 ﻿using Autofac;
 using Enigma5.App.Data;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.App.Tests.Data;
 
 public class VertexFactoryTests : AppTestBase
 {
-    private readonly CertificateManager _certificateManager;
+    private readonly ICertificateManager _certificateManager;
 
     private const string HOSTNAME = "test-hostname";
 
     public VertexFactoryTests()
     {
-        _certificateManager = _scope.Resolve<CertificateManager>();
+        _certificateManager = _scope.Resolve<ICertificateManager>();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class VertexFactoryTests : AppTestBase
     public void ShouldNotAddNeighborTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex(new List<string> { PKey.Address1 }, HOSTNAME);
+        var vertex = _scope.ResolveLocalVertex([PKey.Address1], HOSTNAME);
 
         // Act
         var secondAdded = Vertex.Factory.Prototype.AddNeighbor(vertex, PKey.Address1, _certificateManager, out Vertex? newVertex);
@@ -72,7 +72,7 @@ public class VertexFactoryTests : AppTestBase
     public void ShouldRemoveNeighbor()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex(new List<string> { PKey.Address1 }, HOSTNAME);
+        var vertex = _scope.ResolveLocalVertex([PKey.Address1], HOSTNAME);
 
         // Act
         var removed = Vertex.Factory.Prototype.RemoveNeighbor(vertex, PKey.Address1, _certificateManager, out Vertex? newVertex);

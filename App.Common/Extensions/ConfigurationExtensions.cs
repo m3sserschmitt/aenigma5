@@ -12,4 +12,10 @@ public static class ConfigurationExtensions
 
     public static string? GetHostname(this IConfiguration configuration)
     => configuration.GetValue<string>("Hostname");
+
+    public static string? GetPrivateKeyPath(this IConfiguration configuration)
+    => configuration.GetValue<string>("PrivateKeyPath");
+
+    public static string? GetPublicKeyPath(this IConfiguration configuration)
+    => configuration.GetValue<string>("PublicKeyPath");
 }

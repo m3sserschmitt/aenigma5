@@ -1,3 +1,4 @@
+using System.Text;
 using Enigma5.Crypto.DataProviders;
 using Xunit;
 
@@ -10,7 +11,7 @@ public class EnvelopeTests
     {
         // Arrange
         using var seal = Envelope.Factory.CreateSeal(PKey.PublicKey1);
-        byte[] plaintext = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+        byte[] plaintext = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
         // Act
         var ciphertext = seal.Seal(plaintext);
@@ -25,7 +26,7 @@ public class EnvelopeTests
     {
         // Arrange
         var testEnvelope = TestEnvelope.Create();
-        using var unseal = Envelope.Factory.CreateUnseal(PKey.PrivateKey1, PKey.Passphrase);
+        using var unseal = Envelope.Factory.CreateUnseal(Encoding.UTF8.GetBytes(PKey.PrivateKey1), PKey.Passphrase);
 
         // Act
         var plaintext = unseal.Unseal(testEnvelope);
@@ -39,8 +40,8 @@ public class EnvelopeTests
     public void Envelope_ShouldSign()
     {
         // Arrange
-        using var signature = Envelope.Factory.CreateSignature(PKey.PrivateKey1, PKey.Passphrase);
-        byte[] plaintext = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+        using var signature = Envelope.Factory.CreateSignature(Encoding.UTF8.GetBytes(PKey.PrivateKey1), PKey.Passphrase);
+        byte[] plaintext = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
         // Act
         var ciphertext = signature.Sign(plaintext);

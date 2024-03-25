@@ -61,7 +61,7 @@ public class OnionParser : IDisposable
 
     public static class Factory
     {
-        public static OnionParser Create(string key, string passphrase)
+        public static OnionParser Create(byte[] key, string passphrase)
         {
             return new OnionParser(Envelope.Factory.CreateUnseal(key, passphrase));
         }

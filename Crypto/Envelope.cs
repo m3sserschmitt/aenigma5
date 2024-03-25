@@ -59,10 +59,10 @@ public sealed class Envelope :
         public static IEnvelopeSeal CreateSeal(string key)
         => new Envelope(SealProvider.Factory.Create(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key)));
 
-        public static IEnvelopeUnseal CreateUnseal(string key, string passphrase)
+        public static IEnvelopeUnseal CreateUnseal(byte[] key, string passphrase)
         => new Envelope(SealProvider.Factory.Create(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase)));
 
-        public static IEnvelopeSign CreateSignature(string key, string passphrase)
+        public static IEnvelopeSign CreateSignature(byte[] key, string passphrase)
         => new Envelope(SealProvider.Factory.Create(CryptoContext.Factory.CreateSignatureContext(key, passphrase)));
 
         public static IEnvelopeSign CreateSignatureFromFile(string path, string passphrase)

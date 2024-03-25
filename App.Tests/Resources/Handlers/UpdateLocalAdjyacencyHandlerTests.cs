@@ -3,20 +3,20 @@ using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
 public class UpdateLocalAdjacencyHandlerTests : AppTestBase
 {
-    private readonly CertificateManager _certificateManager;
+    private readonly ICertificateManager _certificateManager;
 
     private readonly UpdateLocalAdjacencyHandler _handler;
 
     public UpdateLocalAdjacencyHandlerTests()
     {
-        _certificateManager = _scope.Resolve<CertificateManager>();
+        _certificateManager = _scope.Resolve<ICertificateManager>();
         _handler = _scope.Resolve<UpdateLocalAdjacencyHandler>();
     }
 

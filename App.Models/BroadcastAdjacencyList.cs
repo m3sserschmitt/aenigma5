@@ -13,7 +13,7 @@ public class BroadcastAdjacencyList
     public BroadcastAdjacencyList(
         List<string> neighbors,
         string publicKey,
-        string privateKey,
+        byte[] privateKey,
         string hostname)
     {
         _adjacencyList = new(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname);
@@ -58,7 +58,7 @@ public class BroadcastAdjacencyList
 
     public AdjacencyList? GetAdjacencyList() => _adjacencyList;
 
-    private string Sign(string privateKey)
+    private string Sign(byte[] privateKey)
     {
         var serializedList = JsonSerializer.Serialize(_adjacencyList);
         using var envelope = Envelope.Factory.CreateSignature(privateKey, string.Empty);

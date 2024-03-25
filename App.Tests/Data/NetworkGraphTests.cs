@@ -1,19 +1,20 @@
 ﻿using Autofac;
 using Enigma5.App.Data;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
+using Enigma5.Crypto;
 using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.App.Tests.Data;
 
 public class NetworkGraphTests : AppTestBase
 {
-    private readonly CertificateManager _certificateManager;
+    private readonly ICertificateManager _certificateManager;
 
     private readonly NetworkGraph _graph;
 
     public NetworkGraphTests()
     {
-        _certificateManager = _scope.Resolve<CertificateManager>();
+        _certificateManager = _scope.Resolve<ICertificateManager>();
         _graph = _scope.Resolve<NetworkGraph>();
     }
 
@@ -21,7 +22,7 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldUpdateLocalVertex()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex(new List<string> { PKey.Address2 });
+        var vertex = _scope.ResolveLocalVertex([PKey.Address2]);
 
         // Act
         var (vertices, delta) = _graph.Update(vertex);
@@ -44,7 +45,7 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldAddNewVertex()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex(new List<string>() { PKey.Address2 });
+        var vertex = _scope.ResolveAdjacentVertex([PKey.Address2]);
 
         // Act
         var (vertices, delta) = _graph.Update(vertex);
@@ -72,9 +73,9 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldRemoveAdjacency()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex(new List<string> { PKey.Address2 });
+        var vertex = _scope.ResolveAdjacentVertex([PKey.Address2]);
 
-        var updatedVertex = _scope.ResolveNonAdjacentVertex(new List<string> { PKey.Address2 });
+        var updatedVertex = _scope.ResolveNonAdjacentVertex([PKey.Address2]);
 
         // Act
         var (vertices, _) = _graph.Update(vertex);
@@ -96,7 +97,7 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldNotUpdateGraphTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex(new List<string> { PKey.Address2 });
+        var vertex = _scope.ResolveAdjacentVertex([PKey.Address2]);
 
         // Act
         var (vertices, delta) = _graph.Update(vertex);

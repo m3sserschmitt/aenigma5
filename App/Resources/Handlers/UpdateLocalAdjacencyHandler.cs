@@ -1,23 +1,17 @@
 ﻿using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
-using Enigma5.App.Security;
+using Enigma5.App.Security.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class UpdateLocalAdjacencyHandler
+public class UpdateLocalAdjacencyHandler(NetworkGraph networkGraph, ICertificateManager certificateManager)
 : IRequestHandler<UpdateLocalAdjacencyCommand, (Vertex localVertex, BroadcastAdjacencyList? broadcast)>
 {
-    private readonly NetworkGraph _networkGraph;
+    private readonly NetworkGraph _networkGraph = networkGraph;
 
-    private readonly CertificateManager _certificateManager;
-
-    public UpdateLocalAdjacencyHandler(NetworkGraph networkGraph, CertificateManager certificateManager)
-    {
-        _networkGraph = networkGraph;
-        _certificateManager = certificateManager;
-    }
+    private readonly ICertificateManager _certificateManager = certificateManager;
 
     public async Task<(Vertex localVertex, BroadcastAdjacencyList? broadcast)> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
     {

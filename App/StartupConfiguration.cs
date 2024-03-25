@@ -17,17 +17,13 @@ using Enigma5.App.Models;
 using Enigma5.Crypto;
 using System.Text;
 using System.Text.Json;
+using Enigma5.App.Security.Contracts;
 
 namespace Enigma5.App;
 
-public class StartupConfiguration
+public class StartupConfiguration(IConfiguration configuration)
 {
-    private readonly IConfiguration _configuration;
-
-    public StartupConfiguration(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
+    private readonly IConfiguration _configuration = configuration;
 
     public void ConfigureServices(IServiceCollection services)
     {
@@ -41,7 +37,9 @@ public class StartupConfiguration
 
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
-        services.AddSingleton<CertificateManager>();
+        services.AddTransient<IPassphraseProvider, CommandLinePassphraseReader>();
+        services.AddTransient<KeysProvider>();
+        services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
         services.AddTransient<MediatorHangfireBridge>();
 
@@ -59,7 +57,7 @@ public class StartupConfiguration
         {
             endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
 
-            endpoints.MapGet(Endpoints.ServerInfoEndpoint, (CertificateManager certificateManager, NetworkGraph networkGraph) =>
+            endpoints.MapGet(Endpoints.ServerInfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
             {
                 var serializedGraph = JsonSerializer.Serialize(networkGraph.Vertices);
                 var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));

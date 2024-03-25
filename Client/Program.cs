@@ -17,7 +17,7 @@ public class Program
         Console.WriteLine($"Message received");
         var decodedData = Convert.FromBase64String(message);
 
-        using var onionParser = OnionParser.Factory.Create(privateKey, passphrase);
+        using var onionParser = OnionParser.Factory.Create(Encoding.UTF8.GetBytes(privateKey), passphrase);
 
         if (onionParser.Parse(new Onion { Content = decodedData }))
         {
@@ -101,7 +101,7 @@ public class Program
         {
             var token = await response ?? throw new Exception("Token generation failed.");
 
-            using var signature = Envelope.Factory.CreateSignature(privateKey, passphrase);
+            using var signature = Envelope.Factory.CreateSignature(Encoding.UTF8.GetBytes(privateKey), passphrase);
             var data = signature.Sign(Convert.FromBase64String(token));
 
             if (data != null)
