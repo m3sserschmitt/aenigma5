@@ -1,6 +1,7 @@
-﻿using Enigma5.App.Security;
+﻿
+using Enigma5.App.Data;
 
-namespace Enigma5.App.Tests.Security;
+namespace Enigma5.App.Tests.Data;
 
 public class NetworkGraphValidationPolicyTests : AppTestBase
 {

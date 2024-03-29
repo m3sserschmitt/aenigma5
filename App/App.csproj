@@ -29,6 +29,7 @@
     <ProjectReference Include="..\Message\Message.csproj" />
     <ProjectReference Include="..\App.Models\App.Models.csproj" />
     <ProjectReference Include="..\App.Common\App.Common.csproj" />
+    <ProjectReference Include="..\App.Security\App.Security.csproj" />
   </ItemGroup>
 
   <ItemGroup>

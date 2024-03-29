@@ -1,7 +1,6 @@
 ﻿using Autofac;
 using Enigma5.App.Data;
 using Enigma5.App.Security.Contracts;
-using Enigma5.Crypto;
 using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.App.Tests.Data;

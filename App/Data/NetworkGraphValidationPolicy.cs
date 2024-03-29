@@ -1,12 +1,11 @@
-﻿using Enigma5.App.Data;
-using Enigma5.Crypto;
+﻿using Enigma5.Crypto;
 using Enigma5.App.Common.Extensions;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Enigma5.App.Security;
+namespace Enigma5.App.Data;
 
-public static class NetworkGraphValidationPolicy
+public static partial class NetworkGraphValidationPolicy
 {
     public static bool ValidateSignature(Vertex vertex)
     {
@@ -54,7 +53,7 @@ public static class NetworkGraphValidationPolicy
     {
         foreach(var address in vertex.Neighborhood.Neighbors)
         {
-            if(!Regex.IsMatch(address, "^[a-fA-F0-9]{64}$"))
+            if(!AddressRegex().IsMatch(address))
             {
                 return false;
             }
@@ -68,4 +67,7 @@ public static class NetworkGraphValidationPolicy
     && CheckCycles(vertex)
     && ValidateNeighborsAddresses(vertex)
     && ValidateSignature(vertex);
+
+    [GeneratedRegex("^[a-fA-F0-9]{64}$")]
+    private static partial Regex AddressRegex();
 }
