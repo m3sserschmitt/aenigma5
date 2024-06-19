@@ -11,4 +11,6 @@ public class EnigmaDbContext : DbContext
 #pragma warning restore CS8618
 
     public DbSet<PendingMessage> Messages { get; set; }
+
+    public DbSet<ShareData> SharedData { get; set; }
 }

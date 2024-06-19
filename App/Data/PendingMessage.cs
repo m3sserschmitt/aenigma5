@@ -2,11 +2,10 @@ namespace Enigma5.App.Data;
 
 public class PendingMessage
 {
-    public PendingMessage(string destination, string content, DateTime dateReceived, bool sent)
+    public PendingMessage(string destination, string content, bool sent)
     {
         Destination = destination;
         Content = content;
-        DateReceived = dateReceived;
         Sent = sent;    
     }
 
@@ -16,7 +15,7 @@ public class PendingMessage
 
     public string Content { get; set; } = string.Empty;
 
-    public DateTime DateReceived { get; set; }
+    public DateTime DateReceived { get; set; } = DateTime.UtcNow;
 
     public bool Sent { get; set; }
 }

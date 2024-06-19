@@ -18,6 +18,8 @@ using Enigma5.Crypto;
 using System.Text;
 using System.Text.Json;
 using Enigma5.App.Security.Contracts;
+using App.Models;
+using MediatR;
 
 namespace Enigma5.App;
 
@@ -78,6 +80,39 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapGet(Endpoints.GraphAddressesEndpoint, (NetworkGraph networkGraph) =>
             {
                 return Results.Ok(networkGraph.Addresses);
+            });
+
+            endpoints.MapPost(Endpoints.ShareEndpoint, async (ShareDataCreate shareDataCreate, IMediator commandRouter) =>
+            {
+                if (!shareDataCreate.Valid)
+                {
+                    return Results.BadRequest();
+                }
+
+                using var signatureVerification = Envelope.Factory.CreateSignatureVerification(shareDataCreate.PublicKey!);
+
+                if (signatureVerification is null)
+                {
+                    return Results.StatusCode(500);
+                }
+                
+                var decodedSignature = Convert.FromBase64String(shareDataCreate.SignedData!);
+
+                if (decodedSignature is null
+                || decodedSignature.Length == 0
+                || !signatureVerification.Verify(decodedSignature))
+                {
+                    return Results.BadRequest();
+                }
+
+                var result = await commandRouter.Send(new CreateShareDataCommand(shareDataCreate.SignedData!));
+
+                if (result is null)
+                {
+                    return Results.StatusCode(500);
+                }
+
+                return Results.Ok(result);
             });
         });
 

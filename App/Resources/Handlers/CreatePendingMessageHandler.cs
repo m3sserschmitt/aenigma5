@@ -12,7 +12,7 @@ public class CreatePendingMessageHandler(EnigmaDbContext context) : IRequestHand
     {
         try
         {
-            var pendingMessage = new PendingMessage(command.Destination, command.Content, DateTime.UtcNow, false);
+            var pendingMessage = new PendingMessage(command.Destination, command.Content, false);
 
             await _context.AddAsync(pendingMessage, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
