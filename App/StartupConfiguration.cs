@@ -131,10 +131,15 @@ public class StartupConfiguration(IConfiguration configuration)
 
         serviceProvider.UseAsHangfireActivator();
 
-        // TODO: Refactor this!!
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-        "storage-cleanup",
-        bridge => bridge.Send(new CleanupMessagesCommand(new TimeSpan(24, 0, 0), true)),
-        "*/15 * * * *");
+            "pending-messages-cleanup",
+            bridge => bridge.Send(new CleanupMessagesCommand(new TimeSpan(24, 0, 0), true)),
+            "*/15 * * * *"
+        );
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            "shared-data-cleanup",
+            bridge => bridge.Send(new CleanupSharedDataCommand(new TimeSpan(0, 15, 0))),
+            "*/5 * * * *"
+        );
     }
 }
