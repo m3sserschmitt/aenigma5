@@ -105,7 +105,12 @@ public class StartupConfiguration(IConfiguration configuration)
                     return Results.BadRequest();
                 }
 
-                var result = await commandRouter.Send(new CreateShareDataCommand(sharedDataCreate.SignedData!));
+                var result = await commandRouter.Send(
+                    new CreateShareDataCommand(
+                        sharedDataCreate.SignedData!,
+                        sharedDataCreate.AccessCount
+                    )
+                );
 
                 if (result is null)
                 {

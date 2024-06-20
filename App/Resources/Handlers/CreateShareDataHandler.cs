@@ -12,7 +12,7 @@ public class CreateShareDataHandler(EnigmaDbContext context) : IRequestHandler<C
     {
         try
         {
-            var sharedData = new SharedData(request.SignedData);
+            var sharedData = new SharedData(request.SignedData, request.AccessCount);
 
             await _context.AddAsync(sharedData, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
