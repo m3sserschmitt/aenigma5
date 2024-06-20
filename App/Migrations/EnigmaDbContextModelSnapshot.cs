@@ -17,24 +17,6 @@ namespace App.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
 
-            modelBuilder.Entity("App.ShareData", b =>
-                {
-                    b.Property<Guid>("Tag")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Data")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Tag");
-
-                    b.ToTable("SharedData");
-                });
-
             modelBuilder.Entity("Enigma5.App.Data.PendingMessage", b =>
                 {
                     b.Property<long>("Id")
@@ -58,6 +40,23 @@ namespace App.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("Enigma5.App.Data.SharedData", b =>
+                {
+                    b.Property<string>("Tag")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Tag");
+
+                    b.ToTable("SharedData");
                 });
 #pragma warning restore 612, 618
         }

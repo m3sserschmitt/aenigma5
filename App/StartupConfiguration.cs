@@ -18,8 +18,8 @@ using Enigma5.Crypto;
 using System.Text;
 using System.Text.Json;
 using Enigma5.App.Security.Contracts;
-using App.Models;
 using MediatR;
+using Enigma5.App.Resources.Queries;
 
 namespace Enigma5.App;
 
@@ -82,21 +82,21 @@ public class StartupConfiguration(IConfiguration configuration)
                 return Results.Ok(networkGraph.Addresses);
             });
 
-            endpoints.MapPost(Endpoints.ShareEndpoint, async (ShareDataCreate shareDataCreate, IMediator commandRouter) =>
+            endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter) =>
             {
-                if (!shareDataCreate.Valid)
+                if (!sharedDataCreate.Valid)
                 {
                     return Results.BadRequest();
                 }
 
-                using var signatureVerification = Envelope.Factory.CreateSignatureVerification(shareDataCreate.PublicKey!);
+                using var signatureVerification = Envelope.Factory.CreateSignatureVerification(sharedDataCreate.PublicKey!);
 
                 if (signatureVerification is null)
                 {
                     return Results.StatusCode(500);
                 }
-                
-                var decodedSignature = Convert.FromBase64String(shareDataCreate.SignedData!);
+
+                var decodedSignature = Convert.FromBase64String(sharedDataCreate.SignedData!);
 
                 if (decodedSignature is null
                 || decodedSignature.Length == 0
@@ -105,15 +105,28 @@ public class StartupConfiguration(IConfiguration configuration)
                     return Results.BadRequest();
                 }
 
-                var result = await commandRouter.Send(new CreateShareDataCommand(shareDataCreate.SignedData!));
+                var result = await commandRouter.Send(new CreateShareDataCommand(sharedDataCreate.SignedData!));
 
                 if (result is null)
                 {
                     return Results.StatusCode(500);
                 }
 
-                return Results.Ok(result);
+                return Results.Ok(new { Tag = result });
             });
+
+            endpoints.MapGet(Endpoints.ShareEndpoint, async (string tag, IMediator commandRouter) =>
+            {
+                var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
+
+                if (sharedData is null)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok(new { sharedData.Tag, sharedData.Data });
+            });
+
         });
 
         serviceProvider.UseAsHangfireActivator();

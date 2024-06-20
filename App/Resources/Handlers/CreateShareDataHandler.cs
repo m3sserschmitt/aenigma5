@@ -4,20 +4,20 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CreateShareDataHandler(EnigmaDbContext context) : IRequestHandler<CreateShareDataCommand, Guid?>
+public class CreateShareDataHandler(EnigmaDbContext context) : IRequestHandler<CreateShareDataCommand, string?>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<Guid?> Handle(CreateShareDataCommand request, CancellationToken cancellationToken)
+    public async Task<string?> Handle(CreateShareDataCommand request, CancellationToken cancellationToken)
     {
         try
         {
-            var shareData = new ShareData(request.SignedData);
+            var sharedData = new SharedData(request.SignedData);
 
-            await _context.AddAsync(shareData, cancellationToken);
+            await _context.AddAsync(sharedData, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
-            return shareData.Tag;
+            return sharedData.Tag;
         }
         catch (Exception)
         {

@@ -1,6 +1,6 @@
 ﻿namespace Enigma5.App.Models;
 
-public class ShareDataCreate
+public class SharedDataCreate
 {
     public string? PublicKey { get; set; }
 

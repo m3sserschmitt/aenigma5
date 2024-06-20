@@ -2,10 +2,10 @@
 
 namespace Enigma5.App.Data;
 
-public class ShareData(string data)
+public class SharedData(string data)
 {
     [Key]
-    public Guid Tag { get; set; } = Guid.NewGuid();
+    public string Tag { get; set; } = Guid.NewGuid().ToString();
 
     [Required]
     public string Data { get; set; } = data;

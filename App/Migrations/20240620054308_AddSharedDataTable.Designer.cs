@@ -11,32 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace App.Migrations
 {
     [DbContext(typeof(EnigmaDbContext))]
-    [Migration("20240618121440_AddShareDataTable")]
-    partial class AddShareDataTable
+    [Migration("20240620054308_AddSharedDataTable")]
+    partial class AddSharedDataTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
-
-            modelBuilder.Entity("App.ShareData", b =>
-                {
-                    b.Property<Guid>("Tag")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Data")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Tag");
-
-                    b.ToTable("SharedData");
-                });
 
             modelBuilder.Entity("Enigma5.App.Data.PendingMessage", b =>
                 {
@@ -61,6 +43,23 @@ namespace App.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("Enigma5.App.Data.SharedData", b =>
+                {
+                    b.Property<string>("Tag")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Tag");
+
+                    b.ToTable("SharedData");
                 });
 #pragma warning restore 612, 618
         }

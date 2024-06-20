@@ -12,5 +12,5 @@ public class EnigmaDbContext : DbContext
 
     public DbSet<PendingMessage> Messages { get; set; }
 
-    public DbSet<ShareData> SharedData { get; set; }
+    public DbSet<SharedData> SharedData { get; set; }
 }
