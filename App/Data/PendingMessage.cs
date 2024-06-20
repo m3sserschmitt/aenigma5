@@ -15,7 +15,7 @@ public class PendingMessage
 
     public string Content { get; set; } = string.Empty;
 
-    public DateTime DateReceived { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset DateReceived { get; set; } = DateTimeOffset.Now;
 
     public bool Sent { get; set; }
 }

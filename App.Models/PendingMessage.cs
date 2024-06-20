@@ -6,5 +6,5 @@ public class PendingMessage
 
     public string? Content { get; set; }
 
-    public DateTime DateReceived { get; set; }
+    public DateTimeOffset DateReceived { get; set; }
 }

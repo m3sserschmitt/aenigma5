@@ -11,5 +11,5 @@ public class SharedData(string data)
     public string Data { get; set; } = data;
 
     [Required]
-    public DateTime DateCreated { get; set; } = DateTime.Now;
+    public DateTimeOffset DateCreated { get; set; } = DateTimeOffset.Now;
 }
