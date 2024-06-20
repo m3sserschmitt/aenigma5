@@ -124,9 +124,10 @@ public class StartupConfiguration(IConfiguration configuration)
                     return Results.NotFound();
                 }
 
+                await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Tag));
+
                 return Results.Ok(new { sharedData.Tag, sharedData.Data });
             });
-
         });
 
         serviceProvider.UseAsHangfireActivator();
