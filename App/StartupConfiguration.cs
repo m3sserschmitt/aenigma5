@@ -20,6 +20,7 @@ using System.Text.Json;
 using Enigma5.App.Security.Contracts;
 using MediatR;
 using Enigma5.App.Resources.Queries;
+using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.App;
 
@@ -82,7 +83,7 @@ public class StartupConfiguration(IConfiguration configuration)
                 return Results.Ok(networkGraph.Addresses);
             });
 
-            endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter) =>
+            endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
             {
                 if (!sharedDataCreate.Valid)
                 {
@@ -117,7 +118,15 @@ public class StartupConfiguration(IConfiguration configuration)
                     return Results.StatusCode(500);
                 }
 
-                return Results.Ok(new { Tag = result });
+                var resourceUrl = $"{(configuration.GetHostname() ?? "").Trim('/')}/{Endpoints.ShareEndpoint}?Tag={result}";
+
+                return Results.Ok(new
+                {
+                    Tag = result,
+                    ResourceUrl = resourceUrl,
+                    ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistancePeriod
+                }
+                );
             });
 
             endpoints.MapGet(Endpoints.ShareEndpoint, async (string tag, IMediator commandRouter) =>
@@ -139,12 +148,16 @@ public class StartupConfiguration(IConfiguration configuration)
 
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "pending-messages-cleanup",
-            bridge => bridge.Send(new CleanupMessagesCommand(new TimeSpan(24, 0, 0), true)),
+            bridge => bridge.Send(
+                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistancePeriod, true)
+            ),
             "*/15 * * * *"
         );
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "shared-data-cleanup",
-            bridge => bridge.Send(new CleanupSharedDataCommand(new TimeSpan(0, 15, 0))),
+            bridge => bridge.Send(
+                new CleanupSharedDataCommand(DataPersistencePeriod.SharedDataPersistancePeriod)
+            ),
             "*/5 * * * *"
         );
     }
