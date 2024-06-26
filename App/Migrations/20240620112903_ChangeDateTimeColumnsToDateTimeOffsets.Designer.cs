@@ -3,6 +3,7 @@ using System;
 using Enigma5.App.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace App.Migrations
 {
     [DbContext(typeof(EnigmaDbContext))]
-    partial class EnigmaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240620112903_ChangeDateTimeColumnsToDateTimeOffsets")]
+    partial class ChangeDateTimeColumnsToDateTimeOffsets
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -47,18 +50,12 @@ namespace App.Migrations
                     b.Property<string>("Tag")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("AccessCount")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Data")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("DateCreated")
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("MaxAccessCount")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Tag");
 

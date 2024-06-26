@@ -9,4 +9,6 @@ public static class Endpoints
     public const string NetworkGraphEndpoint = "NetworkGraph";
 
     public const string GraphAddressesEndpoint = "Addresses";
+
+    public const string ShareEndpoint = "Share";
 }
