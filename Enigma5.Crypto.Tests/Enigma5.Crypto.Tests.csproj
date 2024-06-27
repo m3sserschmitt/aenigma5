@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Crypto/Enigma5.Crypto.csproj" />
+    <ProjectReference Include="../Enigma5.Crypto/Enigma5.Crypto.csproj" />
   </ItemGroup>
 
 </Project>

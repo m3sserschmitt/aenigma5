@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Message/Enigma5.Structures.csproj" />
+    <ProjectReference Include="../Enigma5.Structures/Enigma5.Structures.csproj" />
   </ItemGroup>
 
 </Project>

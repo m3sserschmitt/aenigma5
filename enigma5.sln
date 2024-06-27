@@ -3,27 +3,27 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Crypto", "Crypto\Enigma5.Crypto.csproj", "{FE174B61-70D1-4F7F-8B64-81B17279751A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Crypto", "Enigma5.Crypto\Enigma5.Crypto.csproj", "{FE174B61-70D1-4F7F-8B64-81B17279751A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "Client\Client.csproj", "{B8017F3C-8D84-4E63-A82C-4C72F252F7BD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Structures", "Message\Enigma5.Structures.csproj", "{0A549CCD-6074-4F3D-BA12-472634EE8E57}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Structures", "Enigma5.Structures\Enigma5.Structures.csproj", "{0A549CCD-6074-4F3D-BA12-472634EE8E57}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Protocol.Tests", "Message.Tests\Enigma5.Protocol.Tests.csproj", "{A73F5C8C-43D4-41B2-9AB7-0DB4C8ADC2D2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Structures.Tests", "Enigma5.Structures.Tests\Enigma5.Structures.Tests.csproj", "{A73F5C8C-43D4-41B2-9AB7-0DB4C8ADC2D2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.App", "Enigma5.App\Enigma5.App.csproj", "{72D6D0B3-8B90-4537-8345-0A6907FADD9A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Crypto.Tests", "Crypto.Tests\Enigma5.Crypto.Tests.csproj", "{66E5C1CD-DF58-424A-9517-91DC48764BD7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Enigma5.Crypto.Tests", "Enigma5.Crypto.Tests\Enigma5.Crypto.Tests.csproj", "{66E5C1CD-DF58-424A-9517-91DC48764BD7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Tests", "App.Tests\Enigma5.App.Tests.csproj", "{E2AE2A5F-8AF9-4536-B443-5580BE59BEA9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Tests", "Enigma5.App.Tests\Enigma5.App.Tests.csproj", "{E2AE2A5F-8AF9-4536-B443-5580BE59BEA9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkBridge", "NetworkBridge\NetworkBridge.csproj", "{7F16B3CA-C780-49E5-A5A3-A680675719E9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Models", "App.Models\Enigma5.App.Models.csproj", "{FFBB076C-9B30-4BED-B4DA-622AFE7C73A0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Models", "Enigma5.App.Models\Enigma5.App.Models.csproj", "{FFBB076C-9B30-4BED-B4DA-622AFE7C73A0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Common", "App.Common\Enigma5.App.Common.csproj", "{1CE6D4D2-14A3-4CF5-8FEE-BA88BE8D945D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Common", "Enigma5.App.Common\Enigma5.App.Common.csproj", "{1CE6D4D2-14A3-4CF5-8FEE-BA88BE8D945D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Security", "App.Security\Enigma5.App.Security.csproj", "{2B2370B6-541B-4187-839A-E4E47D6FBEDD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.App.Security", "Enigma5.App.Security\Enigma5.App.Security.csproj", "{2B2370B6-541B-4187-839A-E4E47D6FBEDD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

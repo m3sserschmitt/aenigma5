@@ -12,10 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../App.Common/Enigma5.App.Common.csproj" />
-    <ProjectReference Include="../App.Models/Enigma5.App.Models.csproj" />
-    <ProjectReference Include="../Crypto/Enigma5.Crypto.csproj" />
-    <ProjectReference Include="../Message/Enigma5.Structures.csproj" />
+    <ProjectReference Include="../Enigma5.App.Common/Enigma5.App.Common.csproj" />
+    <ProjectReference Include="../Enigma5.App.Models/Enigma5.App.Models.csproj" />
+    <ProjectReference Include="../Enigma5.Crypto/Enigma5.Crypto.csproj" />
+    <ProjectReference Include="../Enigma5.Structures/Enigma5.Structures.csproj" />
   </ItemGroup>
 
 </Project>
