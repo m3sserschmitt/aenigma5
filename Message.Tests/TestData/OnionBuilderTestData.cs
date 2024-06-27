@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace Enigma5.Message.Tests.TestData;
+namespace Enigma5.Structures.Tests.TestData;
 
 public class OnionBuilderTestData : IEnumerable<object[]>
 {

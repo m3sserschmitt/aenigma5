@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
-using Enigma5.Message.Contracts;
+using Enigma5.Structures.Contracts;
 
-namespace Enigma5.Message;
+namespace Enigma5.Structures;
 
 public class OnionParser : IDisposable
 {

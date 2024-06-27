@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.Crypto.DataProviders;
-using Enigma5.Message;
+using Enigma5.Structures;
 using Microsoft.AspNetCore.SignalR.Client;
 using Enigma5.App.Models;
 using Enigma5.Crypto;

@@ -1,10 +1,10 @@
-using Enigma5.Message.Tests.TestData;
+using Enigma5.Structures.Tests.TestData;
 using Enigma5.Crypto.DataProviders;
 using Xunit;
 using Enigma5.Crypto;
 using FluentAssertions;
 
-namespace Enigma5.Message.Tests;
+namespace Enigma5.Structures.Tests;
 
 public class OnionBuilderTests
 {

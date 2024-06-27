@@ -1,4 +1,4 @@
-namespace Enigma5.Message.Contracts;
+namespace Enigma5.Structures.Contracts;
 
 public interface ISetMessageContent
 {

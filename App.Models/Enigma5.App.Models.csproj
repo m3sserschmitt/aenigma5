@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Crypto\Crypto.csproj" />
+    <ProjectReference Include="../Crypto/Enigma5.Crypto.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

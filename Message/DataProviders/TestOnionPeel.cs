@@ -1,9 +1,9 @@
-using Enigma5.Message.Contracts;
+using Enigma5.Structures.Contracts;
 using Enigma5.Crypto.DataProviders;
-using Enigma5.Message.DataProviders.Contracts;
+using Enigma5.Structures.DataProviders.Contracts;
 using Enigma5.Crypto;
 
-namespace Enigma5.Message.DataProviders;
+namespace Enigma5.Structures.DataProviders;
 
 public class TestOnionPeel : ITestOnion
 {

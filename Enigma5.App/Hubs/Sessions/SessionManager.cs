@@ -2,7 +2,7 @@ using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
-using Enigma5.Message;
+using Enigma5.Structures;
 
 namespace Enigma5.App.Hubs.Sessions;
 

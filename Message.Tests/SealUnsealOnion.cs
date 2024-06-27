@@ -3,7 +3,7 @@ using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 using Xunit;
 
-namespace Enigma5.Message.Tests;
+namespace Enigma5.Structures.Tests;
 
 public class SealUnsealOnionTests
 {

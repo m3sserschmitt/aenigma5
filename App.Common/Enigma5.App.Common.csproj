@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\App.Models\App.Models.csproj" />
+    <ProjectReference Include="../App.Models/Enigma5.App.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>

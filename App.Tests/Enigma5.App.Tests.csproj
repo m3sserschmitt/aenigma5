@@ -27,8 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\App\App.csproj" />
-    <ProjectReference Include="..\Crypto\Crypto.csproj" />
+    <ProjectReference Include="../Crypto/Enigma5.Crypto.csproj" />
+    <ProjectReference Include="..\Enigma5.App\Enigma5.App.csproj" />
   </ItemGroup>
 
   </Project>

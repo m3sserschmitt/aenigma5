@@ -1,12 +1,12 @@
-﻿using Enigma5.Message.Contracts;
+﻿using Enigma5.Structures.Contracts;
 
-namespace Enigma5.Message;
+namespace Enigma5.Structures;
 
 public class Onion : IOnion
 {
     public Onion()
     {
-        Content = new byte[1] { 0x00 };
+        Content = [0x00];
     }
 
     public Onion(byte[] content)

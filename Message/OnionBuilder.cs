@@ -1,8 +1,8 @@
-using Enigma5.Message.Contracts;
+using Enigma5.Structures.Contracts;
 using Enigma5.Crypto;
 using System.Runtime.InteropServices;
 
-namespace Enigma5.Message;
+namespace Enigma5.Structures;
 
 public class OnionBuilder
 {
