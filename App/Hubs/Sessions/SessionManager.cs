@@ -1,3 +1,4 @@
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
@@ -67,7 +68,25 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateMan
         return ThreadSafeExecution.Execute(
             () =>
             {
-                if (!signatureVerifier.Verify(decodedSignature) || !Authenticate(connectionId))
+                var token = decodedSignature.GetDataFromSignature();
+
+                if (token is null)
+                {
+                    return false;
+                }
+
+                var encodedToken = Convert.ToBase64String(token);
+
+                if (encodedToken is null)
+                {
+                    return false;
+                }
+
+                if (!_pending.TryGetValue(connectionId, out string? t) ||
+                    t != encodedToken ||
+                    !signatureVerifier.Verify(decodedSignature) ||
+                    !Authenticate(connectionId)
+                )
                 {
                     return false;
                 }
