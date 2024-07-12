@@ -4,7 +4,7 @@ namespace Enigma5.App.Common.Extensions;
 
 public static class ConfigurationExtensions
 {
-    public static IList<string>? GetPeers(this IConfiguration configuration)
+    public static List<string>? GetPeers(this IConfiguration configuration)
     => configuration.GetSection("Peers").Get<List<string>>();
 
     public static string? GetLocalListenAddress(this IConfiguration configuration)
@@ -18,4 +18,13 @@ public static class ConfigurationExtensions
 
     public static string? GetPublicKeyPath(this IConfiguration configuration)
     => configuration.GetValue<string>("PublicKeyPath");
+
+    public static bool GetRetryConnection(this IConfiguration configuration)
+    => configuration.GetValue<bool>("RetryConnection");
+
+    public static int GetConnectionRetriesCount(this IConfiguration configuration)
+    => configuration.GetValue<int>("ConnectionRetriesCount");
+
+    public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
+    => configuration.GetValue<int>("DelayBetweenConnectionRetries");
 }

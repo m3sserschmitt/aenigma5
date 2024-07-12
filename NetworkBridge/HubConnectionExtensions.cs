@@ -6,66 +6,57 @@ namespace NetworkBridge;
 
 public static class HubConnectionExtensions
 {
-    public static void ForwardTo<T>(this HubConnection connection, HubConnection other, string method)
+    private static Task InvokeAsync<T>(HubConnection target, string method, T data)
+    {
+        try
+        {
+            return target.InvokeAsync(method, data);
+        }
+        catch (Exception)
+        {
+            // TODO: Log this exception!
+            return Task.CompletedTask;
+        }
+    }
+
+    public static void Forward<T>(this ConnectionVector connectionVector, string method)
     where T : class
     {
-        connection.On<T>(method, data =>
-        {
-            other.InvokeAsync(method, data);
-        });
+        connectionVector.SourceOn<T>(method, async data => await connectionVector.InvokeTargetAsync(method, data));
+        connectionVector.TargetOn<T>(method, async data => await connectionVector.InvokeSourceAsync(method, data));
     }
 
-    public static void ForwardMessageRoutingTo(this HubConnection connection, HubConnection other)
-    => connection.ForwardTo<string>(other, nameof(IHub.RouteMessage));
-
-    public static void ForwardBroadcastingTo(this HubConnection connection, HubConnection other)
-    => connection.ForwardTo<BroadcastAdjacencyList>(other, nameof(IHub.Broadcast));
-
-    public static Task StartAuthentication(this (HubConnection first, HubConnection second) pair, Func<bool, Task> onCompleted)
-    => pair.StartAuthentication(true, onCompleted);
-
-    private static Task StartAuthentication(
-        this (HubConnection first, HubConnection second) pair,
-        bool authenticateInReverse,
-        Func<bool, Task> onCompleted)
+    public static void ForwardMessageRouting(this ConnectionVector connection)
     {
-        return pair.second.InvokeAsync<string?>(nameof(IHub.GenerateToken))
-        .ContinueWith(async response =>
-        {
-            var token = await response ?? throw new Exception();
-
-            await pair.first.InvokeAsync<Signature?>(nameof(IHub.SignToken), token)
-            .ContinueWith(async response =>
-            {
-                var signature = await response ?? throw new Exception();
-
-                await pair.second.InvokeAsync<bool>(nameof(IHub.Authenticate), new AuthenticationRequest
-                {
-                    Signature = signature.SignedData,
-                    PublicKey = signature.PublicKey,
-                    UpdateNetworkGraph = !authenticateInReverse,
-                    SyncMessagesOnSuccess = false
-                })
-                .ContinueWith(async response =>
-                {
-                    var success = await response;
-                    if (authenticateInReverse && success)
-                    {
-                        (HubConnection, HubConnection) reversed = (pair.second, pair.first);
-
-                        await reversed.StartAuthentication(false, onCompleted);
-                    }
-                    else
-                    {
-                        await onCompleted(success);
-                    }
-                });
-            });
-        });
+        connection.Forward<string>(nameof(IHub.RouteMessage));
     }
 
-    public static void ForwardCloseSignalTo(this HubConnection connection, HubConnection other)
+    public static void ForwardBroadcasts(this ConnectionVector connection)
     {
-        connection.Closed += async _ => { await other.StopAsync(); };
+        connection.Forward<BroadcastAdjacencyList>(nameof(IHub.Broadcast));
+    }
+
+    public static void ForwardCloseSignal(this ConnectionVector connection)
+    {
+        connection.SourceClosed += async _ => { try { await connection.StopTargetAsync(); } catch (Exception) { /* TODO: log exception */ } };
+        connection.TargetClosed += async _ => { try { await connection.StopSourceAsync(); } catch (Exception) { /* TODO: log exception */ } };
+    }
+
+    public static async Task<bool> StartAsync(this IEnumerable<ConnectionVector> connections)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.StartAsync()));
+        return results.All(result => result);
+    }
+
+    public static async Task<bool> StopAsync(this IEnumerable<ConnectionVector> connections)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.StopAsync()));
+        return results.All(result => result);
+    }
+
+    public static async Task<bool> StartAuthenticationAsync(this IEnumerable<ConnectionVector> connections)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.StartAuthenticationAsync()));
+        return results.All(result => result);
     }
 }

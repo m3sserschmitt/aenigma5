@@ -10,10 +10,51 @@ IConfiguration configuration = new ConfigurationBuilder()
 var urls = configuration.GetPeers() ?? throw new Exception("Peers section not provided into configuration.");
 
 var hubConnectionFactory = new HubConnectionFactory(configuration);
-var connections = hubConnectionFactory.Create(urls);
+var connections = hubConnectionFactory.CreateConnectionsProxy(urls);
+connections.OnAnyTargetClosed += OnConnectionClosed;
 
-connections.Start();
-connections.StartAuthentication();
+async Task Start()
+{
+    if (!await connections.StartAsync())
+    {
+        throw new Exception("Some peers could not be connected.");
+    }
 
+    if (!await connections.StartAuthenticationAsync())
+    {
+        throw new Exception("Authentication failed on some peers.");
+    }
 
-Console.ReadLine();
+    if (!await connections.TriggerBroadcast())
+    {
+        throw new Exception("Failed to trigger broadcast.");
+    }
+}
+
+async Task OnConnectionClosed(Exception? ex)
+{
+    // TODO: log exception
+
+    for (int i = 0; i < configuration.GetConnectionRetriesCount(); i++)
+    {
+        await Task.Delay(configuration.GetDelayBetweenConnectionRetries());
+        try
+        {
+            await Start();
+            Console.WriteLine("Connections reestablished.");
+            break;
+        }
+        catch (Exception)
+        {
+            // TODO: Log failed attempt
+            Console.WriteLine("Failed attempt to reestablish connection.");
+            continue;
+        }
+    }
+};
+
+await Start();
+
+Console.WriteLine("Connection successfully completed.");
+
+while(true) Task.Delay(int.MaxValue).Wait();

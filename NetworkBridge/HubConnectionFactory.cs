@@ -5,36 +5,28 @@ using Microsoft.Extensions.Configuration;
 
 namespace NetworkBridge;
 
-public class HubConnectionFactory
+public class HubConnectionFactory(IConfiguration configuration)
 {
-    private readonly string _listenAddress;
-
-    public HubConnectionFactory(IConfiguration configuration)
-    {
-        _listenAddress = configuration.GetLocalListenAddress()
+    private readonly string _listenAddress = configuration.GetLocalListenAddress()
         ?? throw new Exception("Local listening address not provided into configuration file.");
-    }
 
-    private IList<(HubConnection local, HubConnection remote)> Build(IList<string> urls)
+    private List<ConnectionVector> Build(IEnumerable<string> urls)
     {
-        var result = new List<(HubConnection local, HubConnection remote)>();
-        foreach (var url in urls)
+        return urls.Select(item =>
         {
             var local = new HubConnectionBuilder()
                                         .WithUrl($"{_listenAddress.Trim('/')}/{Endpoints.OnionRoutingEndpoint}")
                                         .Build();
 
             var remote = new HubConnectionBuilder()
-                                .WithUrl($"{url.Trim('/')}/{Endpoints.OnionRoutingEndpoint}")
+                                .WithUrl($"{item.Trim('/')}/{Endpoints.OnionRoutingEndpoint}")
                                 .Build();
-
-            result.Add((local, remote));
-        }
-        return result;
+            return new ConnectionVector(local, remote);
+        }).ToList();
     }
 
-    public HubConnectionProxy Create(IList<string> urls)
+    public HubConnectionsProxy CreateConnectionsProxy(IEnumerable<string> urls)
     {
-        return new HubConnectionProxy(Build(urls));
+        return new HubConnectionsProxy(Build(urls));
     }
 }
