@@ -1,10 +1,17 @@
 ﻿using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.Security;
+using Enigma5.Security.Extensions;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace NetworkBridge;
 
 public class HubConnectionsProxy
 {
     private readonly List<ConnectionVector> _connections;
+
+    private readonly CertificateManager _certificateManager;
+
+    private readonly HubConnection _localHubConnection;
 
     public event Func<Exception?, Task> OnAnyTargetClosed
     {
@@ -30,7 +37,10 @@ public class HubConnectionsProxy
         }
     }
 
-    public HubConnectionsProxy(List<ConnectionVector> connections)
+    public HubConnectionsProxy(
+        List<ConnectionVector> connections,
+        HubConnection localHubConnection,
+        CertificateManager certificateManager)
     {
         _connections = connections;
 
@@ -40,6 +50,9 @@ public class HubConnectionsProxy
             connection.ForwardMessageRouting();
             connection.ForwardBroadcasts();
         }
+
+        _certificateManager = certificateManager;
+        _localHubConnection = localHubConnection;
     }
 
     public Task<bool> StartAsync() => _connections.StartAsync();
@@ -52,12 +65,30 @@ public class HubConnectionsProxy
     {
         try
         {
-            await _connections.First().InvokeSourceAsync(nameof(IHub.TriggerBroadcast));
+            if (_localHubConnection.State == HubConnectionState.Disconnected)
+            {
+                await _localHubConnection.StartAsync();
+
+                if (!await _localHubConnection.AuthenticateAsync(_certificateManager, false, false))
+                {
+                    return false;
+                }
+
+                return await _localHubConnection.InvokeAsync<bool>(nameof(IHub.TriggerBroadcast));
+            }
             return true;
         }
         catch (Exception)
         {
+            // TODO: log exception;
             return false;
+        }
+        finally
+        {
+            if (_localHubConnection.State != HubConnectionState.Disconnected)
+            {
+                await _localHubConnection.StopAsync();
+            }
         }
     }
 }

@@ -13,6 +13,9 @@ public class OnionParsingFilter(SessionManager sessionManager)
 {
     private readonly SessionManager _sessionManager = sessionManager;
 
+    protected override bool CheckArguments(HubInvocationContext invocationContext)
+     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is string;
+
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         var data = invocationContext.MethodInvocationArgument<string>(0);

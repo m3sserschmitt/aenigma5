@@ -2,7 +2,7 @@ using System.Text;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
 
-namespace Enigma5.App.Security.DataProviders;
+namespace Enigma5.Security.DataProviders;
 
 public class TestCertificateManager : ICertificateManager
 {

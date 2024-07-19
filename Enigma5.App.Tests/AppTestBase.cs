@@ -3,7 +3,7 @@ using AutoMapper.Contrib.Autofac.DependencyInjection;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Security.Contracts;
-using Enigma5.App.Security.DataProviders;
+using Enigma5.Security.DataProviders;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 

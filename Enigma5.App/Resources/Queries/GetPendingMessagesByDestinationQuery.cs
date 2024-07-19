@@ -3,8 +3,8 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetPendingMessagesByDestinationQuery
+public class GetPendingMessagesByDestinationQuery(string destination)
 : IRequest<IEnumerable<PendingMessage>>
 {
-    public string Destination { get; set; } = string.Empty;
+    public string Destination { get; set; } = destination;
 }

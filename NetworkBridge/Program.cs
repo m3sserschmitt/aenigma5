@@ -10,7 +10,7 @@ IConfiguration configuration = new ConfigurationBuilder()
 var urls = configuration.GetPeers() ?? throw new Exception("Peers section not provided into configuration.");
 
 var hubConnectionFactory = new HubConnectionFactory(configuration);
-var connections = hubConnectionFactory.CreateConnectionsProxy(urls);
+var connections = hubConnectionFactory.CreateConnectionsProxy();
 connections.OnAnyTargetClosed += OnConnectionClosed;
 
 async Task Start()

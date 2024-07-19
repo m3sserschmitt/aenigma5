@@ -1,6 +1,6 @@
 using Enigma5.App.Security.Contracts;
 
-namespace Enigma5.App.Security;
+namespace Enigma5.Security;
 
 public class CommandLinePassphraseReader : IPassphraseProvider
 {

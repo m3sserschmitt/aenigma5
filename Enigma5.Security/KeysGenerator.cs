@@ -4,7 +4,7 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.OpenSsl;
 using Enigma5.Crypto;
 
-namespace Enigma5.App.Security;
+namespace Enigma5.Security;
 
 public static class KeysGenerator
 {

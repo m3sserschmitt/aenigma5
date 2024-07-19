@@ -1,14 +1,15 @@
 using System.Text;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Security.Contracts;
+using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
 
-namespace Enigma5.App.Security;
+namespace Enigma5.Security;
 
-public class KeysProvider(IPassphraseProvider passphraseProvider, IConfiguration configuration)
+public class KeysReader(IPassphraseProvider passphraseProvider, IConfiguration configuration): IKeysReader
 {
     private const string PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE = "Public Key file not configured.";
 
@@ -20,13 +21,13 @@ public class KeysProvider(IPassphraseProvider passphraseProvider, IConfiguration
 
     private const string INVALID_PRIVATE_KEY_PEM_OBJECT = "Private key PEM is invalid.";
     
-    public string PublicKeyPath { get; } = configuration.GetPublicKeyPath() ?? throw new Exception(PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
+    public string PublicKeyPath => configuration.GetPublicKeyPath() ?? throw new Exception(PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
 
-    public string PrivateKeyPath { get; } = configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
+    public string PrivateKeyPath => configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
 
-    public bool PublicKeyFileExists = File.Exists(configuration.GetPublicKeyPath());
+    public bool PublicKeyFileExists => File.Exists(configuration.GetPublicKeyPath());
 
-    public bool PrivateKeyFileExists = File.Exists(configuration.GetPrivateKeyPath());
+    public bool PrivateKeyFileExists => File.Exists(configuration.GetPrivateKeyPath());
 
     public byte[] PrivateKey => ExportToPem(ReadPrivateKeyFile());
 

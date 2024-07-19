@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="../Enigma5.App.Common/Enigma5.App.Common.csproj" />
     <ProjectReference Include="../Enigma5.App.Models/Enigma5.App.Models.csproj" />
+    <ProjectReference Include="..\Enigma5.Security\Enigma5.Security.csproj" />
   </ItemGroup>
 
 </Project>

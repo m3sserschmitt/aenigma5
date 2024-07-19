@@ -27,7 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="../Enigma5.App.Common/Enigma5.App.Common.csproj" />
     <ProjectReference Include="../Enigma5.App.Models/Enigma5.App.Models.csproj" />
-    <ProjectReference Include="../Enigma5.App.Security/Enigma5.App.Security.csproj" />
+    <ProjectReference Include="../Enigma5.Security/Enigma5.Security.csproj" />
     <ProjectReference Include="../Enigma5.Crypto/Enigma5.Crypto.csproj" />
     <ProjectReference Include="../Enigma5.Structures/Enigma5.Structures.csproj" />
   </ItemGroup>

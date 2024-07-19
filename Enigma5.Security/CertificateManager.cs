@@ -1,12 +1,13 @@
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
+using Enigma5.Security.Contracts;
 
-namespace Enigma5.App.Security;
+namespace Enigma5.Security;
 
 public class CertificateManager : ICertificateManager
 {
-    private readonly KeysProvider _keysProvider;
+    private readonly IKeysReader _keysProvider;
 
     private readonly SingleThreadExecutor<byte[]> _kernelQueryExecutor = new();
 
@@ -30,7 +31,7 @@ public class CertificateManager : ICertificateManager
 
     public string Address { get => ThreadSafeExecution.Execute(() => CertificateHelper.GetHexAddressFromPublicKey(PublicKey), string.Empty, _locker); }
 
-    public CertificateManager(KeysProvider keysProvider)
+    public CertificateManager(IKeysReader keysProvider)
     {
         _keysProvider = keysProvider;
         _kernelQueryExecutor.StartLooper();

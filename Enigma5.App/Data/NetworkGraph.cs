@@ -33,6 +33,8 @@ public class NetworkGraph
         get => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), new Vertex(), _locker);
     }
 
+    public List<string> NeighboringAddresses => [.. ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization().Neighborhood.Neighbors, [], _locker)];
+
     public NetworkGraph(ICertificateManager certificateManager, IConfiguration configuration)
     {
         _certificateManager = certificateManager;

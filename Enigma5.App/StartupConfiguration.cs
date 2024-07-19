@@ -1,7 +1,6 @@
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Hubs.Sessions;
-using Enigma5.App.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
@@ -21,6 +20,8 @@ using Enigma5.App.Security.Contracts;
 using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Common.Extensions;
+using Enigma5.Security;
+using Enigma5.Security.Contracts;
 
 namespace Enigma5.App;
 
@@ -36,12 +37,13 @@ public class StartupConfiguration(IConfiguration configuration)
                 {
                     options.AddFilter<OnionParsingFilter>();
                     options.AddFilter<OnionRoutingFilter>();
+                    options.AddFilter<AuthorizedServiceOnlyFilter>();
                 });
 
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
         services.AddTransient<IPassphraseProvider, CommandLinePassphraseReader>();
-        services.AddTransient<KeysProvider>();
+        services.AddTransient<IKeysReader, KeysReader>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
         services.AddTransient<MediatorHangfireBridge>();
