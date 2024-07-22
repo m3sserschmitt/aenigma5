@@ -8,7 +8,7 @@ public class AdjacencyList
     {
     }
 
-    public AdjacencyList(List<string> neighbors, string address, string hostname)
+    public AdjacencyList(List<string> neighbors, string address, string? hostname)
     {
         Address = address;
         Hostname = hostname;

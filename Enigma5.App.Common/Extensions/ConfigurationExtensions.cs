@@ -27,4 +27,21 @@ public static class ConfigurationExtensions
 
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
     => configuration.GetValue<int>("DelayBetweenConnectionRetries");
+
+    public static TimeSpan? GetNonActiveLeafsLifetime(this IConfiguration configuration)
+    {
+        var value = configuration.GetValue<string>("NonActiveLeafsLifetime");
+
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (TimeSpan.TryParse(value, out var timeSpan))
+        {
+            return timeSpan;
+        }
+
+        return null;
+    }
 }

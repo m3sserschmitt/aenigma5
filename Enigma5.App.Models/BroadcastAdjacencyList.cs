@@ -14,10 +14,11 @@ public class BroadcastAdjacencyList
         List<string> neighbors,
         string publicKey,
         byte[] privateKey,
-        string hostname)
+        string passphrase,
+        string? hostname)
     {
         _adjacencyList = new(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname);
-        _signedData = Sign(privateKey);
+        _signedData = Sign(privateKey, passphrase);
         PublicKey = publicKey;
     }
 
@@ -58,10 +59,10 @@ public class BroadcastAdjacencyList
 
     public AdjacencyList? GetAdjacencyList() => _adjacencyList;
 
-    private string Sign(byte[] privateKey)
+    private string Sign(byte[] privateKey, string passphrase)
     {
         var serializedList = JsonSerializer.Serialize(_adjacencyList);
-        using var envelope = Envelope.Factory.CreateSignature(privateKey, string.Empty);
+        using var envelope = Envelope.Factory.CreateSignature(privateKey, passphrase);
         var signature = envelope.Sign(Encoding.ASCII.GetBytes(serializedList))
         ?? throw new Exception("Could not sign the adjacency list");
 

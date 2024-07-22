@@ -7,14 +7,26 @@ namespace Enigma5.App.Data;
 
 public static partial class NetworkGraphValidationPolicy
 {
-    public static bool ValidateSignature(Vertex vertex)
+    public static bool ValidateSignature(this Vertex vertex)
     {
+        if(vertex.SignedData is null)
+        {
+            return false;
+        }
+
         try
         {
-            var decodedSignature = Convert.FromBase64String(vertex.SignedData!);
-            var adjacencyList = decodedSignature.GetStringDataFromSignature();
-            
-            if(JsonSerializer.Serialize(vertex.Neighborhood) != adjacencyList)
+            var decodedSignature = Convert.FromBase64String(vertex.SignedData);
+            var plaintext = decodedSignature.GetStringDataFromSignature();
+
+            if(plaintext is null)
+            {
+                return false;
+            }
+
+            var expectedNeighborhood = JsonSerializer.Deserialize<Neighborhood>(plaintext);
+
+            if(vertex.Neighborhood != expectedNeighborhood)
             {
                 return false;
             }
@@ -29,40 +41,16 @@ public static partial class NetworkGraphValidationPolicy
         }
     }
 
-    public static bool CheckCycles(Vertex vertex)
-    {
-        if(vertex.Neighborhood.Neighbors.Contains(vertex.Neighborhood.Address))
-        {
-            return false;
-        }
+    public static bool CheckCycles(this Vertex vertex)
+    => !vertex.Neighborhood.Neighbors.Contains(vertex.Neighborhood.Address);
 
-        return true;
-    }
+    public static bool ValidateAddress(this Vertex vertex)
+    => vertex.PublicKey is not null && CertificateHelper.GetHexAddressFromPublicKey(vertex.PublicKey) == vertex.Neighborhood.Address;
 
-    public static bool ValidateAddress(Vertex vertex)
-    {
-        if(CertificateHelper.GetHexAddressFromPublicKey(vertex.PublicKey) != vertex.Neighborhood.Address)
-        {
-            return false;
-        }
+    public static bool ValidateNeighborsAddresses(this Vertex vertex)
+    => vertex.Neighborhood.Neighbors.All(address => AddressRegex().IsMatch(address));
 
-        return true;
-    }
-
-    public static bool ValidateNeighborsAddresses(Vertex vertex)
-    {
-        foreach(var address in vertex.Neighborhood.Neighbors)
-        {
-            if(!AddressRegex().IsMatch(address))
-            {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-
-    public static bool Validate(Vertex vertex)
+    public static bool ValidatePolicy(this Vertex vertex)
     => ValidateAddress(vertex)
     && CheckCycles(vertex)
     && ValidateNeighborsAddresses(vertex)

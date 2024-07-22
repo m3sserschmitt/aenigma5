@@ -24,7 +24,7 @@ public class NetworkGraphTests : AppTestBase
         var vertex = _scope.ResolveLocalVertex([PKey.Address2]);
 
         // Act
-        var (vertices, delta) = _graph.Update(vertex);
+        var vertices = _graph.Update(vertex);
 
         // Assert
         vertices.Count.Should().Be(1);
@@ -33,8 +33,6 @@ public class NetworkGraphTests : AppTestBase
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         localVertex.Neighborhood.Neighbors.First().Should().Be(PKey.Address2);
-        delta.Vertex.Should().BeNull();
-        delta.Added.Should().BeFalse();
         _graph.Vertices.Should().HaveCount(1);
         _graph.LocalVertex.Should().Be(localVertex);
         _graph.Vertices.Single().Should().Be(localVertex);
@@ -44,22 +42,19 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldAddNewVertex()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex([PKey.Address2]);
+        var vertex = _scope.ResolveAdjacentVertex();
 
         // Act
-        var (vertices, delta) = _graph.Update(vertex);
+        var vertices = _graph.Update(vertex);
 
         // Assert
         vertices.Count.Should().Be(2);
-        delta.Vertex.Should().Be(vertex);
-        delta.Added.Should().BeTrue();
         var localVertex = vertices.Single(item => item.Neighborhood.Address == _certificateManager.Address);
         localVertex.PublicKey.Should().Be(_certificateManager.PublicKey);
         localVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         localVertex.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         var adjacentVertex = vertices.Single(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
-        adjacentVertex.Neighborhood.Neighbors.Should().HaveCount(2);
-        adjacentVertex.Neighborhood.Neighbors.Should().Contain(PKey.Address2);
+        adjacentVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         adjacentVertex.Neighborhood.Neighbors.Should().Contain(_certificateManager.Address);
         _graph.LocalVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         _graph.LocalVertex.Neighborhood.Neighbors.Should().Contain(vertex.Neighborhood.Address);
@@ -72,20 +67,18 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldRemoveAdjacency()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex([PKey.Address2]);
+        var vertex = _scope.ResolveAdjacentVertex();
 
-        var updatedVertex = _scope.ResolveNonAdjacentVertex([PKey.Address2]);
+        var updatedVertex = _scope.ResolveNonAdjacentVertex();
 
         // Act
-        var (vertices, _) = _graph.Update(vertex);
-        var (final, delta) = _graph.Update(updatedVertex);
+        var vertices = _graph.Update(vertex);
+        var final = _graph.Update(updatedVertex);
 
         // Assert
         vertices.Count.Should().Be(2);
         final.Count.Should().Be(2);
         _graph.Vertices.Count.Should().Be(1);
-        delta.Vertex.Should().Be(updatedVertex);
-        delta.Added.Should().BeFalse();
         var localVertex = _graph.Vertices.Single(item => item.Neighborhood.Address == _certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().BeEmpty();
         _graph.Vertices.Should().NotContain(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
@@ -96,22 +89,21 @@ public class NetworkGraphTests : AppTestBase
     public void NetworkGraph_ShouldNotUpdateGraphTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex([PKey.Address2]);
+        var vertex = _scope.ResolveAdjacentVertex();
 
         // Act
-        var (vertices, delta) = _graph.Update(vertex);
+        var vertices = _graph.Update(vertex);
         var final = _graph.Update(vertex);
 
         // Assert
         vertices.Count.Should().Be(2);
-        final.vertices.Should().BeEmpty();
+        final.Should().BeEmpty();
         _graph.Vertices.Count.Should().Be(2);
         var localVertex = _graph.Vertices.Single(item => item.Neighborhood.Address == _certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         localVertex.Neighborhood.Neighbors.Should().Contain(vertex.Neighborhood.Address);
         var otherVertex = _graph.Vertices.Single(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
-        otherVertex.Neighborhood.Neighbors.Should().HaveCount(2);
-        otherVertex.Neighborhood.Neighbors.Should().Contain(PKey.Address2);
+        otherVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         otherVertex.Neighborhood.Neighbors.Should().Contain(localVertex.Neighborhood.Address);
         _graph.Vertices.Should().Contain(item => item.Neighborhood.Address == _certificateManager.Address);
         _graph.Vertices.Should().Contain(item => item.Neighborhood.Address == vertex.Neighborhood.Address);

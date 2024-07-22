@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
 
@@ -7,10 +9,29 @@ namespace Enigma5.App.Data;
 
 public class Vertex
 {
+    private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
+
+    [JsonIgnore]
+    public DateTimeOffset LastUpdate => _lastUpdate;
+
+    [JsonIgnore]
+    public bool IsLeaf { get; private set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PublicKey { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SignedData { get; set; }
+
+    [JsonIgnore]
+    public bool PossibleLeaf => Neighborhood.Neighbors.Count == 1;
+
+    public Neighborhood Neighborhood { get; set; }
+
     public Vertex()
     {
-        PublicKey = string.Empty;
-        SignedData = string.Empty;
+        PublicKey = null;
+        SignedData = null;
         Neighborhood = new();
     }
 
@@ -21,11 +42,24 @@ public class Vertex
         Neighborhood = neighborhood;
     }
 
-    public string PublicKey { get; set; }
+    public bool TryAsLeaf(out Vertex? leafVertex)
+    {
+        if (!PossibleLeaf)
+        {
+            leafVertex = null;
+            return false;
+        }
 
-    public string SignedData { get; set; }
+        var leaf = this.CopyBySerialization();
+        leaf.PublicKey = null;
+        leaf.SignedData = null;
+        leaf.Neighborhood.Hostname = null;
+        leaf.IsLeaf = true;
+        leafVertex = leaf;
+        return true;
+    }
 
-    public Neighborhood Neighborhood { get; set; }
+    public void RefreshLastUpdate() => _lastUpdate = DateTimeOffset.Now;
 
     public static class Factory
     {
@@ -78,7 +112,7 @@ public class Vertex
             public static bool RemoveNeighbor(Vertex vertex, string address, ICertificateManager certificateManager, out Vertex? newVertex)
             {
                 var newNeighbors = new HashSet<string>(vertex.Neighborhood.Neighbors);
-                if(newNeighbors.Remove(address))
+                if (newNeighbors.Remove(address))
                 {
                     newVertex = Create(certificateManager, new List<string>(newNeighbors), vertex.Neighborhood.Hostname);
                     return true;
@@ -103,6 +137,12 @@ public class Vertex
         if (obj1 is null || obj2 is null)
         {
             return false;
+        }
+
+        if (obj1.IsLeaf || obj2.IsLeaf)
+        {
+            return obj1.Neighborhood.Address == obj2.Neighborhood.Address
+            && obj1.Neighborhood.CompareNeighbors(obj2.Neighborhood);
         }
 
         return obj1.Neighborhood == obj2.Neighborhood;

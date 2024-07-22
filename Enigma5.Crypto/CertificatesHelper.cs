@@ -6,6 +6,11 @@ public static class CertificateHelper
 {
     public static byte[] GetAddressFromPublicKey(string publicKey)
     {
+        if (string.IsNullOrWhiteSpace(publicKey))
+        {
+            return [];
+        }
+
         try
         {
             string[] lines = publicKey.Split('\n').Where(l => l.Length != 0).ToArray();
@@ -20,12 +25,17 @@ public static class CertificateHelper
         }
         catch
         {
-            return Array.Empty<byte>();
+            return [];
         }
     }
 
-    public static string GetHexAddressFromPublicKey(string publicKey)
+    public static string GetHexAddressFromPublicKey(string? publicKey)
     {
+        if (string.IsNullOrWhiteSpace(publicKey))
+        {
+            return string.Empty;
+        }
+
         var hash = GetAddressFromPublicKey(publicKey);
         return BitConverter.ToString(hash).Replace("-", string.Empty).ToLower();
     }
