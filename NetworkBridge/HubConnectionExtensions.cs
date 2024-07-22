@@ -33,7 +33,7 @@ public static class HubConnectionExtensions
 
     public static void ForwardBroadcasts(this ConnectionVector connection)
     {
-        connection.Forward<BroadcastAdjacencyList>(nameof(IHub.Broadcast));
+        connection.Forward<VertexBroadcast>(nameof(IHub.Broadcast));
     }
 
     public static void ForwardCloseSignal(this ConnectionVector connection)

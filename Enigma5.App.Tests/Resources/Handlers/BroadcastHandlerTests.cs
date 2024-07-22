@@ -24,7 +24,7 @@ public class BroadcastHandlerTests : AppTestBase
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
-        var broadcast = _mapper.Map<BroadcastAdjacencyList>(vertex);
+        var broadcast = _mapper.Map<VertexBroadcast>(vertex);
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
@@ -32,7 +32,7 @@ public class BroadcastHandlerTests : AppTestBase
 
         // Assert
         localVertex.Should().BeOfType<Vertex>();
-        broadcasts.Should().AllBeOfType<BroadcastAdjacencyList>();
+        broadcasts.Should().AllBeOfType<VertexBroadcast>();
         localVertex.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts.Should().HaveCount(2);
         var broadcastLocal = broadcasts.Single(item => item.PublicKey == localVertex.PublicKey);
@@ -46,7 +46,7 @@ public class BroadcastHandlerTests : AppTestBase
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
-        var broadcast = _mapper.Map<BroadcastAdjacencyList>(vertex);
+        var broadcast = _mapper.Map<VertexBroadcast>(vertex);
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
@@ -66,8 +66,8 @@ public class BroadcastHandlerTests : AppTestBase
         // Arrange
         var adjacentVertex = _scope.ResolveAdjacentVertex();
         var nonAdjacentVertex = _scope.ResolveNonAdjacentVertex();
-        var initialBroadcast = _mapper.Map<BroadcastAdjacencyList>(adjacentVertex);
-        var finalBroadcast = _mapper.Map<BroadcastAdjacencyList>(nonAdjacentVertex);
+        var initialBroadcast = _mapper.Map<VertexBroadcast>(adjacentVertex);
+        var finalBroadcast = _mapper.Map<VertexBroadcast>(nonAdjacentVertex);
         var request1 = new HandleBroadcastCommand(initialBroadcast);
         var request2 = new HandleBroadcastCommand(finalBroadcast);
     

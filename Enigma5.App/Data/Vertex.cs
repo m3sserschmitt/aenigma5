@@ -2,45 +2,31 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Models;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
 
 namespace Enigma5.App.Data;
 
-public class Vertex
+[method: JsonConstructor]
+public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData)
 {
-    private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
-
     [JsonIgnore]
-    public DateTimeOffset LastUpdate => _lastUpdate;
+    public DateTimeOffset LastUpdate { get; private set; }
 
     [JsonIgnore]
     public bool IsLeaf { get; private set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PublicKey { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SignedData { get; set; }
-
     [JsonIgnore]
     public bool PossibleLeaf => Neighborhood.Neighbors.Count == 1;
 
-    public Neighborhood Neighborhood { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PublicKey { get; private set; } = publicKey;
 
-    public Vertex()
-    {
-        PublicKey = null;
-        SignedData = null;
-        Neighborhood = new();
-    }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SignedData { get; private set; } = signedData;
 
-    public Vertex(Neighborhood neighborhood, string publicKey, string signature)
-    {
-        PublicKey = publicKey;
-        SignedData = signature;
-        Neighborhood = neighborhood;
-    }
+    public Neighborhood Neighborhood { get; private set; } = neighborhood;
 
     public bool TryAsLeaf(out Vertex? leafVertex)
     {
@@ -50,16 +36,23 @@ public class Vertex
             return false;
         }
 
-        var leaf = this.CopyBySerialization();
-        leaf.PublicKey = null;
-        leaf.SignedData = null;
-        leaf.Neighborhood.Hostname = null;
-        leaf.IsLeaf = true;
+        var copy = this.CopyBySerialization();
+        var neighborhood = new Neighborhood([.. copy.Neighborhood.Neighbors], copy.Neighborhood.Address, null);
+        var leaf = new Vertex(neighborhood, null, null)
+        {
+            IsLeaf = true
+        };
         leafVertex = leaf;
         return true;
     }
 
-    public void RefreshLastUpdate() => _lastUpdate = DateTimeOffset.Now;
+    public void RefreshLastUpdate() => LastUpdate = DateTimeOffset.Now;
+
+    public static Vertex FromBroadcast(VertexBroadcast adjacencyList)
+    => new(Neighborhood.FromAdjacency(adjacencyList.AdjacencyList), adjacencyList.PublicKey, adjacencyList.SignedData);
+
+    public static VertexBroadcast ToBroadcast(Vertex vertex)
+    => new(vertex.PublicKey ?? string.Empty, vertex.SignedData ?? string.Empty);
 
     public static class Factory
     {
@@ -71,7 +64,7 @@ public class Vertex
         string? passphrase = null,
         string? hostname = null)
         {
-            var neighborhood = new Neighborhood(neighbors, address, hostname);
+            var neighborhood = new Neighborhood([.. neighbors], address, hostname);
             var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
             using var envelope = Envelope.Factory.CreateSignature(privateKey, passphrase ?? string.Empty);
             var signature = envelope.Sign(serializedNeighborhood);

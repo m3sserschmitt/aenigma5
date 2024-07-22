@@ -1,28 +1,13 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Enigma5.App.Models;
 
-public class AdjacencyList
+[method: JsonConstructor]
+public class AdjacencyList(List<string> neighbors, string address, string? hostname)
 {
-    public AdjacencyList()
-    {
-    }
+    public string Address { get; set; } = address;
 
-    public AdjacencyList(List<string> neighbors, string address, string? hostname)
-    {
-        Address = address;
-        Hostname = hostname;
-        Neighbors = neighbors;
-    }
+    public string? Hostname { get; set; } = hostname;
 
-    public string? Address { get; set; }
-
-    public string? Hostname { get; set; }
-
-    public List<string>? Neighbors { get; set; }
-
-    public override string ToString()
-    {
-        return JsonSerializer.Serialize(this);
-    }
+    public List<string> Neighbors { get; set; } = neighbors;
 }

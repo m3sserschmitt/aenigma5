@@ -10,7 +10,7 @@ public interface IHub
 
     Signature? SignToken(string token);
 
-    Task<bool> Broadcast(BroadcastAdjacencyList broadcastAdjacencyList);
+    Task<bool> Broadcast(VertexBroadcast broadcastAdjacencyList);
 
     Task<bool> TriggerBroadcast();
 

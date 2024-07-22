@@ -44,21 +44,21 @@ public partial class RoutingHub
         }
     }
     
-    private async Task<(Vertex localVertex, BroadcastAdjacencyList? broadcast)> AddNewAdjacency(string publicKey)
+    private async Task<(Vertex localVertex, VertexBroadcast? broadcast)> AddNewAdjacency(string publicKey)
     {
         var command = new UpdateLocalAdjacencyCommand(CertificateHelper.GetHexAddressFromPublicKey(publicKey), true);
 
         return await _commandRouter.Send(command);
     }
 
-    private async Task<(Vertex localVertex, BroadcastAdjacencyList? broadcast)> RemoveAdjacency(string address)
+    private async Task<(Vertex localVertex, VertexBroadcast? broadcast)> RemoveAdjacency(string address)
     {
         var command = new UpdateLocalAdjacencyCommand(address, false);
 
         return await _commandRouter.Send(command);
     }
 
-    private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<BroadcastAdjacencyList> adjacencyLists)
+    private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<VertexBroadcast> adjacencyLists)
     {
         foreach (var address in _networkGraph.NeighboringAddresses)
         {
@@ -72,11 +72,11 @@ public partial class RoutingHub
         }
     }
 
-    private async Task<bool> SendBroadcast(IEnumerable<BroadcastAdjacencyList> adjacencyLists)
+    private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcast> adjacencyLists)
     {
         return (await Task.WhenAll(GenerateBroadcastTask(adjacencyLists))).All(success => success);
     }
 
-    private async Task<bool> SendBroadcast(BroadcastAdjacencyList adjacencyLists)
+    private async Task<bool> SendBroadcast(VertexBroadcast adjacencyLists)
     => await SendBroadcast([adjacencyLists]);
 }

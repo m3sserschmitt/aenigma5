@@ -7,13 +7,13 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class UpdateLocalAdjacencyHandler(NetworkGraph networkGraph, ICertificateManager certificateManager)
-: IRequestHandler<UpdateLocalAdjacencyCommand, (Vertex localVertex, BroadcastAdjacencyList? broadcast)>
+: IRequestHandler<UpdateLocalAdjacencyCommand, (Vertex localVertex, VertexBroadcast? broadcast)>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
-    public async Task<(Vertex localVertex, BroadcastAdjacencyList? broadcast)> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
+    public async Task<(Vertex localVertex, VertexBroadcast? broadcast)> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
     {
         var (newVertex, updated) = request.Add ?
         await _networkGraph.AddAdjacencyAsync(request.Address, cancellationToken)
@@ -24,10 +24,12 @@ public class UpdateLocalAdjacencyHandler(NetworkGraph networkGraph, ICertificate
             return (newVertex, null);
         }
 
-        return (newVertex, new BroadcastAdjacencyList()
+        if(newVertex.SignedData is null)
         {
-            SignedData = newVertex.SignedData,
-            PublicKey = _certificateManager.PublicKey
-        });
+            // TODO: This should not happen! Log this
+            return (newVertex, null);
+        }
+
+        return (newVertex, new VertexBroadcast(_certificateManager.PublicKey, newVertex.SignedData));
     }
 }

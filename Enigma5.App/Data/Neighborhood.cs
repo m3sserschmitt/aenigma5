@@ -1,29 +1,20 @@
 ﻿using System.Text.Json.Serialization;
+using Enigma5.App.Models;
 
 namespace Enigma5.App.Data;
 
-public class Neighborhood
+[method: JsonConstructor]
+public class Neighborhood(HashSet<string> neighbors, string address, string? hostname)
 {
-    public Neighborhood()
-    {
-        Address = string.Empty;
-        Neighbors = [];
-        Hostname = null;
-    }
-
-    public Neighborhood(List<string> neighbors, string address, string? hostname = null)
-    {
-        Neighbors = new HashSet<string>(neighbors);
-        Address = address;
-        Hostname = hostname;
-    }
-
-    public string Address { get; set; }
-
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Hostname { get; set; }
+    public string? Hostname { get; private set; } = hostname;
 
-    public HashSet<string> Neighbors { get; set; }
+    public string Address { get; private set; } = address;
+
+    public HashSet<string> Neighbors { get; private set; } = new HashSet<string>(neighbors);
+
+    public static Neighborhood FromAdjacency(AdjacencyList adjacencyList)
+    => new([.. adjacencyList.Neighbors], adjacencyList.Address, adjacencyList.Hostname);
 
     public bool CompareNeighbors(Neighborhood other)
     {

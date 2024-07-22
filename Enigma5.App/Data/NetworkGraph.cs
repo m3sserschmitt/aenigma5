@@ -17,22 +17,13 @@ public class NetworkGraph
 
     private readonly List<Vertex> _vertices;
 
-    public List<Vertex> Vertices
-    {
-        get => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker);
-    }
+    public List<Vertex> Vertices => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker);
 
-    public List<string> Addresses
-    {
-        get => ThreadSafeExecution.Execute(() => _vertices.Select(item => item.Neighborhood.Address).ToList(), [], _locker);
-    }
+    public List<string> Addresses => ThreadSafeExecution.Execute(() => _vertices.Select(item => item.Neighborhood.Address).ToList(), [], _locker);
 
-    public Vertex LocalVertex
-    {
-        get => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), new Vertex(), _locker);
-    }
+    public Vertex LocalVertex => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), CreateInitialVertex(), _locker);
 
-    public bool HasAtLeastTwoVertices => _vertices.Any(item => !IsLocalVertex(item) && !item.IsLeaf);
+    public bool HasAtLeastTwoVertices => ThreadSafeExecution.Execute(() => _vertices.Any(item => !IsLocalVertex(item) && !item.IsLeaf), false, _locker);
 
     public List<string> NeighboringAddresses => [.. ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization().Neighborhood.Neighbors, [], _locker)];
 
@@ -40,7 +31,7 @@ public class NetworkGraph
     {
         _certificateManager = certificateManager;
         _configuration = configuration;
-        _localVertex = Vertex.Factory.CreateWithEmptyNeighborhood(_certificateManager, _configuration.GetHostname());
+        _localVertex = CreateInitialVertex();
         _vertices = [_localVertex];
     }
 
@@ -154,6 +145,8 @@ public class NetworkGraph
         List<Vertex> task() => Update(vertex);
         return Task.Run(task, cancellationToken);
     }
+
+    private Vertex CreateInitialVertex() => Vertex.Factory.CreateWithEmptyNeighborhood(_certificateManager, _configuration.GetHostname());
 
     private Vertex TryConvertToLeaf(Vertex vertex)
     {

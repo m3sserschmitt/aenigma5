@@ -51,7 +51,6 @@ public class StartupConfiguration(IConfiguration configuration)
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
-        services.AddAutoMapper(typeof(MappingProfile));
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)

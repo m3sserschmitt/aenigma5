@@ -8,7 +8,6 @@ using Enigma5.Crypto;
 using Enigma5.App.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
-using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs;
@@ -17,8 +16,7 @@ public partial class RoutingHub(
     SessionManager sessionManager,
     ICertificateManager certificateManager,
     NetworkGraph networkGraph,
-    IMediator commandRouter,
-    IMapper mapper) :
+    IMediator commandRouter) :
     Hub,
     IHub,
     IOnionParsingHub,
@@ -31,8 +29,6 @@ public partial class RoutingHub(
     private readonly NetworkGraph _networkGraph = networkGraph;
 
     private readonly IMediator _commandRouter = commandRouter;
-
-    private readonly IMapper _mapper = mapper;
 
     public string? DestinationConnectionId { get; set; }
 
@@ -55,7 +51,13 @@ public partial class RoutingHub(
             {
                 try
                 {
-                    await RespondAsync(nameof(Synchronize), _mapper.Map<List<Models.PendingMessage>>(onions));
+                    var pendingMessages = onions.Select(item => new Models.PendingMessage
+                    {
+                        Destination = item.Destination,
+                        Content = item.Content,
+                        DateReceived = item.DateReceived
+                    });
+                    await RespondAsync(nameof(Synchronize), pendingMessages);
                 }
                 catch
                 {
@@ -112,7 +114,7 @@ public partial class RoutingHub(
         return new Signature(Convert.ToBase64String(data), _certificateManager.PublicKey);
     }
 
-    public async Task<bool> Broadcast(BroadcastAdjacencyList broadcastAdjacencyList)
+    public async Task<bool> Broadcast(VertexBroadcast broadcastAdjacencyList)
     {
         var (localVertex, broadcasts) = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
@@ -128,7 +130,7 @@ public partial class RoutingHub(
     public Task<bool> TriggerBroadcast()
     {
         var localVertex = _networkGraph.LocalVertex;
-        var broadcast = _mapper.Map<BroadcastAdjacencyList>(localVertex);
+        var broadcast = Vertex.ToBroadcast(localVertex);
 
         return SendBroadcast(broadcast);
     }
