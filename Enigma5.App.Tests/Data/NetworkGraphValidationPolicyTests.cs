@@ -12,7 +12,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         var vertex = _scope.ResolveAdjacentVertex();
 
         // Act
-        var valid = NetworkGraphValidationPolicy.Validate(vertex);
+        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
 
         // Assert
         valid.Should().BeTrue();
@@ -26,7 +26,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         vertex.SignedData = "naoif9823-409gfsakjdigu908";
 
         // Act
-        var valid = NetworkGraphValidationPolicy.Validate(vertex);
+        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
 
         // Assert
         valid.Should().BeFalse();
@@ -40,7 +40,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         vertex.PublicKey = "naoif9823-409gfsakjdigu908";
 
         // Act
-        var valid = NetworkGraphValidationPolicy.Validate(vertex);
+        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
 
         // Assert
         valid.Should().BeFalse();
@@ -54,7 +54,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         var vertex = _scope.ResolveAdjacentVertex(new List<string> { address });
 
         // Act
-        var valid = NetworkGraphValidationPolicy.Validate(vertex);
+        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
 
         // Assert
         valid.Should().BeFalse();
@@ -68,7 +68,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         vertex.Neighborhood.Neighbors.Add("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // Act
-        var valid = NetworkGraphValidationPolicy.Validate(vertex);
+        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
 
         // Assert
         valid.Should().BeFalse();
@@ -82,7 +82,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         var vertex = _scope.ResolveAdjacentVertex(invalidAddresses);
 
         // Act
-        var valid = NetworkGraphValidationPolicy.Validate(vertex);
+        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
 
         // Assert
         valid.Should().BeFalse();
