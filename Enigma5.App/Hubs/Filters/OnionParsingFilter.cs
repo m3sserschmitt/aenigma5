@@ -5,6 +5,7 @@ using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Hubs.Adapters;
 using Enigma5.App.Hubs.Sessions;
 using Enigma5.Structures;
+using Enigma5.App.Models;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -14,14 +15,14 @@ public class OnionParsingFilter(SessionManager sessionManager)
     private readonly SessionManager _sessionManager = sessionManager;
 
     protected override bool CheckArguments(HubInvocationContext invocationContext)
-     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is string;
+     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is RoutingRequest;
 
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        var data = invocationContext.MethodInvocationArgument<string>(0);
-        if (data != null)
+        var request = invocationContext.MethodInvocationArgument<RoutingRequest>(0);
+        if (request != null)
         {
-            var decodedData = Convert.FromBase64String(data);
+            var decodedData = Convert.FromBase64String(request.Payload!);
 
             if (_sessionManager.TryGetParser(invocationContext.Context.ConnectionId, out var onionParser) &&
             onionParser!.Parse(new Onion { Content = decodedData }))

@@ -28,12 +28,12 @@ public static class HubConnectionExtensions
 
     public static void ForwardMessageRouting(this ConnectionVector connection)
     {
-        connection.Forward<string>(nameof(IHub.RouteMessage));
+        connection.Forward<RoutingRequest>(nameof(IHub.RouteMessage));
     }
 
     public static void ForwardBroadcasts(this ConnectionVector connection)
     {
-        connection.Forward<VertexBroadcast>(nameof(IHub.Broadcast));
+        connection.Forward<VertexBroadcastRequest>(nameof(IHub.Broadcast));
     }
 
     public static void ForwardCloseSignal(this ConnectionVector connection)

@@ -48,10 +48,10 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
     public void RefreshLastUpdate() => LastUpdate = DateTimeOffset.Now;
 
-    public static Vertex FromBroadcast(VertexBroadcast adjacencyList)
+    public static Vertex FromBroadcast(VertexBroadcastRequest adjacencyList)
     => new(Neighborhood.FromAdjacency(adjacencyList.AdjacencyList), adjacencyList.PublicKey, adjacencyList.SignedData);
 
-    public static VertexBroadcast ToBroadcast(Vertex vertex)
+    public static VertexBroadcastRequest ToBroadcast(Vertex vertex)
     => new(vertex.PublicKey ?? string.Empty, vertex.SignedData ?? string.Empty);
 
     public static class Factory

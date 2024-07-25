@@ -14,7 +14,7 @@ public class Neighborhood(HashSet<string> neighbors, string address, string? hos
     public HashSet<string> Neighbors { get; private set; } = new HashSet<string>(neighbors);
 
     public static Neighborhood FromAdjacency(AdjacencyList adjacencyList)
-    => new([.. adjacencyList.Neighbors], adjacencyList.Address, adjacencyList.Hostname);
+    => new([.. adjacencyList.Neighbors], adjacencyList.Address ?? string.Empty, adjacencyList.Hostname);
 
     public bool CompareNeighbors(Neighborhood other)
     {

@@ -1,7 +1,7 @@
 ﻿using Enigma5.Crypto;
-using Enigma5.App.Common.Extensions;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Enigma5.App.Models.Extensions;
 
 namespace Enigma5.App.Data;
 

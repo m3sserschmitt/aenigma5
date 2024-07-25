@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Enigma5.App.Common.Extensions;
+namespace Enigma5.App.Models.Extensions;
 
 public static class SignatureExtensions
 {
