@@ -14,27 +14,36 @@ public static class HubConnectionExtensions
         bool updateNetworkGraph = false
     )
     {
-        var token = await connection.InvokeAsync<string?>(nameof(IHub.GenerateToken));
+        try
+        {
+            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
 
-        if (token is null)
+            if (!nonce.Success || nonce.Data is null)
+            {
+                return false;
+            }
+
+            using var signature = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
+            var data = signature.Sign(Convert.FromBase64String(nonce.Data));
+
+            if (data is null)
+            {
+                return false;
+            }
+
+            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
+            {
+                PublicKey = certificateManager.PublicKey,
+                Signature = Convert.ToBase64String(data),
+                SyncMessagesOnSuccess = syncOnSuccess,
+                UpdateNetworkGraph = updateNetworkGraph
+            });
+
+            return authentication.Success && authentication.Data;
+        }
+        catch (Exception)
         {
             return false;
         }
-
-        using var signature = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
-        var data = signature.Sign(Convert.FromBase64String(token));
-
-        if (data is null)
-        {
-            return false;
-        }
-
-        return await connection.InvokeAsync<bool>(nameof(IHub.Authenticate), new AuthenticationRequest
-        {
-            PublicKey = certificateManager.PublicKey,
-            Signature = Convert.ToBase64String(data),
-            SyncMessagesOnSuccess = syncOnSuccess,
-            UpdateNetworkGraph = updateNetworkGraph
-        });
     }
 }

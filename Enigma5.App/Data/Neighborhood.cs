@@ -13,17 +13,6 @@ public class Neighborhood(HashSet<string> neighbors, string address, string? hos
 
     public HashSet<string> Neighbors { get; private set; } = new HashSet<string>(neighbors);
 
-    public static Neighborhood FromAdjacency(AdjacencyList adjacencyList)
-    => new([.. adjacencyList.Neighbors], adjacencyList.Address, adjacencyList.Hostname);
-
-    public bool CompareNeighbors(Neighborhood other)
-    {
-        var list1 = other.Neighbors.OrderBy(x => x);
-        var list2 = Neighbors.OrderBy(x => x);
-
-        return list1.SequenceEqual(list2);
-    }
-
     public static bool operator ==(Neighborhood? obj1, Neighborhood? obj2)
     {
         if (ReferenceEquals(obj1, obj2))
@@ -36,27 +25,14 @@ public class Neighborhood(HashSet<string> neighbors, string address, string? hos
             return false;
         }
 
-        return obj1.CompareNeighbors(obj2)
+        return obj1.Neighbors.SetEquals(obj2.Neighbors)
         && obj1.Hostname == obj2.Hostname
         && obj1.Address == obj2.Address;
     }
 
-    public static bool operator !=(Neighborhood? obj1, Neighborhood? obj2)
-    {
-        return !(obj1 == obj2);
-    }
+    public static bool operator !=(Neighborhood? obj1, Neighborhood? obj2) => !(obj1 == obj2);
 
-    public override bool Equals(object? obj)
-    {
-        if (obj is Neighborhood other)
-        {
-            return this == other;
-        }
-        return false;
-    }
+    public override bool Equals(object? obj) => obj is Neighborhood other && this == other;
 
-    public override int GetHashCode()
-    {
-        throw new NotImplementedException();
-    }
+    public override int GetHashCode() => Address.GetHashCode();
 }

@@ -1,5 +1,6 @@
 ﻿
 using Enigma5.App.Data;
+using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.App.Tests.Data;
 
@@ -12,7 +13,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         var vertex = _scope.ResolveAdjacentVertex();
 
         // Act
-        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
+        var valid = vertex.ValidatePolicy();
 
         // Assert
         valid.Should().BeTrue();
@@ -22,11 +23,10 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     public void ShouldNotValidateVertexWithInvalidSignature()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
-        vertex.SignedData = "naoif9823-409gfsakjdigu908";
+        var vertex = new Vertex(new ([], PKey.Address1, null), PKey.PublicKey1, "fake-signature");
 
         // Act
-        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
+        var valid = vertex.ValidateSignature();
 
         // Assert
         valid.Should().BeFalse();
@@ -36,11 +36,10 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     public void ShouldNotValidateVertexWithInvalidPublicKey()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
-        vertex.PublicKey = "naoif9823-409gfsakjdigu908";
+        var vertex = new Vertex(new ([], PKey.Address1, null), "fake-public-key", "fake-signature");
 
         // Act
-        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
+        var valid = vertex.ValidatePublicKey();
 
         // Assert
         valid.Should().BeFalse();
@@ -51,10 +50,10 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     {
         // Arrange
         var address = _scope.ResolveAdjacentVertex().Neighborhood.Address;
-        var vertex = _scope.ResolveAdjacentVertex(new List<string> { address });
+        var vertex = _scope.ResolveAdjacentVertex([address]);
 
         // Act
-        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
+        var valid = vertex.CheckCycles();
 
         // Assert
         valid.Should().BeFalse();
@@ -68,7 +67,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         vertex.Neighborhood.Neighbors.Add("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // Act
-        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
+        var valid = vertex.ValidateSignature();
 
         // Assert
         valid.Should().BeFalse();
@@ -82,7 +81,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
         var vertex = _scope.ResolveAdjacentVertex(invalidAddresses);
 
         // Act
-        var valid = NetworkGraphValidationPolicy.ValidatePolicy(vertex);
+        var valid = vertex.ValidateNeighborsAddresses();
 
         // Assert
         valid.Should().BeFalse();

@@ -4,15 +4,15 @@ namespace Enigma5.App.Common.Contracts.Hubs;
 
 public interface IHub
 {
-    string? GenerateToken();
+    Task<InvocationResult<string>> GenerateToken();
 
-    Task<bool> Authenticate(AuthenticationRequest request);
+    Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request);
 
-    Signature? SignToken(string token);
+    Task<InvocationResult<Signature>> SignToken(SignatureRequest request);
 
-    Task<bool> Broadcast(VertexBroadcast broadcastAdjacencyList);
+    Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest request);
 
-    Task<bool> TriggerBroadcast();
+    Task<InvocationResult<bool>> TriggerBroadcast();
 
-    Task<bool> RouteMessage(string data);
+    Task<InvocationResult<bool>> RouteMessage(RoutingRequest request);
 }

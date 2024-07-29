@@ -35,9 +35,10 @@ public class StartupConfiguration(IConfiguration configuration)
         .AddHubOptions<RoutingHub>(
             options =>
                 {
+                    options.AddFilter<AuthorizedServiceOnlyFilter>();
+                    options.AddFilter<ValidateModelFilter>();
                     options.AddFilter<OnionParsingFilter>();
                     options.AddFilter<OnionRoutingFilter>();
-                    options.AddFilter<AuthorizedServiceOnlyFilter>();
                 });
 
         services.AddSingleton<ConnectionsMapper>();

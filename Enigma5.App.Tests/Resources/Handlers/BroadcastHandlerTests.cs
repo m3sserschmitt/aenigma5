@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using AutoMapper;
 using Enigma5.App.Data;
+using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
@@ -11,12 +12,9 @@ public class BroadcastHandlerTests : AppTestBase
 {
     private readonly BroadcastHandler _handler;
 
-    private readonly IMapper _mapper;
-
     public BroadcastHandlerTests()
     {
         _handler = _scope.Resolve<BroadcastHandler>();
-        _mapper = _scope.Resolve<IMapper>();
     }
 
     [Fact]
@@ -24,7 +22,7 @@ public class BroadcastHandlerTests : AppTestBase
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
-        var broadcast = _mapper.Map<VertexBroadcast>(vertex);
+        var broadcast = vertex.ToVertexBroadcast();
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
@@ -32,7 +30,7 @@ public class BroadcastHandlerTests : AppTestBase
 
         // Assert
         localVertex.Should().BeOfType<Vertex>();
-        broadcasts.Should().AllBeOfType<VertexBroadcast>();
+        broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
         localVertex.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts.Should().HaveCount(2);
         var broadcastLocal = broadcasts.Single(item => item.PublicKey == localVertex.PublicKey);
@@ -46,7 +44,7 @@ public class BroadcastHandlerTests : AppTestBase
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
-        var broadcast = _mapper.Map<VertexBroadcast>(vertex);
+        var broadcast = vertex.ToVertexBroadcast();
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
@@ -66,8 +64,8 @@ public class BroadcastHandlerTests : AppTestBase
         // Arrange
         var adjacentVertex = _scope.ResolveAdjacentVertex();
         var nonAdjacentVertex = _scope.ResolveNonAdjacentVertex();
-        var initialBroadcast = _mapper.Map<VertexBroadcast>(adjacentVertex);
-        var finalBroadcast = _mapper.Map<VertexBroadcast>(nonAdjacentVertex);
+        var initialBroadcast = adjacentVertex.ToVertexBroadcast();
+        var finalBroadcast = nonAdjacentVertex.ToVertexBroadcast();
         var request1 = new HandleBroadcastCommand(initialBroadcast);
         var request2 = new HandleBroadcastCommand(finalBroadcast);
     

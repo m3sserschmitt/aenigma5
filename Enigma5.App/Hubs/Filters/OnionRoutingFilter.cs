@@ -10,8 +10,7 @@ public class OnionRoutingFilter(SessionManager sessionManager) : BaseFilter<IOni
 {
     private readonly SessionManager _sessionManager = sessionManager;
 
-    protected override bool CheckArguments(HubInvocationContext invocationContext)
-     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is string;
+    protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
     protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {

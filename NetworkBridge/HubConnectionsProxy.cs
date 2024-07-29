@@ -1,4 +1,5 @@
 ﻿using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.App.Models;
 using Enigma5.Security;
 using Enigma5.Security.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -74,7 +75,8 @@ public class HubConnectionsProxy
                     return false;
                 }
 
-                return await _localHubConnection.InvokeAsync<bool>(nameof(IHub.TriggerBroadcast));
+                var authentication = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast));
+                return authentication.Success && authentication.Data;
             }
             return true;
         }

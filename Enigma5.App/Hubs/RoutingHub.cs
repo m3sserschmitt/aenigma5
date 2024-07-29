@@ -9,6 +9,7 @@ using Enigma5.App.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
 using Microsoft.AspNetCore.SignalR;
+using Enigma5.App.Data.Extensions;
 
 namespace Enigma5.App.Hubs;
 
@@ -38,8 +39,14 @@ public partial class RoutingHub(
 
     public byte[]? Content { get; set; }
 
-    public string? GenerateToken()
-    => _sessionManager.AddPending(Context.ConnectionId);
+    public Task<InvocationResult<string>> GenerateToken()
+    {
+        var nonce = _sessionManager.AddPending(Context.ConnectionId);
+
+        return nonce is not null
+        ? OkAsync(nonce)
+        : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
+    }
 
     public async Task Synchronize()
     {
@@ -69,18 +76,14 @@ public partial class RoutingHub(
         }
     }
 
-    public async Task<bool> Authenticate(AuthenticationRequest request)
+    [ValidateModel]
+    public async Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request)
     {
-        if (request.PublicKey == null || request.Signature == null)
-        {
-            return false;
-        }
-
-        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey, request.Signature);
+        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!);
 
         if (!authenticated)
         {
-            return false;
+            return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
         if (request.SyncMessagesOnSuccess)
@@ -90,58 +93,62 @@ public partial class RoutingHub(
 
         if (request.UpdateNetworkGraph)
         {
-            await AddNewAdjacency(request.PublicKey);
+            await AddNewAdjacency(request.PublicKey!);
         }
 
-        return true;
+        return Ok(true);
     }
 
-    public Signature? SignToken(string token)
+    [ValidateModel]
+    public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
     {
-        if (token == null)
-        {
-            return null;
-        }
-
         using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-        var data = signature.Sign(Convert.FromBase64String(token));
+        var data = signature.Sign(Convert.FromBase64String(request.Nonce!));
 
         if (data == null)
         {
-            return null;
+            return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
-        return new Signature(Convert.ToBase64String(data), _certificateManager.PublicKey);
+        var encodedData = Convert.ToBase64String(data);
+
+        if (encodedData is null)
+        {
+            return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
+        }
+
+        return OkAsync<Signature>(new(encodedData, _certificateManager.PublicKey));
     }
 
-    public async Task<bool> Broadcast(VertexBroadcast broadcastAdjacencyList)
+    [ValidateModel]
+    public async Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest broadcastAdjacencyList)
     {
         var (localVertex, broadcasts) = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
         if (localVertex != null && broadcasts != null)
         {
-            return await SendBroadcast(broadcasts);
+            return await SendBroadcast(broadcasts)
+            ? Ok(true)
+            : Error<bool>(InvocationErrors.BROADCAST_FORWARDING_ERROR);
         }
 
-        return false;
+        return Error<bool>(InvocationErrors.BROADCAST_HANDLING_ERROR);
     }
 
     [AuthorizedServiceOnly]
-    public Task<bool> TriggerBroadcast()
-    {
-        var localVertex = _networkGraph.LocalVertex;
-        var broadcast = Vertex.ToBroadcast(localVertex);
+    public async Task<InvocationResult<bool>> TriggerBroadcast()
+    => await SendBroadcast(_networkGraph.LocalVertex.ToVertexBroadcast())
+        ? Ok(true)
+        : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
 
-        return SendBroadcast(broadcast);
-    }
-
+    [ValidateModel]
     [OnionParsing]
     [OnionRouting]
-    public async Task<bool> RouteMessage(string data)
+    public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
     {
         if (DestinationConnectionId != null && Content != null)
         {
-            return await RouteMessage(DestinationConnectionId, Content);
+            return await RouteMessage(DestinationConnectionId, Content) ? Ok(true) : Error(false, "");
         }
         else if (Content != null)
         {
@@ -149,9 +156,9 @@ public partial class RoutingHub(
 
             var createPendingMessageCommand = new CreatePendingMessageCommand(Next!, encodedContent);
 
-            return await _commandRouter.Send(createPendingMessageCommand) is not null;
+            return await _commandRouter.Send(createPendingMessageCommand) is not null ? Ok(true) : Error(false, "");
         }
-        return false;
+        return Error<bool>(InvocationErrors.ROUTING_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

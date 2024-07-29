@@ -48,12 +48,6 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
     public void RefreshLastUpdate() => LastUpdate = DateTimeOffset.Now;
 
-    public static Vertex FromBroadcast(VertexBroadcast adjacencyList)
-    => new(Neighborhood.FromAdjacency(adjacencyList.AdjacencyList), adjacencyList.PublicKey, adjacencyList.SignedData);
-
-    public static VertexBroadcast ToBroadcast(Vertex vertex)
-    => new(vertex.PublicKey ?? string.Empty, vertex.SignedData ?? string.Empty);
-
     public static class Factory
     {
         public static Vertex Create(
@@ -135,28 +129,17 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         if (obj1.IsLeaf || obj2.IsLeaf)
         {
             return obj1.Neighborhood.Address == obj2.Neighborhood.Address
-            && obj1.Neighborhood.CompareNeighbors(obj2.Neighborhood);
+            && obj1.Neighborhood.Neighbors.SetEquals(obj2.Neighborhood.Neighbors);
         }
 
-        return obj1.Neighborhood == obj2.Neighborhood;
+        return obj1.PublicKey == obj2.PublicKey
+        && obj1.SignedData == obj2.SignedData
+        && obj1.Neighborhood == obj2.Neighborhood;
     }
 
-    public static bool operator !=(Vertex? obj1, Vertex? obj2)
-    {
-        return !(obj1 == obj2);
-    }
+    public static bool operator !=(Vertex? obj1, Vertex? obj2) => !(obj1 == obj2);
 
-    public override bool Equals(object? obj)
-    {
-        if (obj is Vertex other)
-        {
-            return this == other;
-        }
-        return false;
-    }
+    public override bool Equals(object? obj) => obj is Vertex other && this == other;
 
-    public override int GetHashCode()
-    {
-        throw new NotImplementedException();
-    }
+    public override int GetHashCode() => Neighborhood.GetHashCode();
 }

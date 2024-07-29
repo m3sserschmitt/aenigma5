@@ -179,28 +179,29 @@ public class ConnectionVector
 
         try
         {
-            var token = await _target.InvokeAsync<string?>(nameof(IHub.GenerateToken));
+            var nonce = await _target.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
 
-            if (token is null)
+            if (!nonce.Success || nonce.Data is null)
             {
                 return false;
             }
 
-            var signature = await _source.InvokeAsync<Signature?>(nameof(IHub.SignToken), token);
+            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IHub.SignToken), new SignatureRequest(nonce.Data));
 
-            if (signature is null)
+            if (!signature.Success || signature.Data is null)
             {
                 return false;
             }
 
-            TargetAuthenticated = await _target.InvokeAsync<bool>(nameof(IHub.Authenticate), new AuthenticationRequest
+            var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
             {
-                Signature = signature.SignedData,
-                PublicKey = signature.PublicKey,
+                Signature = signature.Data.SignedData,
+                PublicKey = signature.Data.PublicKey,
                 UpdateNetworkGraph = IsReversed,
                 SyncMessagesOnSuccess = false
             });
 
+            TargetAuthenticated = authentication.Success && authentication.Data;
             if (!IsReversed && TargetAuthenticated)
             {
                 SourceAuthenticated = await Reversed().StartAuthenticationAsync();
