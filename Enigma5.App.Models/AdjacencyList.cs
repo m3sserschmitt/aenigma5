@@ -9,7 +9,7 @@ public partial class AdjacencyList : IValidatable
 
     public string? Hostname { get; set; }
 
-    public List<string>? Neighbors { get; set; }
+    public HashSet<string>? Neighbors { get; set; }
 
     public IEnumerable<Error> Validate()
     {

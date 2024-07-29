@@ -1,17 +1,26 @@
 ﻿using Enigma5.App.Attributes;
 using Enigma5.App.Common.Contracts.Hubs;
-using Enigma5.App.Hubs.Sessions;
-using MediatR;
 using Microsoft.AspNetCore.SignalR;
+
+#if !DEBUG
+using Enigma5.App.Hubs.Sessions;
+using Enigma5.App.Resources.Queries;
+using MediatR;
+#endif
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class AuthorizedServiceOnlyFilter(SessionManager sessionManager, IMediator commandRouter)
+public class AuthorizedServiceOnlyFilter
+#if !DEBUG
+(SessionManager sessionManager, IMediator commandRouter)
+#endif
 : BaseFilter<IHub, AuthorizedServiceOnlyAttribute>
 {
+#if !DEBUG
     private readonly SessionManager _sessionManager = sessionManager;
 
     private readonly IMediator _commandRouter = commandRouter;
+#endif
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 

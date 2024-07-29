@@ -13,4 +13,6 @@ public class InvocationErrors
     public static readonly string BROADCAST_FORWARDING_ERROR = "Vertex broadcast could not be received by some of the neighbors.";
 
     public static readonly string BROADCAST_TRIGGERING_FAILED = "Failed to trigger broadcast or some neighbors were not able to receive.";
+
+    public static readonly string ROUTING_FAILED = "Failed to route or store message.";
 }

@@ -1,4 +1,5 @@
 ﻿using Enigma5.App.Data;
+using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using MediatR;
@@ -12,10 +13,10 @@ public class BroadcastHandler(NetworkGraph networkGraph)
 
     public async Task<(Vertex localVertex, IEnumerable<VertexBroadcastRequest> broadcasts)> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken = default)
     {
-        var vertex = Vertex.FromBroadcast(request.BroadcastAdjacencyList);
+        var vertex = request.BroadcastAdjacencyList.ToVertex();
         var vertices = await _networkGraph.UpdateAsync(vertex, cancellationToken);
 
-        var broadcasts = vertices.Select(Vertex.ToBroadcast);
+        var broadcasts = vertices.Select(item => item.ToVertexBroadcast());
 
         return (_networkGraph.LocalVertex, broadcasts);
     }

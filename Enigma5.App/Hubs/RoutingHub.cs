@@ -9,6 +9,7 @@ using Enigma5.App.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
 using Microsoft.AspNetCore.SignalR;
+using Enigma5.App.Data.Extensions;
 
 namespace Enigma5.App.Hubs;
 
@@ -136,14 +137,9 @@ public partial class RoutingHub(
 
     [AuthorizedServiceOnly]
     public async Task<InvocationResult<bool>> TriggerBroadcast()
-    {
-        var localVertex = _networkGraph.LocalVertex;
-        var broadcast = Vertex.ToBroadcast(localVertex);
-
-        return await SendBroadcast(broadcast)
+    => await SendBroadcast(_networkGraph.LocalVertex.ToVertexBroadcast())
         ? Ok(true)
         : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
-    }
 
     [ValidateModel]
     [OnionParsing]
@@ -162,7 +158,7 @@ public partial class RoutingHub(
 
             return await _commandRouter.Send(createPendingMessageCommand) is not null ? Ok(true) : Error(false, "");
         }
-        return Error(false, "");
+        return Error<bool>(InvocationErrors.ROUTING_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

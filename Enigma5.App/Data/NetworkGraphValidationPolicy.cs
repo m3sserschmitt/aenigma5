@@ -1,6 +1,5 @@
 ﻿using Enigma5.Crypto;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Enigma5.App.Models.Extensions;
 
 namespace Enigma5.App.Data;
@@ -44,18 +43,20 @@ public static partial class NetworkGraphValidationPolicy
     public static bool CheckCycles(this Vertex vertex)
     => !vertex.Neighborhood.Neighbors.Contains(vertex.Neighborhood.Address);
 
+    public static bool ValidatePublicKey(this Vertex vertex)
+    => vertex.PublicKey.IsValidPublicKey();
+
     public static bool ValidateAddress(this Vertex vertex)
-    => vertex.PublicKey is not null && CertificateHelper.GetHexAddressFromPublicKey(vertex.PublicKey) == vertex.Neighborhood.Address;
+    => vertex.Neighborhood.Address.IsValidAddress()
+    && CertificateHelper.GetHexAddressFromPublicKey(vertex.PublicKey) == vertex.Neighborhood.Address;
 
     public static bool ValidateNeighborsAddresses(this Vertex vertex)
-    => vertex.Neighborhood.Neighbors.All(address => AddressRegex().IsMatch(address));
+    => vertex.Neighborhood.Neighbors.All(address => address.IsValidAddress());
 
     public static bool ValidatePolicy(this Vertex vertex)
-    => ValidateAddress(vertex)
-    && CheckCycles(vertex)
-    && ValidateNeighborsAddresses(vertex)
-    && ValidateSignature(vertex);
-
-    [GeneratedRegex("^[a-fA-F0-9]{64}$")]
-    private static partial Regex AddressRegex();
+    => vertex.ValidatePublicKey()
+    && vertex.ValidateAddress()
+    && vertex.CheckCycles()
+    && vertex.ValidateNeighborsAddresses()
+    && vertex.ValidateSignature();
 }
