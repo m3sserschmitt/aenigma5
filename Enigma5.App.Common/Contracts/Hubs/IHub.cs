@@ -12,7 +12,7 @@ public interface IHub
 
     Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest request);
 
-    Task<InvocationResult<bool>> TriggerBroadcast();
+    Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request);
 
     Task<InvocationResult<bool>> RouteMessage(RoutingRequest request);
 }

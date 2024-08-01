@@ -44,19 +44,12 @@ public partial class RoutingHub
         }
     }
 
-    private async Task<(Vertex localVertex, VertexBroadcastRequest? broadcast)> AddNewAdjacency(string publicKey)
-    {
-        var command = new UpdateLocalAdjacencyCommand(CertificateHelper.GetHexAddressFromPublicKey(publicKey), true);
+    private async Task<(Vertex localVertex, VertexBroadcastRequest? broadcast)> AddNewAdjacency(string address)
+    => await _commandRouter.Send(new UpdateLocalAdjacencyCommand(address, true));
 
-        return await _commandRouter.Send(command);
-    }
 
     private async Task<(Vertex localVertex, VertexBroadcastRequest? broadcast)> RemoveAdjacency(string address)
-    {
-        var command = new UpdateLocalAdjacencyCommand(address, false);
-
-        return await _commandRouter.Send(command);
-    }
+    => await _commandRouter.Send(new UpdateLocalAdjacencyCommand(address, false));
 
     private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequest> adjacencyLists)
     {

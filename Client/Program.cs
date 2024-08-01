@@ -111,7 +111,6 @@ public class Program
                     PublicKey = publicKey,
                     Signature = Convert.ToBase64String(data),
                     SyncMessagesOnSuccess = true,
-                    UpdateNetworkGraph = false
                 }).ContinueWith(async response =>
                 {
                     var authenticated = await response;

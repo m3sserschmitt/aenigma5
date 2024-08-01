@@ -91,11 +91,6 @@ public partial class RoutingHub(
             await Synchronize();
         }
 
-        if (request.UpdateNetworkGraph)
-        {
-            await AddNewAdjacency(request.PublicKey!);
-        }
-
         return Ok(true);
     }
 
@@ -135,11 +130,27 @@ public partial class RoutingHub(
         return Error<bool>(InvocationErrors.BROADCAST_HANDLING_ERROR);
     }
 
+    [ValidateModel]
     [AuthorizedServiceOnly]
-    public async Task<InvocationResult<bool>> TriggerBroadcast()
-    => await SendBroadcast(_networkGraph.LocalVertex.ToVertexBroadcast())
-        ? Ok(true)
-        : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
+    public async Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request)
+    {
+        var vertexBroadcastRequest = request.NewAddresses is null || request.NewAddresses.Count == 0
+        ? _networkGraph.LocalVertex.ToVertexBroadcast()
+        : null;
+
+        foreach (var address in request.NewAddresses ?? [])
+        {
+            (_, vertexBroadcastRequest) = await AddNewAdjacency(address);
+
+            if (vertexBroadcastRequest is null)
+            {
+                return Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
+            }
+        }
+        return await SendBroadcast(vertexBroadcastRequest!)
+            ? Ok(true)
+            : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
+    }
 
     [ValidateModel]
     [OnionParsing]

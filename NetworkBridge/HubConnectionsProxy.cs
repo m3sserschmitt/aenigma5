@@ -1,5 +1,7 @@
 ﻿using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
+using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto;
 using Enigma5.Security;
 using Enigma5.Security.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -75,7 +77,11 @@ public class HubConnectionsProxy
                     return false;
                 }
 
-                var authentication = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast));
+                var newAddresses = _connections
+                .Where(item => item.TargetPublicKey.IsValidPublicKey())
+                .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToHashSet();
+                var requestModel = new TriggerBroadcastRequest(newAddresses);
+                var authentication = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast), requestModel);
                 return authentication.Success && authentication.Data;
             }
             return true;

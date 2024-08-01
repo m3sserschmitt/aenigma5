@@ -12,8 +12,6 @@ public class AuthenticationRequest: IValidatable
 
     public bool SyncMessagesOnSuccess { get; set; }
 
-    public bool UpdateNetworkGraph { get; set; }
-
     public IEnumerable<Error> Validate()
     {
         if(string.IsNullOrWhiteSpace(PublicKey))

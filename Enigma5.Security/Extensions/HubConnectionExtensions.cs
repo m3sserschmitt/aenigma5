@@ -36,7 +36,6 @@ public static class HubConnectionExtensions
                 PublicKey = certificateManager.PublicKey,
                 Signature = Convert.ToBase64String(data),
                 SyncMessagesOnSuccess = syncOnSuccess,
-                UpdateNetworkGraph = updateNetworkGraph
             });
 
             return authentication.Success && authentication.Data;

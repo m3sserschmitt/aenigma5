@@ -18,6 +18,10 @@ public class ConnectionVector
 
     private readonly HubConnection _target;
 
+    public string? SourcePublicKey { get; private set; }
+
+    public string? TargetPublicKey { get; private set; }
+
     public bool IsReversed
     {
         get
@@ -172,7 +176,9 @@ public class ConnectionVector
 
         if (!IsReversed && TargetAuthenticated)
         {
-            SourceAuthenticated = await Reversed().StartAuthenticationAsync();
+            var reversedVector = Reversed();
+            SourceAuthenticated = await reversedVector.StartAuthenticationAsync();
+            TargetPublicKey = reversedVector.SourcePublicKey;
 
             return Authenticated;
         }
@@ -197,14 +203,18 @@ public class ConnectionVector
             {
                 Signature = signature.Data.SignedData,
                 PublicKey = signature.Data.PublicKey,
-                UpdateNetworkGraph = IsReversed,
                 SyncMessagesOnSuccess = false
             });
 
             TargetAuthenticated = authentication.Success && authentication.Data;
+            SourcePublicKey = signature.Data.PublicKey;
+
             if (!IsReversed && TargetAuthenticated)
             {
-                SourceAuthenticated = await Reversed().StartAuthenticationAsync();
+                var reversedVector = Reversed();
+                SourceAuthenticated = await reversedVector.StartAuthenticationAsync();
+                TargetPublicKey = reversedVector.SourcePublicKey;
+                
                 return Authenticated;
             }
 
