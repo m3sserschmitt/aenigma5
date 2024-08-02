@@ -32,7 +32,7 @@ public class Neighborhood(HashSet<string> neighbors, string address, string? hos
 
     public static bool operator !=(Neighborhood? obj1, Neighborhood? obj2) => !(obj1 == obj2);
 
-    public override bool Equals(object? obj) => obj is Neighborhood other && this == other;
+    public override bool Equals(object? obj) => obj is Neighborhood other && Address == other.Address;
 
     public override int GetHashCode() => Address.GetHashCode();
 }

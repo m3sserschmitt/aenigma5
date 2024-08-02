@@ -4,11 +4,11 @@ public static class Endpoints
 {
     public const string OnionRoutingEndpoint = "OnionRouting";
 
-    public const string ServerInfoEndpoint = "ServerInfo";
+    public const string ServerInfoEndpoint = "Info";
 
-    public const string NetworkGraphEndpoint = "NetworkGraph";
+    public const string NetworkGraphEndpoint = "Graph";
 
-    public const string GraphAddressesEndpoint = "Addresses";
+    public const string VerticesEndpoint = "Vertices";
 
     public const string ShareEndpoint = "Share";
 }

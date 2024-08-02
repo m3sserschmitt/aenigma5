@@ -18,27 +18,6 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldUpdateLocalVertex()
-    {
-        // Arrange
-        var vertex = _scope.ResolveLocalVertex([PKey.Address2]);
-
-        // Act
-        var vertices = _graph.Update(vertex);
-
-        // Assert
-        vertices.Count.Should().Be(1);
-        var localVertex = vertices.First();
-        localVertex.PublicKey.Should().Be(_certificateManager.PublicKey);
-        localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
-        localVertex.Neighborhood.Neighbors.Should().HaveCount(1);
-        localVertex.Neighborhood.Neighbors.First().Should().Be(PKey.Address2);
-        _graph.Vertices.Should().HaveCount(1);
-        _graph.LocalVertex.Should().Be(localVertex);
-        _graph.Vertices.Single().Should().Be(localVertex);
-    }
-
-    [Fact]
     public void NetworkGraph_ShouldAddNewVertex()
     {
         // Arrange

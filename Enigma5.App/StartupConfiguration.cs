@@ -64,7 +64,7 @@ public class StartupConfiguration(IConfiguration configuration)
 
             endpoints.MapGet(Endpoints.ServerInfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
             {
-                var serializedGraph = JsonSerializer.Serialize(networkGraph.Vertices);
+                var serializedGraph = JsonSerializer.Serialize(networkGraph.Graph);
                 var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
 
                 return Results.Ok(new ServerInfo
@@ -77,13 +77,14 @@ public class StartupConfiguration(IConfiguration configuration)
 
             endpoints.MapGet(Endpoints.NetworkGraphEndpoint, (NetworkGraph networkGraph) =>
             {
-                return Results.Ok(networkGraph.Vertices);
+                return Results.Ok(networkGraph.Graph);
             });
 
-            endpoints.MapGet(Endpoints.GraphAddressesEndpoint, (NetworkGraph networkGraph) =>
-            {
-                return Results.Ok(networkGraph.Addresses);
+#if DEBUG
+            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) => {
+                return Results.Ok(networkGraph.Vertices);
             });
+#endif
 
             endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
             {

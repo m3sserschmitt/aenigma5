@@ -78,6 +78,9 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         public static Vertex CreateWithEmptyNeighborhood(ICertificateManager certificateManager, string? hostname = null)
         => Create(certificateManager, [], hostname);
 
+        public static Vertex Create(string address)
+        => new(new([], address, null), string.Empty, null);
+
         public static class Prototype
         {
             public static bool AddNeighbor(Vertex vertex, string address, ICertificateManager certificateManager, out Vertex? newVertex)
@@ -139,7 +142,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
     public static bool operator !=(Vertex? obj1, Vertex? obj2) => !(obj1 == obj2);
 
-    public override bool Equals(object? obj) => obj is Vertex other && this == other;
+    public override bool Equals(object? obj) => obj is Vertex other && Neighborhood.Address == other.Neighborhood.Address;
 
-    public override int GetHashCode() => Neighborhood.GetHashCode();
+    public override int GetHashCode() => Neighborhood.Address.GetHashCode();
 }
