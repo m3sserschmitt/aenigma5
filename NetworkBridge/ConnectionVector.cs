@@ -1,4 +1,5 @@
-﻿using Enigma5.App.Common.Contracts.Hubs;
+﻿using Enigma5.App.Common.Constants;
+using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -14,15 +15,55 @@ public class ConnectionVector
 
     private bool _targetAuthenticated;
 
+    private string? _sourcePublicKey;
+
+    private string? _targetPublicKey;
+
+    public readonly string SourceHubHost;
+
+    public readonly string TargetHubHost;
+
     private readonly HubConnection _source;
 
     private readonly HubConnection _target;
 
-    public string? SourcePublicKey { get; private set; }
+    public string? SourcePublicKey
+    {
+        get
+        {
+            lock (_locker)
+            {
+                return _sourcePublicKey;
+            }
+        }
+        private set
+        {
+            lock (_locker)
+            {
+                _sourcePublicKey = value;
+            }
+        }
+    }
 
-    public string? TargetPublicKey { get; private set; }
+    public string? TargetPublicKey
+    {
+        get
+        {
+            lock (_locker)
+            {
+                return _targetPublicKey;
+            }
+        }
+        private set
+        {
+            lock (_locker)
+            {
+                _targetPublicKey = value;
+            }
+        }
+    }
 
-    public bool IsReversed
+    private bool IsReversed
     {
         get
         {
@@ -104,10 +145,15 @@ public class ConnectionVector
         }
     }
 
-    public ConnectionVector(HubConnection source, HubConnection target)
+    private ConnectionVector(HubConnection source, HubConnection target, string sourceUrl, string targetUrl)
     {
         _source = source;
         _target = target;
+
+        var sourceUri = new Uri(sourceUrl);
+        SourceHubHost = $"{sourceUri.Host}:{sourceUri.Port}";
+        var targetUri = new Uri(targetUrl);
+        TargetHubHost = $"{targetUri.Host}:{targetUri.Port}";
 
         _source.Closed += OnSourceClosed;
         _target.Closed += OnTargetClosed;
@@ -214,7 +260,7 @@ public class ConnectionVector
                 var reversedVector = Reversed();
                 SourceAuthenticated = await reversedVector.StartAuthenticationAsync();
                 TargetPublicKey = reversedVector.SourcePublicKey;
-                
+
                 return Authenticated;
             }
 
@@ -226,7 +272,19 @@ public class ConnectionVector
         }
     }
 
-    private ConnectionVector Reversed() => new(_target, _source) { IsReversed = true };
+    private Task OnSourceClosed(Exception? _)
+    {
+        SourceAuthenticated = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OnTargetClosed(Exception? _)
+    {
+        TargetAuthenticated = false;
+        return Task.CompletedTask;
+    }
+
+    private ConnectionVector Reversed() => new(_target, _source, TargetHubHost, SourceHubHost) { IsReversed = true };
 
     private static async Task<bool> InvokeAsync(HubConnection connection, string method, object? data)
     {
@@ -271,15 +329,23 @@ public class ConnectionVector
         }
     }
 
-    private Task OnSourceClosed(Exception? _)
-    {
-        SourceAuthenticated = false;
-        return Task.CompletedTask;
-    }
+    public static bool operator ==(ConnectionVector vector1, ConnectionVector vector2)
+    => vector1.SourceHubHost == vector2.SourceHubHost && vector1.TargetHubHost == vector2.TargetHubHost;
 
-    private Task OnTargetClosed(Exception? _)
-    {
-        TargetAuthenticated = false;
-        return Task.CompletedTask;
-    }
+    public static bool operator !=(ConnectionVector vector1, ConnectionVector vector2) => !(vector1 == vector2);
+
+    public override int GetHashCode() => HashCode.Combine(SourceHubHost, TargetHubHost);
+
+    public override bool Equals(object? obj) => obj is ConnectionVector vector && this == vector;
+
+    public static ConnectionVector Create(string sourceHubUrl, string targetHubUrl)
+    => new(CreateHubConnection(sourceHubUrl), CreateHubConnection(targetHubUrl), sourceHubUrl, targetHubUrl);
+
+    public static HubConnection CreateHubConnection(string baseUrl)
+    => new HubConnectionBuilder()
+        .WithUrl($"{baseUrl.Trim('/')}/{Endpoints.OnionRoutingEndpoint}")
+        .Build();
+
+    public static HashSet<ConnectionVector> CreateConnections(string sourceHubUrl, List<string> targetUrls)
+    => targetUrls.Select(item => Create(sourceHubUrl, item)).ToHashSet();
 }

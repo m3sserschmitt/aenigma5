@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Enigma5.Crypto;
 
@@ -7,13 +8,7 @@ public static class HashProvider
     public static string ToHex(byte[] data)
     => BitConverter.ToString(data).Replace("-", string.Empty).ToLower();
 
-    public static byte[] Sha256(byte[] data)
-    {
-        using (SHA256 sha256 = SHA256.Create())
-        {
-            return sha256.ComputeHash(data);
-        }
-    }
+    public static byte[] Sha256(byte[] data) => SHA256.HashData(data);
 
     public static byte[] FromHexString(string hexString)
     {
@@ -34,4 +29,7 @@ public static class HashProvider
 
     public static string Sha256Hex(byte[] data)
     => ToHex(Sha256(data));
+
+    public static string Sha256Hex(string data)
+    => Sha256Hex(Encoding.UTF8.GetBytes(data));
 }

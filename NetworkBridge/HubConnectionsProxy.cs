@@ -1,4 +1,5 @@
 ﻿using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto;
@@ -10,7 +11,9 @@ namespace NetworkBridge;
 
 public class HubConnectionsProxy
 {
-    private readonly List<ConnectionVector> _connections;
+    private readonly ConfigurationLoader _configurationLoader;
+
+    private readonly HashSet<ConnectionVector> _connections;
 
     private readonly CertificateManager _certificateManager;
 
@@ -20,11 +23,17 @@ public class HubConnectionsProxy
     {
         add
         {
-            _connections.ForEach(connection => connection.TargetClosed += value);
+            foreach (var connection in _connections)
+            {
+                connection.TargetClosed += value;
+            }
         }
         remove
         {
-            _connections.ForEach(connection => connection.TargetClosed -= value);
+            foreach (var connection in _connections)
+            {
+                connection.TargetClosed -= value;
+            }
         }
     }
 
@@ -32,20 +41,31 @@ public class HubConnectionsProxy
     {
         add
         {
-            _connections.ForEach(connection => connection.SourceClosed += value);
+            foreach (var connection in _connections)
+            {
+                connection.SourceClosed += value;
+            }
         }
         remove
         {
-            _connections.ForEach(connection => connection.SourceClosed -= value);
+            foreach (var connection in _connections)
+            {
+                connection.SourceClosed -= value;
+            }
         }
     }
 
-    public HubConnectionsProxy(
-        List<ConnectionVector> connections,
-        HubConnection localHubConnection,
+    private HubConnectionsProxy(
+        ConfigurationLoader configurationLoader,
         CertificateManager certificateManager)
     {
-        _connections = connections;
+        var listenAddress = configurationLoader.Configuration.GetLocalListenAddress()
+        ?? throw new Exception("Local listening address not provided into configuration file.");
+        List<string> urls = configurationLoader.Configuration.GetPeers()
+        ?? throw new Exception("Peers section not provided into configuration.");
+
+        _connections = ConnectionVector.CreateConnections(listenAddress, urls);
+        _localHubConnection = ConnectionVector.CreateHubConnection(listenAddress);
 
         foreach (var connection in _connections)
         {
@@ -55,7 +75,7 @@ public class HubConnectionsProxy
         }
 
         _certificateManager = certificateManager;
-        _localHubConnection = localHubConnection;
+        _configurationLoader = configurationLoader;
     }
 
     public Task<bool> StartAsync() => _connections.StartAsync();
@@ -79,7 +99,7 @@ public class HubConnectionsProxy
 
                 var newAddresses = _connections
                 .Where(item => item.TargetPublicKey.IsValidPublicKey())
-                .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToHashSet();
+                .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToList();
                 var requestModel = new TriggerBroadcastRequest(newAddresses);
                 var authentication = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast), requestModel);
                 return authentication.Success && authentication.Data;
@@ -98,5 +118,37 @@ public class HubConnectionsProxy
                 await _localHubConnection.StopAsync();
             }
         }
+    }
+
+    private async void ReloadConnections()
+    {
+        try
+        {
+            var newProxy = new HubConnectionsProxy(_configurationLoader, _certificateManager);
+            var connectionsToBeRemoved = _connections.Except(newProxy._connections).ToList();
+
+            _connections.IntersectWith(newProxy._connections);
+            _connections.UnionWith(newProxy._connections);
+
+            foreach (var connection in connectionsToBeRemoved)
+            {
+                await connection.StopAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // TODO: log exception
+            Console.WriteLine($"Exception while trying to reload connections: {ex.Message}.");
+        }
+    }
+
+    public static HubConnectionsProxy Create(ConfigurationLoader configurationLoader)
+    {
+        var certificateManager = new CertificateManager(new KeysReader(new CommandLinePassphraseReader(), configurationLoader.Configuration));
+
+        var proxy = new HubConnectionsProxy(configurationLoader, certificateManager);
+        configurationLoader.OnConfigurationReloaded += proxy.ReloadConnections;
+
+        return proxy;
     }
 }

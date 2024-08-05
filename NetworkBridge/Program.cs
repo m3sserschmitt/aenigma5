@@ -1,16 +1,8 @@
 ﻿using Enigma5.App.Common.Extensions;
-using Microsoft.Extensions.Configuration;
 using NetworkBridge;
 
-IConfiguration configuration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .Build();
-
-var urls = configuration.GetPeers() ?? throw new Exception("Peers section not provided into configuration.");
-
-var hubConnectionFactory = new HubConnectionFactory(configuration);
-var connections = hubConnectionFactory.CreateConnectionsProxy();
+var configurationLoader = new ConfigurationLoader("appsettings.json");
+var connections = HubConnectionsProxy.Create(configurationLoader);
 connections.OnAnyTargetClosed += OnConnectionClosed;
 
 async Task Start()
@@ -35,9 +27,9 @@ async Task OnConnectionClosed(Exception? ex)
 {
     // TODO: log exception
 
-    for (int i = 0; i < configuration.GetConnectionRetriesCount(); i++)
+    for (int i = 0; i < configurationLoader.Configuration.GetConnectionRetriesCount(); i++)
     {
-        await Task.Delay(configuration.GetDelayBetweenConnectionRetries());
+        await Task.Delay(configurationLoader.Configuration.GetDelayBetweenConnectionRetries());
         try
         {
             await Start();

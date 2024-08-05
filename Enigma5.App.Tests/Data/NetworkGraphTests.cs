@@ -94,7 +94,7 @@ public class NetworkGraphTests : AppTestBase
         // Arrange
 
         // Act
-        var (localVertex, updated) = _graph.AddAdjacency(PKey.Address1);
+        var (localVertex, updated) = _graph.AddAdjacency([PKey.Address1]);
 
         // Assert
         updated.Should().BeTrue();
@@ -109,8 +109,8 @@ public class NetworkGraphTests : AppTestBase
         // Arrange
 
         // Act
-        var (localVertex1, updated1) = _graph.AddAdjacency(PKey.Address1);
-        var (localVertex2, updated2) = _graph.AddAdjacency(PKey.Address1);
+        var (localVertex1, updated1) = _graph.AddAdjacency([PKey.Address1]);
+        var (localVertex2, updated2) = _graph.AddAdjacency([PKey.Address1]);
 
         // Assert
         updated1.Should().BeTrue();
@@ -125,7 +125,7 @@ public class NetworkGraphTests : AppTestBase
         // Arrange
 
         // Act
-        var (localVertex, updated) = _graph.AddAdjacency("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffxy");
+        var (localVertex, updated) = _graph.AddAdjacency(["ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffxy"]);
 
         // Assert
         updated.Should().BeFalse();
@@ -137,8 +137,8 @@ public class NetworkGraphTests : AppTestBase
         // Arrange
 
         // Act
-        var (localVertex1, updated1) = _graph.AddAdjacency(PKey.Address1);
-        var (localVertex2, updated2) = _graph.RemoveAdjacency(PKey.Address1);
+        var (localVertex1, updated1) = _graph.AddAdjacency([PKey.Address1]);
+        var (localVertex2, updated2) = _graph.RemoveAdjacency([PKey.Address1]);
 
         // Assert
         updated1.Should().BeTrue();

@@ -24,7 +24,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     public async void ShouldAddNewNeighbor()
     {
         // Arrange
-        var request = new UpdateLocalAdjacencyCommand(PKey.Address1, true);
+        var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
 
         // Act
         var (localVertex, broadcast) = await _handler.Handle(request);
@@ -44,7 +44,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     public async void ShouldNotAddNeighborTwice()
     {
         // Arrange
-        var request = new UpdateLocalAdjacencyCommand(PKey.Address1, true);
+        var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
 
         // Act
         var (localVertex1, broadcast1) = await _handler.Handle(request);
@@ -61,7 +61,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     public async void ShouldNotRemoveNonExistentNeighbor()
     {
         // Arrange
-        var request = new UpdateLocalAdjacencyCommand(PKey.Address1, false);
+        var request = new UpdateLocalAdjacencyCommand([PKey.Address1], false);
 
         // Act
         var (localVertex, broadcast) = await _handler.Handle(request);
@@ -80,8 +80,8 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
         // Arrange
 
         // Act
-        var (localVertex1, broadcast1) = await _handler.Handle(new UpdateLocalAdjacencyCommand(PKey.Address1, true));
-        var (localVertex2, broadcast2) = await _handler.Handle(new UpdateLocalAdjacencyCommand(PKey.Address1, false));
+        var (localVertex1, broadcast1) = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], true));
+        var (localVertex2, broadcast2) = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], false));
 
         // Assert
         localVertex1.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);

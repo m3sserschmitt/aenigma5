@@ -136,17 +136,13 @@ public partial class RoutingHub(
     {
         var vertexBroadcastRequest = request.NewAddresses is null || request.NewAddresses.Count == 0
         ? _networkGraph.LocalVertex.ToVertexBroadcast()
-        : null;
+        : (await AddNewAdjacencies(request.NewAddresses)).broadcast;
 
-        foreach (var address in request.NewAddresses ?? [])
+        if(vertexBroadcastRequest is null)
         {
-            (_, vertexBroadcastRequest) = await AddNewAdjacency(address);
-
-            if (vertexBroadcastRequest is null)
-            {
-                return Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
-            }
+            return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
+
         return await SendBroadcast(vertexBroadcastRequest!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
@@ -179,7 +175,7 @@ public partial class RoutingHub(
             return;
         }
 
-        var (_, broadcast) = await RemoveAdjacency(removedAddress!);
+        var (_, broadcast) = await RemoveAdjacencies([removedAddress!]);
 
         if (broadcast != null)
         {

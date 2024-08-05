@@ -14,5 +14,7 @@ public class InvocationErrors
 
     public static readonly string BROADCAST_TRIGGERING_FAILED = "Failed to trigger broadcast or some neighbors were not able to receive.";
 
+    public static readonly string BROADCAST_TRIGGERING_WARNING = "Broadcast will not be triggered because validation failures or no changes required to local neighborhood.";
+
     public static readonly string ROUTING_FAILED = "Failed to route or store message.";
 }

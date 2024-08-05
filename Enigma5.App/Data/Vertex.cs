@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Enigma5.App.Common.Extensions;
-using Enigma5.App.Models;
 using Enigma5.App.Security.Contracts;
 using Enigma5.Crypto;
 
@@ -54,7 +53,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         string publicKey,
         byte[] privateKey,
         string address,
-        List<string> neighbors,
+        HashSet<string> neighbors,
         string? passphrase = null,
         string? hostname = null)
         {
@@ -66,7 +65,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature!));
         }
 
-        public static Vertex Create(ICertificateManager certificateManager, List<string> neighbors, string? hostname = null)
+        public static Vertex Create(ICertificateManager certificateManager, HashSet<string> neighbors, string? hostname = null)
         => Create(
             certificateManager.PublicKey,
             certificateManager.PrivateKey,
@@ -83,28 +82,37 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
         public static class Prototype
         {
-            public static bool AddNeighbor(Vertex vertex, string address, ICertificateManager certificateManager, out Vertex? newVertex)
+            public static bool AddNeighbors(Vertex vertex, List<string> addresses, ICertificateManager certificateManager, out Vertex? newVertex)
             {
-                var newNeighbors = new HashSet<string>(vertex.Neighborhood.Neighbors);
-                if (newNeighbors.Add(address))
+                var previousCount = vertex.Neighborhood.Neighbors.Count;
+                var neighborsToBeAdded = new HashSet<string>(addresses);
+                var newNeighborsSet = vertex.Neighborhood.Neighbors.Union(neighborsToBeAdded).ToHashSet();
+
+                if (previousCount != newNeighborsSet.Count)
                 {
-                    newVertex = Create(certificateManager, new List<string>(newNeighbors), vertex.Neighborhood.Hostname);
+                    newVertex = Create(certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname);
                     return true;
                 }
 
                 newVertex = null;
                 return false;
             }
+
+            public static bool AddNeighbor(Vertex vertex, string address, ICertificateManager certificateManager, out Vertex? newVertex)
+            => AddNeighbors(vertex, [address], certificateManager, out newVertex);
 
             public static bool AddNeighbor(Vertex vertex, Vertex newNeighbor, ICertificateManager certificateManager, out Vertex? newVertex)
-            => AddNeighbor(vertex, newNeighbor.Neighborhood.Address, certificateManager, out newVertex);
+            => AddNeighbors(vertex, [newNeighbor.Neighborhood.Address], certificateManager, out newVertex);
 
-            public static bool RemoveNeighbor(Vertex vertex, string address, ICertificateManager certificateManager, out Vertex? newVertex)
+            public static bool RemoveNeighbors(Vertex vertex, List<string> addresses, ICertificateManager certificateManager, out Vertex? newVertex)
             {
-                var newNeighbors = new HashSet<string>(vertex.Neighborhood.Neighbors);
-                if (newNeighbors.Remove(address))
+                var previousCount = vertex.Neighborhood.Neighbors.Count;
+                var neighborsToBeRemoved = new HashSet<string>(addresses);
+                var newNeighborsSet = vertex.Neighborhood.Neighbors.Except(neighborsToBeRemoved).ToHashSet();
+
+                if (previousCount != newNeighborsSet.Count)
                 {
-                    newVertex = Create(certificateManager, new List<string>(newNeighbors), vertex.Neighborhood.Hostname);
+                    newVertex = Create(certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname);
                     return true;
                 }
 
@@ -112,8 +120,11 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
                 return false;
             }
 
+            public static bool RemoveNeighbor(Vertex vertex, string address, ICertificateManager certificateManager, out Vertex? newVertex)
+            => RemoveNeighbors(vertex, [address], certificateManager, out newVertex);
+
             public static bool RemoveNeighbor(Vertex vertex, Vertex neighbor, ICertificateManager certificateManager, out Vertex? newVertex)
-            => RemoveNeighbor(vertex, neighbor.Neighborhood.Address, certificateManager, out newVertex);
+            => RemoveNeighbors(vertex, [neighbor.Neighborhood.Address], certificateManager, out newVertex);
         }
     }
 

@@ -17,7 +17,7 @@ public static class ContainerBuilderExtensions
             var neighbors = args.Named<List<string>>("neighbors");
             var hostname = args.Named<string>("hostname");
 
-            return Vertex.Factory.Create(publicKey, privateKey, address, neighbors, passphrase, hostname == string.Empty ? null : hostname);
+            return Vertex.Factory.Create(publicKey, privateKey, address, [..neighbors], passphrase, hostname == string.Empty ? null : hostname);
         });
     }
 }

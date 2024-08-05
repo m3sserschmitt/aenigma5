@@ -5,9 +5,9 @@ namespace Enigma5.App.Models;
 
 public class TriggerBroadcastRequest : IValidatable
 {
-    public HashSet<string>? NewAddresses { get; set; }
+    public List<string>? NewAddresses { get; set; }
 
-    public TriggerBroadcastRequest(HashSet<string> newAddresses)
+    public TriggerBroadcastRequest(List<string> newAddresses)
     {
         NewAddresses = newAddresses;
     }

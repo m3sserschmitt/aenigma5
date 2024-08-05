@@ -2,7 +2,7 @@
 
 public class InvocationResult<T>
 {
-    public T? Data { get; set; }
+    public T? Result { get; set; }
 
     public IEnumerable<Error> Errors { get; set; }
 
@@ -10,21 +10,21 @@ public class InvocationResult<T>
 
     public InvocationResult(T? data, IEnumerable<Error> errors)
     {
-        Data = data;
+        Result = data;
         Errors = errors;
         Success = false;
     }
 
     public InvocationResult(T? data)
     {
-        Data = data;
+        Result = data;
         Errors = [];
         Success = true;
     }
 
     public InvocationResult()
     { 
-        Data = default;
+        Result = default;
         Errors = [];
         Success = false;
     }

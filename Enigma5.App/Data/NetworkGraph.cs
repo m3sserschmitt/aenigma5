@@ -44,14 +44,16 @@ public class NetworkGraph
         _graph ??= new Graph(_certificateManager.PublicKey, string.Empty);
     }
 
-    public (Vertex localVertex, bool updated) AddAdjacency(string address)
+    public (Vertex localVertex, bool updated) AddAdjacency(List<string> addresses)
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.AddNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex)
+            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, _certificateManager, out Vertex? newVertex)
                 && ValidateNewVertex(newVertex!))
             {
                 ReplaceLocalVertex(newVertex!);
+                SignGraph();
+
                 return (_localVertex.CopyBySerialization(), true);
             }
 
@@ -61,14 +63,15 @@ public class NetworkGraph
         _locker
     );
 
-    public (Vertex localVertex, bool updated) RemoveAdjacency(string address)
+    public (Vertex localVertex, bool updated) RemoveAdjacency(List<string> addresses)
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, address, _certificateManager, out Vertex? newVertex))
+            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, _certificateManager, out Vertex? newVertex))
             {
                 ReplaceLocalVertex(newVertex!);
                 CleanupGraph();
+                SignGraph();
 
                 return (_localVertex.CopyBySerialization(), true);
             }
@@ -78,15 +81,15 @@ public class NetworkGraph
         _locker
     );
 
-    public Task<(Vertex localVertex, bool updated)> AddAdjacencyAsync(string address, CancellationToken cancellationToken = default)
+    public Task<(Vertex localVertex, bool updated)> AddAdjacencyAsync(List<string> addresses, CancellationToken cancellationToken = default)
     {
-        (Vertex, bool) task() => AddAdjacency(address);
+        (Vertex, bool) task() => AddAdjacency(addresses);
         return Task.Run(task, cancellationToken);
     }
 
-    public Task<(Vertex localVertex, bool updated)> RemoveAdjacencyAsync(string address, CancellationToken cancellationToken = default)
+    public Task<(Vertex localVertex, bool updated)> RemoveAdjacencyAsync(List<string> addresses, CancellationToken cancellationToken = default)
     {
-        (Vertex, bool) task() => RemoveAdjacency(address);
+        (Vertex, bool) task() => RemoveAdjacency(addresses);
         return Task.Run(task, cancellationToken);
     }
 
