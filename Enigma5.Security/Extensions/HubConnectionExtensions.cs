@@ -11,20 +11,20 @@ public static class HubConnectionExtensions
         this HubConnection connection,
         CertificateManager certificateManager,
         bool syncOnSuccess = false,
-        bool updateNetworkGraph = false
+        CancellationToken cancellationToken = default
     )
     {
         try
         {
-            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
+            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken), cancellationToken);
 
-            if (!nonce.Success || nonce.Data is null)
+            if (!nonce.Success || nonce.Result is null)
             {
                 return false;
             }
 
             using var signature = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
-            var data = signature.Sign(Convert.FromBase64String(nonce.Data));
+            var data = signature.Sign(Convert.FromBase64String(nonce.Result));
 
             if (data is null)
             {
@@ -36,9 +36,9 @@ public static class HubConnectionExtensions
                 PublicKey = certificateManager.PublicKey,
                 Signature = Convert.ToBase64String(data),
                 SyncMessagesOnSuccess = syncOnSuccess,
-            });
+            }, cancellationToken);
 
-            return authentication.Success && authentication.Data;
+            return authentication.Success && authentication.Result;
         }
         catch (Exception)
         {

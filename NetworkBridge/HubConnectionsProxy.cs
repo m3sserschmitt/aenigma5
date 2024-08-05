@@ -19,6 +19,8 @@ public class HubConnectionsProxy
 
     private readonly HubConnection _localHubConnection;
 
+    public event Action? OnConnectionsReloaded;
+
     public event Func<Exception?, Task> OnAnyTargetClosed
     {
         add
@@ -78,21 +80,21 @@ public class HubConnectionsProxy
         _configurationLoader = configurationLoader;
     }
 
-    public Task<bool> StartAsync() => _connections.StartAsync();
+    public Task<bool> StartAsync(CancellationToken cancellationToken = default) => _connections.StartAsync(cancellationToken);
 
-    public Task<bool> StartAuthenticationAsync() => _connections.StartAuthenticationAsync();
+    public Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default) => _connections.StartAuthenticationAsync(cancellationToken);
 
-    public Task<bool> StopAsync() => _connections.StopAsync();
+    public Task<bool> StopAsync(CancellationToken cancellationToken = default) => _connections.StopAsync(cancellationToken);
 
-    public async Task<bool> TriggerBroadcast()
+    public async Task<bool> TriggerBroadcast(CancellationToken cancellationToken = default)
     {
         try
         {
             if (_localHubConnection.State == HubConnectionState.Disconnected)
             {
-                await _localHubConnection.StartAsync();
+                await _localHubConnection.StartAsync(cancellationToken);
 
-                if (!await _localHubConnection.AuthenticateAsync(_certificateManager, false, false))
+                if (!await _localHubConnection.AuthenticateAsync(_certificateManager, false, cancellationToken))
                 {
                     return false;
                 }
@@ -101,10 +103,16 @@ public class HubConnectionsProxy
                 .Where(item => item.TargetPublicKey.IsValidPublicKey())
                 .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToList();
                 var requestModel = new TriggerBroadcastRequest(newAddresses);
-                var authentication = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast), requestModel);
-                return authentication.Success && authentication.Data;
+                var result = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast), requestModel, cancellationToken: cancellationToken);
+
+                if (!result.Success && result.Result && result.Errors.Any())
+                {
+                    Console.WriteLine($"Possible errors returned from server while invoking {nameof(TriggerBroadcast)} method. Server message: {string.Join(", ", result.Errors.Select(item => item.Message))}");
+                }
+
+                return result.Result;
             }
-            return true;
+            return false;
         }
         catch (Exception)
         {
@@ -115,12 +123,12 @@ public class HubConnectionsProxy
         {
             if (_localHubConnection.State != HubConnectionState.Disconnected)
             {
-                await _localHubConnection.StopAsync();
+                await _localHubConnection.StopAsync(CancellationToken.None);
             }
         }
     }
 
-    private async void ReloadConnections()
+    private void ReloadConnections()
     {
         try
         {
@@ -130,10 +138,8 @@ public class HubConnectionsProxy
             _connections.IntersectWith(newProxy._connections);
             _connections.UnionWith(newProxy._connections);
 
-            foreach (var connection in connectionsToBeRemoved)
-            {
-                await connection.StopAsync();
-            }
+            _ = Task.Run(() => { OnConnectionsReloaded?.Invoke(); });
+            Parallel.ForEach(connectionsToBeRemoved, async connection => await connection.StopAsync());
         }
         catch (Exception ex)
         {

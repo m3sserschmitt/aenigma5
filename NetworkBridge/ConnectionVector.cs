@@ -165,36 +165,36 @@ public class ConnectionVector
     public void SourceOn<T>(string method, Func<T, Task> handler)
     => _source.On(method, handler);
 
-    public async Task<bool> InvokeTargetAsync(string method, object? data)
-    => await InvokeAsync(_target, method, data);
+    public async Task<bool> InvokeTargetAsync(string method, object? data, CancellationToken cancellationToken = default)
+    => await InvokeAsync(_target, method, data, cancellationToken);
 
-    public async Task<bool> InvokeSourceAsync(string method, object? data)
-    => await InvokeAsync(_source, method, data);
+    public async Task<bool> InvokeSourceAsync(string method, object? data, CancellationToken cancellationToken = default)
+    => await InvokeAsync(_source, method, data, cancellationToken);
 
-    public async Task<bool> InvokeTargetAsync(string method)
-    => await InvokeAsync(_target, method);
+    public async Task<bool> InvokeTargetAsync(string method, CancellationToken cancellationToken = default)
+    => await InvokeAsync(_target, method, cancellationToken);
 
-    public async Task<bool> InvokeSourceAsync(string method)
-    => await InvokeAsync(_source, method);
+    public async Task<bool> InvokeSourceAsync(string method, CancellationToken cancellationToken = default)
+    => await InvokeAsync(_source, method, cancellationToken);
 
-    public async Task<bool> StopTargetAsync()
-    => await StopAsync(_target);
+    public async Task<bool> StopTargetAsync(CancellationToken cancellationToken = default)
+    => await StopAsync(_target, cancellationToken);
 
-    public async Task<bool> StopSourceAsync()
-    => await StopAsync(_source);
+    public async Task<bool> StopSourceAsync(CancellationToken cancellationToken = default)
+    => await StopAsync(_source, cancellationToken);
 
-    public async Task<bool> StartAsync()
+    public async Task<bool> StartAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             if (_source.State == HubConnectionState.Disconnected)
             {
-                await _source.StartAsync();
+                await _source.StartAsync(cancellationToken);
             }
 
             if (_target.State == HubConnectionState.Disconnected)
             {
-                await _target.StartAsync();
+                await _target.StartAsync(cancellationToken);
             }
 
             return true;
@@ -205,10 +205,10 @@ public class ConnectionVector
         }
     }
 
-    public async Task<bool> StopAsync()
-    => await StopAsync(_target) && await StopAsync(_source);
+    public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
+    => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
 
-    public async Task<bool> StartAuthenticationAsync()
+    public async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
     {
         if (Authenticated)
         {
@@ -223,7 +223,7 @@ public class ConnectionVector
         if (!IsReversed && TargetAuthenticated)
         {
             var reversedVector = Reversed();
-            SourceAuthenticated = await reversedVector.StartAuthenticationAsync();
+            SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
             TargetPublicKey = reversedVector.SourcePublicKey;
 
             return Authenticated;
@@ -231,34 +231,34 @@ public class ConnectionVector
 
         try
         {
-            var nonce = await _target.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
+            var nonce = await _target.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken), cancellationToken);
 
-            if (!nonce.Success || nonce.Data is null)
+            if (!nonce.Success || nonce.Result is null)
             {
                 return false;
             }
 
-            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IHub.SignToken), new SignatureRequest(nonce.Data));
+            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IHub.SignToken), new SignatureRequest(nonce.Result), cancellationToken: cancellationToken);
 
-            if (!signature.Success || signature.Data is null)
+            if (!signature.Success || signature.Result is null)
             {
                 return false;
             }
 
             var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
             {
-                Signature = signature.Data.SignedData,
-                PublicKey = signature.Data.PublicKey,
+                Signature = signature.Result.SignedData,
+                PublicKey = signature.Result.PublicKey,
                 SyncMessagesOnSuccess = false
-            });
+            }, cancellationToken: cancellationToken);
 
-            TargetAuthenticated = authentication.Success && authentication.Data;
-            SourcePublicKey = signature.Data.PublicKey;
+            TargetAuthenticated = authentication.Success && authentication.Result;
+            SourcePublicKey = signature.Result.PublicKey;
 
             if (!IsReversed && TargetAuthenticated)
             {
                 var reversedVector = Reversed();
-                SourceAuthenticated = await reversedVector.StartAuthenticationAsync();
+                SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
                 TargetPublicKey = reversedVector.SourcePublicKey;
 
                 return Authenticated;
@@ -286,11 +286,11 @@ public class ConnectionVector
 
     private ConnectionVector Reversed() => new(_target, _source, TargetHubHost, SourceHubHost) { IsReversed = true };
 
-    private static async Task<bool> InvokeAsync(HubConnection connection, string method, object? data)
+    private static async Task<bool> InvokeAsync(HubConnection connection, string method, object? data, CancellationToken cancellationToken = default)
     {
         try
         {
-            await connection.InvokeAsync(method, data);
+            await connection.InvokeAsync(method, data, cancellationToken);
             return true;
         }
         catch (Exception)
@@ -299,11 +299,11 @@ public class ConnectionVector
         }
     }
 
-    private static async Task<bool> InvokeAsync(HubConnection connection, string method)
+    private static async Task<bool> InvokeAsync(HubConnection connection, string method, CancellationToken cancellationToken = default)
     {
         try
         {
-            await connection.InvokeAsync(method);
+            await connection.InvokeAsync(method, cancellationToken);
             return true;
         }
         catch (Exception)
@@ -312,13 +312,13 @@ public class ConnectionVector
         }
     }
 
-    private static async Task<bool> StopAsync(HubConnection connection)
+    private static async Task<bool> StopAsync(HubConnection connection, CancellationToken cancellationToken = default)
     {
         try
         {
             if (connection.State != HubConnectionState.Disconnected)
             {
-                await connection.StopAsync();
+                await connection.StopAsync(cancellationToken);
             }
 
             return true;
