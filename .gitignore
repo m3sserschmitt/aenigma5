@@ -2,4 +2,4 @@
 */bin/*
 */obj/*
 *.sqlite*
-logs
+Enigma5.App/logs/*
