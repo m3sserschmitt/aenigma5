@@ -7,6 +7,7 @@ using Enigma5.App.Models;
 using Enigma5.Crypto;
 using System.Net.Http.Json;
 using Enigma5.App.Common.Constants;
+using Enigma5.App.Models.HubInvocation;
 
 namespace Client;
 
@@ -45,6 +46,15 @@ public class Program
         return null;
     }
 
+    public static void HandleServerResponse(dynamic invocationResponse, string methodName)
+    {
+        if(!invocationResponse.Success)
+        {
+            var errors = invocationResponse.Errors as List<Error>;
+            throw new Exception($"{methodName} method invocation failed; errors: {string.Join(", ", errors?.Select(error => error.Message) ?? [])}");
+        }
+    }
+
     public static async Task Main(string[] args)
     {
         string publicKey;
@@ -79,9 +89,9 @@ public class Program
             })
             .Build();
 
-        connection.On<string>(nameof(IHub.RouteMessage), message =>
+        connection.On<RoutingRequest>(nameof(IHub.RouteMessage), message =>
         {
-            HandleMessage(message, privateKey, passphrase);
+            HandleMessage(message.Payload!, privateKey, passphrase);
         });
 
         connection.On<List<PendingMessage>>("Synchronize", messages =>
@@ -96,28 +106,24 @@ public class Program
         });
 
         await connection.StartAsync();
-        await connection.InvokeAsync<string?>(nameof(IHub.GenerateToken))
-        .ContinueWith(async response =>
+
+        var tokenResult = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
+        HandleServerResponse(tokenResult, nameof(IHub.GenerateToken));
+
+        using var signature = Envelope.Factory.CreateSignature(Encoding.UTF8.GetBytes(privateKey), passphrase);
+        var encodedNonce = Convert.FromBase64String(tokenResult.Data!) ?? throw new Exception("Failed to base64 decode nonce.");
+        var data = signature.Sign(encodedNonce) ?? throw new Exception("Nonce signature failed.");
+
+        var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
         {
-            var token = await response ?? throw new Exception("Token generation failed.");
-
-            using var signature = Envelope.Factory.CreateSignature(Encoding.UTF8.GetBytes(privateKey), passphrase);
-            var data = signature.Sign(Convert.FromBase64String(token));
-
-            if (data != null)
-            {
-                await connection.InvokeAsync<bool>(nameof(IHub.Authenticate), new AuthenticationRequest
-                {
-                    PublicKey = publicKey,
-                    Signature = Convert.ToBase64String(data),
-                    SyncMessagesOnSuccess = true,
-                }).ContinueWith(async response =>
-                {
-                    var authenticated = await response;
-                    Console.WriteLine($"Authenticated: {authenticated}");
-                });
-            }
+            PublicKey = publicKey,
+            Signature = Convert.ToBase64String(data),
+            SyncMessagesOnSuccess = true,
         });
+        HandleServerResponse(authenticationResult, nameof(IHub.Authenticate));
+
+        Console.WriteLine($"Authenticated.");
+
 
         var message = "Test";
         var serverPublicKey = await RequestPublicKey(serverInfoEndpoint);
@@ -137,7 +143,7 @@ public class Program
                 .SetNextAddress(destinationAddress)
                 .Seal(serverPublicKey)
                 .Build();
-            await connection.InvokeAsync(nameof(IHub.RouteMessage), Convert.ToBase64String(onion.Content));
+            await connection.InvokeAsync(nameof(IHub.RouteMessage), new RoutingRequest(Convert.ToBase64String(onion.Content)));
 
             Console.ReadLine();
         }
