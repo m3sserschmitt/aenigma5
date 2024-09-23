@@ -11,17 +11,8 @@ public class RemoveMessagesHandler(EnigmaDbContext context)
 
     public async Task Handle(RemoveMessagesCommand command, CancellationToken cancellationToken)
     {
-        try
-        {
-            var messages = _context.Messages.Where(item => item.Destination == command.Destination);
-
-            _context.RemoveRange(messages);
-
-            await _context.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception)
-        {
-            // TODO: Log exception!!
-        }
+        var messages = _context.Messages.Where(item => item.Destination == command.Destination);
+        _context.RemoveRange(messages);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

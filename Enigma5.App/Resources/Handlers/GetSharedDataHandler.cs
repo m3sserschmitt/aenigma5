@@ -10,16 +10,7 @@ public class GetSharedDataHandler(EnigmaDbContext context) : IRequestHandler<Get
     private readonly EnigmaDbContext _context = context;
 
     public async Task<SharedData?> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _context.SharedData.SingleOrDefaultAsync(
+    => await _context.SharedData.SingleOrDefaultAsync(
                 item => item.Tag == request.Tag,
                 cancellationToken: cancellationToken);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
 }

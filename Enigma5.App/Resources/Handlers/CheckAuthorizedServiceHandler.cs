@@ -11,15 +11,5 @@ public class CheckAuthorizedServiceHandler(EnigmaDbContext context)
     private readonly EnigmaDbContext _context = context;
     
     public async Task<bool> Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return  await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken);
-        }
-        catch (Exception)
-        {
-            // TODO: log exception
-            return false;
-        }
-    }
+    => await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken);
 }

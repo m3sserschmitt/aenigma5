@@ -1,6 +1,7 @@
 ﻿using Enigma5.App.Common.Constants;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
+using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace NetworkBridge;
@@ -233,27 +234,27 @@ public class ConnectionVector
         {
             var nonce = await _target.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken), cancellationToken);
 
-            if (!nonce.Success || nonce.Result is null)
+            if (!nonce.Success || nonce.Data is null)
             {
                 return false;
             }
 
-            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IHub.SignToken), new SignatureRequest(nonce.Result), cancellationToken: cancellationToken);
+            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IHub.SignToken), new SignatureRequest(nonce.Data), cancellationToken: cancellationToken);
 
-            if (!signature.Success || signature.Result is null)
+            if (!signature.Success || signature.Data is null)
             {
                 return false;
             }
 
             var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
             {
-                Signature = signature.Result.SignedData,
-                PublicKey = signature.Result.PublicKey,
+                Signature = signature.Data.SignedData,
+                PublicKey = signature.Data.PublicKey,
                 SyncMessagesOnSuccess = false
             }, cancellationToken: cancellationToken);
 
-            TargetAuthenticated = authentication.Success && authentication.Result;
-            SourcePublicKey = signature.Result.PublicKey;
+            TargetAuthenticated = authentication.Success && authentication.Data;
+            SourcePublicKey = signature.Data.PublicKey;
 
             if (!IsReversed && TargetAuthenticated)
             {

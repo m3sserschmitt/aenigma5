@@ -2,6 +2,7 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Models.Extensions;
+using Enigma5.App.Models.HubInvocation;
 using Enigma5.Crypto;
 using Enigma5.Security;
 using Enigma5.Security.Extensions;
@@ -105,12 +106,12 @@ public class HubConnectionsProxy
                 var requestModel = new TriggerBroadcastRequest(newAddresses);
                 var result = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast), requestModel, cancellationToken: cancellationToken);
 
-                if (!result.Success && result.Result && result.Errors.Any())
+                if (!result.Success && result.Data)
                 {
                     Console.WriteLine($"Possible errors returned from server while invoking {nameof(TriggerBroadcast)} method. Server message: {string.Join(", ", result.Errors.Select(item => item.Message))}");
                 }
 
-                return result.Result;
+                return result.Data;
             }
             return false;
         }

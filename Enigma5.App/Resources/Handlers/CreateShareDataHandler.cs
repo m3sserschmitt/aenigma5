@@ -10,19 +10,10 @@ public class CreateShareDataHandler(EnigmaDbContext context) : IRequestHandler<C
 
     public async Task<string?> Handle(CreateShareDataCommand request, CancellationToken cancellationToken)
     {
-        try
-        {
-            var sharedData = new SharedData(request.SignedData, request.AccessCount);
+        var sharedData = new SharedData(request.SignedData, request.AccessCount);
+        await _context.AddAsync(sharedData, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
-            await _context.AddAsync(sharedData, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return sharedData.Tag;
-        }
-        catch (Exception)
-        {
-            // TODO: do something with the exception
-            return null;
-        }
+        return sharedData.Tag;
     }
 }

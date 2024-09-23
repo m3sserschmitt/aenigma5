@@ -1,18 +1,20 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hangfire;
 
-public class MediatorHangfireBridge
+public class MediatorHangfireBridge(
+    IMediator mediator,
+    ILogger<MediatorHangfireBridge> logger
+    )
 {
-    private readonly IMediator _mediator;
+    private readonly IMediator _mediator = mediator;
 
-    public MediatorHangfireBridge(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+    private readonly ILogger<MediatorHangfireBridge> _logger = logger;
 
-    public async Task Send(IRequest command)
+    public Task Send(IRequest command)
     {
-        await _mediator.Send(command);
+        _logger.LogInformation("Executing {CommandName} for Hangfire Job: {@Command}", command.GetType().Name, command);
+        return _mediator.Send(command);
     }
 }

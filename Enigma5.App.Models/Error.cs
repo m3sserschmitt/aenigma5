@@ -6,10 +6,16 @@ public class Error
 
     public IEnumerable<string> Properties { get; set; }
 
-    public Error(string message, IEnumerable<string> properties)
+    public Error(string message, List<string> properties)
     {
         Message = message;
         Properties = properties;
+    }
+
+    public Error(string message)
+    {
+        Message = message;
+        Properties = [];
     }
 
     public Error()

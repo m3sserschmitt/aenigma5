@@ -10,6 +10,8 @@ using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
 using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Data.Extensions;
+using Enigma5.App.Models.HubInvocation;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs;
 
@@ -17,7 +19,8 @@ public partial class RoutingHub(
     SessionManager sessionManager,
     ICertificateManager certificateManager,
     NetworkGraph networkGraph,
-    IMediator commandRouter) :
+    IMediator commandRouter,
+    ILogger<RoutingHub> logger) :
     Hub,
     IHub,
     IOnionParsingHub,
@@ -31,6 +34,8 @@ public partial class RoutingHub(
 
     private readonly IMediator _commandRouter = commandRouter;
 
+    private readonly ILogger<RoutingHub> _logger = logger;
+
     public string? DestinationConnectionId { get; set; }
 
     public int Size { get; set; }
@@ -43,9 +48,16 @@ public partial class RoutingHub(
     {
         var nonce = _sessionManager.AddPending(Context.ConnectionId);
 
-        return nonce is not null
-        ? OkAsync(nonce)
-        : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
+        if (nonce is null)
+        {
+            _logger.LogError(
+                $"Null nonce generated while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+                nameof(GenerateToken),
+                Context.ConnectionId
+                );
+        }
+
+        return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
     public async Task Synchronize()
@@ -83,6 +95,7 @@ public partial class RoutingHub(
 
         if (!authenticated)
         {
+            _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
             return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
@@ -91,17 +104,27 @@ public partial class RoutingHub(
             await Synchronize();
         }
 
+        _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
         return Ok(true);
     }
 
     [ValidateModel]
     public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
     {
+
+        var decodedNonce = Convert.FromBase64String(request.Nonce!);
+        if (decodedNonce is null)
+        {
+            _logger.LogDebug($"Could not base64 decode nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
+            return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
+        }
+
         using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-        var data = signature.Sign(Convert.FromBase64String(request.Nonce!));
+        var data = signature.Sign(decodedNonce);
 
         if (data == null)
         {
+            _logger.LogError($"Could not sign nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
             return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
@@ -109,6 +132,7 @@ public partial class RoutingHub(
 
         if (encodedData is null)
         {
+            _logger.LogError($"Could not base64 encode signed nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
             return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
@@ -138,8 +162,9 @@ public partial class RoutingHub(
         ? _networkGraph.LocalVertex.ToVertexBroadcast()
         : (await AddNewAdjacencies(request.NewAddresses)).broadcast;
 
-        if(vertexBroadcastRequest is null)
+        if (vertexBroadcastRequest is null)
         {
+            _logger.LogWarning($"{nameof(TriggerBroadcast)} resulted in no changes to be broadcasted.");
             return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
 
@@ -155,23 +180,30 @@ public partial class RoutingHub(
     {
         if (DestinationConnectionId != null && Content != null)
         {
-            return await RouteMessage(DestinationConnectionId, Content) ? Ok(true) : Error(false, "");
+            return await RouteMessage(DestinationConnectionId, Content) ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
         }
         else if (Content != null)
         {
+            _logger.LogDebug($"Onion could not be forwarded for connectionId {{{nameof(Context.ConnectionId)}}}. Saving locally...", Context.ConnectionId);
             var encodedContent = Convert.ToBase64String(Content);
-
+            if (encodedContent is null)
+            {
+                _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
+                return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
+            }
             var createPendingMessageCommand = new CreatePendingMessageCommand(Next!, encodedContent);
 
-            return await _commandRouter.Send(createPendingMessageCommand) is not null ? Ok(true) : Error(false, "");
+            return await _commandRouter.Send(createPendingMessageCommand) is not null ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
         }
-        return Error<bool>(InvocationErrors.ROUTING_FAILED);
+        return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected.", Context.ConnectionId);
         if (!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
         {
+            _logger.LogWarning($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected, but the connection could not be found into Session Manager", Context.ConnectionId);
             return;
         }
 

@@ -1,4 +1,5 @@
 ﻿using Enigma5.App.Models;
+using Enigma5.App.Models.HubInvocation;
 
 namespace Enigma5.App.Common.Contracts.Hubs;
 

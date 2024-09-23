@@ -16,5 +16,15 @@ public class InvocationErrors
 
     public static readonly string BROADCAST_TRIGGERING_WARNING = "Broadcast will not be triggered because validation failures or no changes required to local neighborhood.";
 
-    public static readonly string ROUTING_FAILED = "Failed to route or store message.";
+    public static readonly string ONION_ROUTING_FAILED = "Failed to route or store message.";
+
+    public static readonly string NOT_AUTHORIZED = "Could not authorize.";
+
+    public static readonly string AUTHENTICATION_REQUIRED = "Authentication required";
+
+    public static readonly string INVALID_INVOCATION_DATA = "Invalid data provided for method invocation.";
+
+    public static readonly string ONION_PARSING_FAILED = "Could not parse onion.";
+
+    public static readonly string INTERNAL_ERROR = "Internal error";
 }

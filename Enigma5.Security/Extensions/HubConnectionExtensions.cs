@@ -1,5 +1,6 @@
 ﻿using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
+using Enigma5.App.Models.HubInvocation;
 using Enigma5.Crypto;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -18,13 +19,13 @@ public static class HubConnectionExtensions
         {
             var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken), cancellationToken);
 
-            if (!nonce.Success || nonce.Result is null)
+            if (!nonce.Success || nonce.Data is null)
             {
                 return false;
             }
 
             using var signature = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
-            var data = signature.Sign(Convert.FromBase64String(nonce.Result));
+            var data = signature.Sign(Convert.FromBase64String(nonce.Data));
 
             if (data is null)
             {
@@ -38,7 +39,7 @@ public static class HubConnectionExtensions
                 SyncMessagesOnSuccess = syncOnSuccess,
             }, cancellationToken);
 
-            return authentication.Success && authentication.Result;
+            return authentication.Success && authentication.Data;
         }
         catch (Exception)
         {

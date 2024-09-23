@@ -11,31 +11,24 @@ public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<
 
     public async Task Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
     {
-        try
-        {
-            var sharedData = await _context.SharedData.SingleOrDefaultAsync(
-                item => item.Tag == request.Tag,
-                cancellationToken: cancellationToken);
+        var sharedData = await _context.SharedData.SingleOrDefaultAsync(
+            item => item.Tag == request.Tag,
+            cancellationToken: cancellationToken);
 
-            if (sharedData is not null)
+        if (sharedData is not null)
+        {
+            sharedData.AccessCount += 1;
+
+            if (sharedData.AccessCount >= sharedData.MaxAccessCount)
             {
-                sharedData.AccessCount += 1;
-
-                if (sharedData.AccessCount >= sharedData.MaxAccessCount)
-                {
-                    _context.Remove(sharedData);
-                }
-                else
-                {
-                    _context.Update(sharedData);
-                }
-
-                await _context.SaveChangesAsync(cancellationToken);
+                _context.Remove(sharedData);
             }
-        }
-        catch (Exception)
-        {
-            // TODO: do something with this exception
+            else
+            {
+                _context.Update(sharedData);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

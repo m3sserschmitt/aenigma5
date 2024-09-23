@@ -6,13 +6,17 @@ using Enigma5.App.Hubs.Adapters;
 using Enigma5.App.Hubs.Sessions;
 using Enigma5.Structures;
 using Enigma5.App.Models;
+using Microsoft.Extensions.Logging;
+using Enigma5.App.Models.HubInvocation;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class OnionParsingFilter(SessionManager sessionManager)
+public class OnionParsingFilter(SessionManager sessionManager, ILogger<OnionParsingFilter> logger)
 : BaseFilter<IOnionParsingHub, OnionParsingAttribute>
 {
     private readonly SessionManager _sessionManager = sessionManager;
+
+    private readonly ILogger<OnionParsingFilter> _logger = logger;
 
     protected override bool CheckArguments(HubInvocationContext invocationContext)
      => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is RoutingRequest;
@@ -24,7 +28,7 @@ public class OnionParsingFilter(SessionManager sessionManager)
         {
             var decodedData = Convert.FromBase64String(request.Payload!);
 
-            if (_sessionManager.TryGetParser(invocationContext.Context.ConnectionId, out var onionParser) &&
+            if (decodedData is not null && _sessionManager.TryGetParser(invocationContext.Context.ConnectionId, out var onionParser) &&
             onionParser!.Parse(new Onion { Content = decodedData }))
             {
                 _ = new OnionParsingHubAdapter(invocationContext.Hub)
@@ -34,9 +38,15 @@ public class OnionParsingFilter(SessionManager sessionManager)
                 };
 
                 onionParser.Reset();
+                _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
+                return await next(invocationContext);
             }
+
+            _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
+            return EmptyErrorResult.Create(InvocationErrors.ONION_PARSING_FAILED);
         }
 
-        return await next(invocationContext);
+        _logger.LogDebug($"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} method: {{@{nameof(invocationContext.HubMethodArguments)}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
+        return EmptyErrorResult.Create(InvocationErrors.INVALID_INVOCATION_DATA);
     }
 }

@@ -35,12 +35,13 @@ public class StartupConfiguration(IConfiguration configuration)
         .AddHubOptions<RoutingHub>(
             options =>
                 {
+                    options.AddFilter<LogFilter>();
                     options.AddFilter<AuthorizedServiceOnlyFilter>();
                     options.AddFilter<ValidateModelFilter>();
                     options.AddFilter<OnionParsingFilter>();
                     options.AddFilter<OnionRoutingFilter>();
                 });
-
+                
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
         services.AddTransient<IPassphraseProvider, CommandLinePassphraseReader>();

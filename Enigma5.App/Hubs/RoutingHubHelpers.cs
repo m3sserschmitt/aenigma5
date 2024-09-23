@@ -2,6 +2,7 @@
 using Enigma5.App.Attributes;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
+using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Microsoft.AspNetCore.SignalR;
 
@@ -34,7 +35,7 @@ public partial class RoutingHub
                     .SingleOrDefault()
                     ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
 
-            await Clients.Client(connectionId).SendAsync(routingMethod.Name, Convert.ToBase64String(data));
+            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest(Convert.ToBase64String(data)));
             return true;
         }
         catch (Exception)
@@ -72,15 +73,15 @@ public partial class RoutingHub
     private async Task<bool> SendBroadcast(VertexBroadcastRequest adjacencyLists)
     => await SendBroadcast([adjacencyLists]);
 
-    private static InvocationResult<T> Ok<T>(T response) => new(response);
+    private static InvocationResult<T> Ok<T>(T response) => new SuccessResult<T>(response);
 
     private static Task<InvocationResult<T>> OkAsync<T>(T response) => Task.FromResult(Ok(response));
 
-    private static InvocationResult<T> Error<T>(T? response, string error) => new(response, [new(error, [])]);
+    private static InvocationResult<T> Error<T>(T? response, string error) => ErrorResult<T>.Create(response, error);
 
     private static Task<InvocationResult<T>> ErrorAsync<T>(T? response, string error) => Task.FromResult(Error(response, error));
 
-    private static InvocationResult<T> Error<T>(string error) => new(default, [new(error, [])]);
+    private static InvocationResult<T> Error<T>(string error) => Error<T>(default, error);
 
     private static Task<InvocationResult<T>> ErrorAsync<T>(string error)
     => Task.FromResult(Error<T>(error));

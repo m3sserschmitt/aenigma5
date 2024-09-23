@@ -10,18 +10,10 @@ public class CreatePendingMessageHandler(EnigmaDbContext context) : IRequestHand
 
     public async Task<PendingMessage?> Handle(CreatePendingMessageCommand command, CancellationToken cancellationToken)
     {
-        try
-        {
-            var pendingMessage = new PendingMessage(command.Destination, command.Content, false);
+        var pendingMessage = new PendingMessage(command.Destination, command.Content, false);
+        await _context.AddAsync(pendingMessage, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
-            await _context.AddAsync(pendingMessage, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-            return pendingMessage;
-        }
-        catch
-        {
-            // TODO: Log exception!!
-            return null;
-        }
+        return pendingMessage;
     }
 }

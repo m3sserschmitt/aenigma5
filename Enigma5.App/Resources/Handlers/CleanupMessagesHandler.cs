@@ -4,33 +4,21 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupMessagesHandler
+public class CleanupMessagesHandler(EnigmaDbContext context)
 : IRequestHandler<CleanupMessagesCommand>
 {
-    private readonly EnigmaDbContext _context;
-
-    public CleanupMessagesHandler(EnigmaDbContext context)
-    {
-        _context = context;
-    }
+    private readonly EnigmaDbContext _context = context;
 
     public async Task Handle(CleanupMessagesCommand command, CancellationToken cancellationToken)
     {
-        try
-        {
-            var time = DateTime.Now - command.TimeSpan;
+        var time = DateTime.Now - command.TimeSpan;
 
-            var messages = _context.Messages
-            .Where(item =>
-                time > item.DateReceived ||
-                (command.RemoveDelivered && item.Sent));
+        var messages = _context.Messages
+        .Where(item =>
+            time > item.DateReceived ||
+            (command.RemoveDelivered && item.Sent));
 
-            _context.Messages.RemoveRange(messages);
-            await _context.SaveChangesAsync(cancellationToken);
-        }
-        catch
-        {
-            // TODO: Log exception!!
-        }
+        _context.Messages.RemoveRange(messages);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }
