@@ -11,4 +11,13 @@
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="../Libaenigma7/build/libaenigma.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../Libaenigma7/build/libaenigma-kernelkeys.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
