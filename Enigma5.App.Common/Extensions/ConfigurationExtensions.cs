@@ -20,7 +20,7 @@ public static class ConfigurationExtensions
     => configuration.GetValue<string?>("PublicKeyPath", null);
 
     public static string? GetPassphraseKeyPath(this IConfiguration configuration)
-    => configuration.GetValue<string?>("PublicKeyPath", null);
+    => configuration.GetValue<string?>("Passphrase", null);
 
     public static bool GetRetryConnection(this IConfiguration configuration)
     => configuration.GetValue("RetryConnection", false);
