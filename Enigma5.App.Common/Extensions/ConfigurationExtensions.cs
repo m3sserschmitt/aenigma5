@@ -8,29 +8,32 @@ public static class ConfigurationExtensions
     => configuration.GetSection("Peers").Get<List<string>>() ?? [];
 
     public static string? GetLocalListenAddress(this IConfiguration configuration)
-    => configuration.GetValue<string>("Kestrel:EndPoints:Http:Url");
+    => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null);
 
     public static string? GetHostname(this IConfiguration configuration)
-    => configuration.GetValue<string>("Hostname");
+    => configuration.GetValue<string?>("Hostname", null);
 
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
-    => configuration.GetValue<string>("PrivateKeyPath");
+    => configuration.GetValue<string?>("PrivateKeyPath", null);
 
     public static string? GetPublicKeyPath(this IConfiguration configuration)
-    => configuration.GetValue<string>("PublicKeyPath");
+    => configuration.GetValue<string?>("PublicKeyPath", null);
+
+    public static string? GetPassphraseKeyPath(this IConfiguration configuration)
+    => configuration.GetValue<string?>("PublicKeyPath", null);
 
     public static bool GetRetryConnection(this IConfiguration configuration)
-    => configuration.GetValue<bool>("RetryConnection");
+    => configuration.GetValue("RetryConnection", false);
 
     public static int GetConnectionRetriesCount(this IConfiguration configuration)
-    => configuration.GetValue<int>("ConnectionRetriesCount");
+    => configuration.GetValue("ConnectionRetriesCount", 0);
 
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
-    => configuration.GetValue<int>("DelayBetweenConnectionRetries");
+    => configuration.GetValue("DelayBetweenConnectionRetries", 0);
 
     public static TimeSpan? GetNonActiveLeafsLifetime(this IConfiguration configuration)
     {
-        var value = configuration.GetValue<string>("NonActiveLeafsLifetime");
+        var value = configuration.GetValue<string?>("NonActiveLeafsLifetime", null);
 
         if (value is null)
         {
@@ -44,4 +47,13 @@ public static class ConfigurationExtensions
 
         return null;
     }
+
+    public static string? GetAzureVaultUrl(this IConfiguration configuration)
+    => configuration.GetValue<string?>("AzureVaultUrl", null);
+
+    public static bool UseAzureVaultForKeys(this IConfiguration configuration)
+    => configuration.GetValue("UseAzureVaultForKeys", false);
+
+    public static bool UseAzureVaultForPassphrase(this IConfiguration configuration)
+    => configuration.GetValue("UseAzureVaultForPassphrase", false);
 }

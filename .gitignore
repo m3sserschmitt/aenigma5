@@ -3,3 +3,4 @@
 */obj/*
 *.sqlite*
 Enigma5.App/logs/*
+*.pem

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
@@ -22,6 +21,7 @@ using Enigma5.App.Resources.Queries;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
 using Enigma5.Security.Contracts;
+using Hangfire;
 
 namespace Enigma5.App;
 
@@ -41,18 +41,22 @@ public class StartupConfiguration(IConfiguration configuration)
                     options.AddFilter<OnionParsingFilter>();
                     options.AddFilter<OnionRoutingFilter>();
                 });
-                
+
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
-        services.AddTransient<IPassphraseProvider, CommandLinePassphraseReader>();
-        services.AddTransient<IKeysReader, KeysReader>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
-        services.AddTransient<MediatorHangfireBridge>();
-
+        services.AddSingleton<MediatorHangfireBridge>();
+        
+        services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
+        services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
+        services.AddTransient<AzureClient>();
+        
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
+
+        services.BuildServiceProvider();
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
@@ -82,7 +86,8 @@ public class StartupConfiguration(IConfiguration configuration)
             });
 
 #if DEBUG
-            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) => {
+            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
+            {
                 return Results.Ok(networkGraph.Vertices);
             });
 #endif
