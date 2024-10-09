@@ -46,12 +46,12 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
-        services.AddSingleton<MediatorHangfireBridge>();
         
         services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
         services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
         services.AddTransient<AzureClient>();
-        
+        services.AddTransient<MediatorHangfireBridge>();
+
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
