@@ -4,3 +4,4 @@
 *.sqlite*
 Enigma5.App/logs/*
 *.pem
+build
