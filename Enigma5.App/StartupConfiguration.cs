@@ -1,3 +1,23 @@
+/*
+    Aenigma - Onion Routing based messaging application
+    Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Hubs.Sessions;
@@ -5,7 +25,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
@@ -16,12 +35,12 @@ using Enigma5.App.Models;
 using Enigma5.Crypto;
 using System.Text;
 using System.Text.Json;
-using Enigma5.App.Security.Contracts;
+using Enigma5.Security.Contracts;
 using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
-using Enigma5.Security.Contracts;
+using Hangfire;
 
 namespace Enigma5.App;
 
@@ -41,18 +60,22 @@ public class StartupConfiguration(IConfiguration configuration)
                     options.AddFilter<OnionParsingFilter>();
                     options.AddFilter<OnionRoutingFilter>();
                 });
-                
+
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<SessionManager>();
-        services.AddTransient<IPassphraseProvider, CommandLinePassphraseReader>();
-        services.AddTransient<IKeysReader, KeysReader>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
+        
+        services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
+        services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
+        services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
 
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
+
+        services.BuildServiceProvider();
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
@@ -82,7 +105,8 @@ public class StartupConfiguration(IConfiguration configuration)
             });
 
 #if DEBUG
-            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) => {
+            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
+            {
                 return Results.Ok(networkGraph.Vertices);
             });
 #endif

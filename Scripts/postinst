@@ -1,0 +1,62 @@
+#!/bin/bash
+
+set -e
+
+APP_NAME="aenigma"
+SERVICE_NAME=$APP_NAME
+SERVICE_USER=$APP_NAME
+APP_INSTALL_DIR="/usr/local/$APP_NAME"
+APP_EXEC="$APP_INSTALL_DIR/Enigma5.App"
+SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
+LOG_DIR="/var/log/$APP_NAME"
+KEYS_DIR="/usr/local/etc/$APP_NAME"
+
+# Step 1: Create a dedicated user for the service if it doesn't exist
+if ! id "$SERVICE_USER" &>/dev/null; then
+    echo -n "Creating user '$SERVICE_USER' for the service... "
+    sudo useradd -r -s /bin/false "$SERVICE_USER"
+    echo "Done."
+fi
+
+# Step 2: Setting ownership for app files dir and logs
+echo -n "Setting ownership of $LOG_DIR to user '$SERVICE_USER'... "
+sudo chown "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
+echo "Done."
+echo -n "Setting ownership of $APP_INSTALL_DIR directory to user '$SERVICE_USER'... "
+sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
+echo "Done."
+
+# Step 3: Create the systemd service file
+echo -n "Creating service file: $SERVICE_FILE... "
+cat <<EOF | sudo tee $SERVICE_FILE > /dev/null
+[Unit]
+Description=$SERVICE_NAME service
+After=network.target
+
+[Service]
+WorkingDirectory=$APP_INSTALL_DIR
+ExecStart=$APP_EXEC
+Restart=always
+RestartSec=10
+User=$SERVICE_USER
+Group=$SERVICE_USER
+
+[Install]
+WantedBy=multi-user.target
+EOF
+echo "Done."
+
+# Step 4: Reload systemd to recognize the new service & enable newly created service
+echo -n "Reloading systemd... "
+sudo systemctl daemon-reload
+echo "Done."
+
+echo -n "Enabling $SERVICE_NAME service ... "
+sudo systemctl enable "$SERVICE_NAME"
+echo "Done."
+echo -n "Starting $SERVICE_NAME service ..."
+sudo systemctl start "$SERVICE_NAME"
+sudo systemctl status "$SERVICE_NAME"
+
+echo -e "$APP_NAME service has been configured. Please make sure to run \e[31maenigma-genkeys\e[0m command to complete the setup."
+echo "Done."
