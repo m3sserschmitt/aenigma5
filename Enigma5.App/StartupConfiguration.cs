@@ -104,12 +104,10 @@ public class StartupConfiguration(IConfiguration configuration)
                 return Results.Ok(networkGraph.Graph);
             });
 
-#if DEBUG
             endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
             {
                 return Results.Ok(networkGraph.Vertices);
             });
-#endif
 
             endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
             {
