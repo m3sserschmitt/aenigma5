@@ -43,12 +43,21 @@ LOG_DIR="/var/log/apache2"
 # Define the virtual host configuration
 VIRTUAL_HOST_CONF=$(cat <<EOF
 <VirtualHost *:80>
-    ServerName $DOMAIN
+    RewriteEngine On
     ProxyPreserveHost On
+    ProxyRequests Off
+    ServerName $DOMAIN
+
+    # allow for upgrading to websockets
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule /(.*)           ws://localhost:$APP_PORT/\$1 [P,L]
+    RewriteCond %{HTTP:Upgrade} !=websocket [NC]
+    RewriteRule /(.*)           http://localhost:$APP_PORT/\$1 [P,L]
 
     # Proxy for HTTP requests
-    ProxyPass / http://localhost:$APP_PORT/
-    ProxyPassReverse / http://localhost:$APP_PORT/
+    ProxyPass "/" "http://localhost:$APP_PORT/"
+    ProxyPassReverse "/" "http://localhost:$APP_PORT/"
 
     # Proxy for WebSocket (SignalR) requests
     ProxyPass "/OnionRouting" "ws://localhost:$APP_PORT/OnionRouting"
@@ -65,6 +74,7 @@ sudo apt update
 sudo apt install -y apache2
 
 # Enable Apache modules required for reverse proxying and WebSockets
+sudo a2enmod rewrite
 sudo a2enmod proxy
 sudo a2enmod proxy_http
 sudo a2enmod proxy_wstunnel
