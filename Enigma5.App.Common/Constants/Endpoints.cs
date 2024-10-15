@@ -24,11 +24,13 @@ public static class Endpoints
 {
     public const string OnionRoutingEndpoint = "OnionRouting";
 
-    public const string ServerInfoEndpoint = "Info";
+    public const string InfoEndpoint = "Info";
 
-    public const string NetworkGraphEndpoint = "Graph";
+    public const string GraphEndpoint = "Graph";
 
     public const string VerticesEndpoint = "Vertices";
 
     public const string ShareEndpoint = "Share";
+
+    public const string VertexEndpoint = "Vertex";
 }

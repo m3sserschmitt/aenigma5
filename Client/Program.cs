@@ -83,7 +83,7 @@ public class Program
 
         string server = $"http://{args[1]}".Trim();
         string onionRoutingEndpoint = $"{server}/{Endpoints.OnionRoutingEndpoint}";
-        string serverInfoEndpoint = $"{server}/{Endpoints.ServerInfoEndpoint}";
+        string serverInfoEndpoint = $"{server}/{Endpoints.InfoEndpoint}";
 
         if (args[0] == "1")
         {

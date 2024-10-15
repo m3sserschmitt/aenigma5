@@ -86,7 +86,7 @@ public class StartupConfiguration(IConfiguration configuration)
         {
             endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
 
-            endpoints.MapGet(Endpoints.ServerInfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
+            endpoints.MapGet(Endpoints.InfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
             {
                 var serializedGraph = JsonSerializer.Serialize(networkGraph.Graph);
                 var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
@@ -99,7 +99,7 @@ public class StartupConfiguration(IConfiguration configuration)
                 });
             });
 
-            endpoints.MapGet(Endpoints.NetworkGraphEndpoint, (NetworkGraph networkGraph) =>
+            endpoints.MapGet(Endpoints.GraphEndpoint, (NetworkGraph networkGraph) =>
             {
                 return Results.Ok(networkGraph.Graph);
             });
@@ -167,6 +167,17 @@ public class StartupConfiguration(IConfiguration configuration)
                 await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Tag));
 
                 return Results.Ok(new { sharedData.Tag, sharedData.Data });
+            });
+
+            endpoints.MapGet(Endpoints.VertexEndpoint, async (string address, IMediator commandRouter) => {
+                var vertex = await commandRouter.Send(new GetVertexQuery(address));
+
+                if(vertex is null)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok(vertex);
             });
         });
 

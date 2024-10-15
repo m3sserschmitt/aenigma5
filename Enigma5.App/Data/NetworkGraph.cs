@@ -64,6 +64,25 @@ public class NetworkGraph
         _graph ??= new Graph(_certificateManager.PublicKey, string.Empty);
     }
 
+    public Vertex? GetVertex(string address)
+    => ThreadSafeExecution.Execute(
+        () =>
+        {
+            if(_vertices.TryGetValue(Vertex.Factory.Create(address), out var foundVertex))
+            {
+                return foundVertex.CopyBySerialization();
+            }
+            
+            return null;
+        }, null, _locker
+    );
+
+    public Task<Vertex?> GetVertexAsync(string address, CancellationToken cancellationToken = default)
+    {
+        Vertex? task() => GetVertex(address);
+        return Task.Run(task, cancellationToken);
+    }
+
     public (Vertex localVertex, bool updated) AddAdjacency(List<string> addresses)
     => ThreadSafeExecution.Execute(
         () =>
