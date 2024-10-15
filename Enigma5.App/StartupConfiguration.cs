@@ -88,6 +88,7 @@ public class StartupConfiguration(IConfiguration configuration)
 
             endpoints.MapGet(Endpoints.InfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
             {
+                //TODO: refactor to use handler
                 var serializedGraph = JsonSerializer.Serialize(networkGraph.Graph);
                 var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
 
@@ -101,16 +102,19 @@ public class StartupConfiguration(IConfiguration configuration)
 
             endpoints.MapGet(Endpoints.GraphEndpoint, (NetworkGraph networkGraph) =>
             {
+                //TODO: refactor to use handler
                 return Results.Ok(networkGraph.Graph);
             });
 
             endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
             {
+                //TODO: refactor to use handler
                 return Results.Ok(networkGraph.Vertices);
             });
 
             endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
             {
+                //TODO: refactor to use handler
                 if (!sharedDataCreate.Valid)
                 {
                     return Results.BadRequest();
