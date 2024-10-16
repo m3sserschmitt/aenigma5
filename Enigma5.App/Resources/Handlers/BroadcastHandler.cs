@@ -27,17 +27,14 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class BroadcastHandler(NetworkGraph networkGraph)
-: IRequestHandler<HandleBroadcastCommand, (Vertex localVertex, IEnumerable<VertexBroadcastRequest> broadcasts)>
+: IRequestHandler<HandleBroadcastCommand, CommandResult<IEnumerable<VertexBroadcastRequest>>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
-    public async Task<(Vertex localVertex, IEnumerable<VertexBroadcastRequest> broadcasts)> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<IEnumerable<VertexBroadcastRequest>>> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken)
     {
         var vertex = request.BroadcastAdjacencyList.ToVertex();
         var vertices = await _networkGraph.UpdateAsync(vertex, cancellationToken);
-
-        var broadcasts = vertices.Select(item => item.ToVertexBroadcast());
-
-        return (_networkGraph.LocalVertex, broadcasts);
+        return CommandResult.CreateResultSuccess(vertices.Select(item => item.ToVertexBroadcast()));
     }
 }

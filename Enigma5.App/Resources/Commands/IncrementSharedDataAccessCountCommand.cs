@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Onion Routing based messaging application
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,13 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
 using Enigma5.App.Resources.Handlers;
 using MediatR;
 
-namespace Enigma5.App.Resources.Queries;
+namespace Enigma5.App.Resources.Commands;
 
-public class CheckAuthorizedServiceQuery(string address)
-: IRequest<CommandResult<bool>>
+public class IncrementSharedDataAccessCountCommand(string tag)
+: IRequest<CommandResult<SharedData>>
 {
-    public string Address { get; private set; } = address;
+    public string Tag { get; private set; } = tag;
 }

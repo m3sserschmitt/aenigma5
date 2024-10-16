@@ -20,7 +20,6 @@
 
 using System.Reflection;
 using Enigma5.App.Attributes;
-using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
@@ -64,12 +63,12 @@ public partial class RoutingHub
         }
     }
 
-    private async Task<(Vertex localVertex, VertexBroadcastRequest? broadcast)> AddNewAdjacencies(List<string> addresses)
-    => await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, true));
+    private async Task<VertexBroadcastRequest?> AddNewAdjacencies(List<string> addresses)
+    => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, true))).Value;
 
 
-    private async Task<(Vertex localVertex, VertexBroadcastRequest? broadcast)> RemoveAdjacencies(List<string> addresses)
-    => await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, false));
+    private async Task<VertexBroadcastRequest?> RemoveAdjacencies(List<string> addresses)
+    => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, false))).Value;
 
     private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequest> adjacencyLists)
     {

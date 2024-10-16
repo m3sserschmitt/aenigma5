@@ -26,6 +26,7 @@ namespace Enigma5.App.Resources.Handlers;
 public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<RequestResponseLoggingBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : class
+    where TResponse: new()
 {
     private readonly ILogger<RequestResponseLoggingBehavior<TRequest, TResponse>> _logger = logger;
 
@@ -42,9 +43,7 @@ public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<Request
         catch(Exception ex)
         {
             _logger.LogError(ex, "Exception occurred while handling command {CommandName}: {@Command}", typeof(TRequest).Name, request);
-#pragma warning disable CS8603 // Possible null reference return.
-            return default;
-#pragma warning restore CS8603 // Possible null reference return.
+            return new TResponse();
         }
     }
 }

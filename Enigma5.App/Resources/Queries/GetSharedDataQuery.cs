@@ -19,11 +19,12 @@
 */
 
 using Enigma5.App.Data;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetSharedDataQuery(string tag) : IRequest<SharedData?>
+public class GetSharedDataQuery(string tag) : IRequest<CommandResult<SharedData>>
 {
-    public string Tag { get; set; } = tag;
+    public string Tag { get; private set; } = tag;
 }

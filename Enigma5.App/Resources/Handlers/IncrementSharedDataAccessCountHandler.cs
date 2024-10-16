@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Onion Routing based messaging application
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -19,17 +19,31 @@
 */
 
 using Enigma5.App.Data;
-using Enigma5.App.Resources.Queries;
+using Enigma5.App.Resources.Commands;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CheckAuthorizedServiceHandler(EnigmaDbContext context)
-: IRequestHandler<CheckAuthorizedServiceQuery, CommandResult<bool>>
+public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
+: IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<SharedData>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<bool>> IRequestHandler<CheckAuthorizedServiceQuery, CommandResult<bool>>.Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken));
+    public async Task<CommandResult<SharedData>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
+    {
+        var sharedData = await _context.SharedData.FirstOrDefaultAsync(
+            item => item.Tag == request.Tag,
+            cancellationToken: cancellationToken);
+
+        if (sharedData is not null)
+        {
+            sharedData.AccessCount += 1;
+            _context.Update(sharedData);
+            await _context.SaveChangesAsync(cancellationToken);
+            return CommandResult.CreateResultSuccess(sharedData);
+        }
+
+        return CommandResult.CreateResultSuccess<SharedData>();
+    }
 }

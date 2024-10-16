@@ -25,12 +25,10 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class GetVertexHandler(NetworkGraph graph)
-: IRequestHandler<GetVertexQuery, Vertex?>
+: IRequestHandler<GetVertexQuery, CommandResult<Vertex>>
 {
     private readonly NetworkGraph _graph = graph;
 
-    public Task<Vertex?> Handle(GetVertexQuery request, CancellationToken cancellationToken)
-    {
-        return _graph.GetVertexAsync(request.Address, cancellationToken);
-    }
+    async Task<CommandResult<Vertex>> IRequestHandler<GetVertexQuery, CommandResult<Vertex>>.Handle(GetVertexQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _graph.GetVertexAsync(request.Address, cancellationToken));
 }

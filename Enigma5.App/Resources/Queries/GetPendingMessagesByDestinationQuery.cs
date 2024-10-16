@@ -19,12 +19,13 @@
 */
 
 using Enigma5.App.Data;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
 public class GetPendingMessagesByDestinationQuery(string destination)
-: IRequest<IEnumerable<PendingMessage>>
+: IRequest<CommandResult<List<PendingMessage>>>
 {
-    public string Destination { get; set; } = destination;
+    public string Destination { get; private set; } = destination;
 }

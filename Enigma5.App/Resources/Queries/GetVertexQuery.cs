@@ -19,11 +19,12 @@
 */
 
 using Enigma5.App.Data;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetVertexQuery(string address): IRequest<Vertex?>
+public class GetVertexQuery(string address): IRequest<CommandResult<Vertex>>
 {
-    public string Address { get; set; } = address;
+    public string Address { get; private set; } = address;
 }

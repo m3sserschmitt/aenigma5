@@ -25,30 +25,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<RemoveSharedDataCommand>
+public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<RemoveSharedDataCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
+    async Task<CommandResult<int>> IRequestHandler<RemoveSharedDataCommand, CommandResult<int>>.Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
     {
-        var sharedData = await _context.SharedData.SingleOrDefaultAsync(
+        var sharedData = await _context.SharedData.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,
             cancellationToken: cancellationToken);
 
         if (sharedData is not null)
         {
-            sharedData.AccessCount += 1;
-
-            if (sharedData.AccessCount >= sharedData.MaxAccessCount)
-            {
-                _context.Remove(sharedData);
-            }
-            else
-            {
-                _context.Update(sharedData);
-            }
-
-            await _context.SaveChangesAsync(cancellationToken);
+            _context.Remove(sharedData);
+            return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
         }
+
+        return CommandResult.CreateResultSuccess(0);
     }
 }
