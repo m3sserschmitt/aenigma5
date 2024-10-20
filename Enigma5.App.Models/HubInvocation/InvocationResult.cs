@@ -1,5 +1,5 @@
 ﻿/*
-    Aenigma - Onion Routing based messaging application
+    Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
     This file is part of Aenigma project.
