@@ -31,7 +31,7 @@ public class UpdateLocalAdjacencyHandler(
     NetworkGraph networkGraph,
     ICertificateManager certificateManager,
     ILogger<UpdateLocalAdjacencyHandler> logger)
-: IRequestHandler<UpdateLocalAdjacencyCommand, (Vertex localVertex, VertexBroadcastRequest? broadcast)>
+: IRequestHandler<UpdateLocalAdjacencyCommand, CommandResult<VertexBroadcastRequest>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
@@ -39,7 +39,7 @@ public class UpdateLocalAdjacencyHandler(
 
     private readonly ILogger<UpdateLocalAdjacencyHandler> _logger = logger;
 
-    public async Task<(Vertex localVertex, VertexBroadcastRequest? broadcast)> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken)
     {
         var (newLocalVertex, updated) = request.Add ?
         await _networkGraph.AddAdjacencyAsync(request.Address, cancellationToken)
@@ -47,15 +47,15 @@ public class UpdateLocalAdjacencyHandler(
 
         if(!updated)
         {
-            return (newLocalVertex, null);
+            return CommandResult.CreateResultSuccess<VertexBroadcastRequest>();
         }
 
         if(newLocalVertex.SignedData is null)
         {
             _logger.LogError("Local vertex has null signed data!");
-            return (newLocalVertex, null);
+            return CommandResult.CreateResultFailure<VertexBroadcastRequest>();
         }
 
-        return (newLocalVertex, new VertexBroadcastRequest(_certificateManager.PublicKey, newLocalVertex.SignedData));
+        return CommandResult.CreateResultSuccess(new VertexBroadcastRequest(_certificateManager.PublicKey, newLocalVertex.SignedData));
     }
 }

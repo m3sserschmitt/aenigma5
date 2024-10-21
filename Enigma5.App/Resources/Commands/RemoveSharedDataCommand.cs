@@ -18,11 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class RemoveSharedDataCommand(string tag): IRequest
+public class RemoveSharedDataCommand(string tag): IRequest<CommandResult<int>>
 {
-    public string Tag { get; set; } = tag;
+    public string Tag { get; private set; } = tag;
 }

@@ -18,13 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
 using Enigma5.App.Models;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class HandleBroadcastCommand(VertexBroadcastRequest broadcastAdjacencyList) : IRequest<(Vertex localVertex, IEnumerable<VertexBroadcastRequest> broadcasts)>
+public class HandleBroadcastCommand(VertexBroadcastRequest broadcastAdjacencyList)
+: IRequest<CommandResult<IEnumerable<VertexBroadcastRequest>>>
 {
     public VertexBroadcastRequest BroadcastAdjacencyList { get; private set; } = broadcastAdjacencyList;
 }

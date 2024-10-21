@@ -18,13 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class CreateShareDataCommand(string signedData, int accessCount = 1) : IRequest<string?>
+public class CreateShareDataCommand(string signedData, int accessCount = 1) : IRequest<CommandResult<SharedData>>
 {
-    public string SignedData { get; set; } = signedData;
+    public string SignedData { get; private set; } = signedData;
 
-    public int AccessCount { get; set; } = accessCount;
+    public int AccessCount { get; private set; } = accessCount;
 }

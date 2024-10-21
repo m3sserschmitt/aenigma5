@@ -18,19 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class CleanupMessagesCommand : IRequest
+public class CleanupMessagesCommand(TimeSpan timeSpan, bool removeDelivered) : IRequest<CommandResult<int>>
 {
-    public CleanupMessagesCommand(TimeSpan timeSpan, bool removeDelivered)
-    {
-        TimeSpan = timeSpan;
-        RemoveDelivered = removeDelivered;
-    }
-    
-    public TimeSpan TimeSpan { get; private set; }
+    public TimeSpan TimeSpan { get; private set; } = timeSpan;
 
-    public bool RemoveDelivered { get; private set; }
+    public bool RemoveDelivered { get; private set; } = removeDelivered;
 }

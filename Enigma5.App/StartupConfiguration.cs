@@ -41,6 +41,7 @@ using Enigma5.App.Resources.Queries;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
 using Hangfire;
+using Enigma5.App.Resources.Handlers;
 
 namespace Enigma5.App;
 
@@ -143,16 +144,16 @@ public class StartupConfiguration(IConfiguration configuration)
                     )
                 );
 
-                if (result is null)
+                if (!result.IsSuccessNotNullResulValue())
                 {
                     return Results.StatusCode(500);
                 }
 
-                var resourceUrl = $"{(configuration.GetHostname() ?? "").Trim('/')}/{Endpoints.ShareEndpoint}?Tag={result}";
+                var resourceUrl = $"{(configuration.GetHostname() ?? "").Trim('/')}/{Endpoints.ShareEndpoint}?Tag={result.Value?.Tag}";
 
                 return Results.Ok(new
                 {
-                    Tag = result,
+                    result.Value?.Tag,
                     ResourceUrl = resourceUrl,
                     ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistancePeriod
                 }
@@ -163,14 +164,19 @@ public class StartupConfiguration(IConfiguration configuration)
             {
                 var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
 
-                if (sharedData is null)
+                if (!sharedData.IsSuccessNotNullResulValue())
                 {
                     return Results.NotFound();
                 }
 
-                await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Tag));
+                var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag));
 
-                return Results.Ok(new { sharedData.Tag, sharedData.Data });
+                if(result.IsSuccessNotNullResulValue() && result.Value!.AccessCount > result.Value.MaxAccessCount)
+                {
+                    await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag));
+                }
+                
+                return Results.Ok(new { sharedData.Value.Tag, sharedData.Value.Data });
             });
 
             endpoints.MapGet(Endpoints.VertexEndpoint, async (string address, IMediator commandRouter) => {
