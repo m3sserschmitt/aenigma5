@@ -172,8 +172,8 @@ public class StartupConfiguration(IConfiguration configuration)
             });
 
             endpoints.MapGet(Endpoints.VertexEndpoint, async (string address, IMediator commandRouter) => {
-                var vertex = await commandRouter.Send(new GetVertexQuery(address));
-                return vertex.IsSuccessNotNullResultValue() ? Results.Ok(vertex.Value) : Results.NotFound();
+                var result = await commandRouter.Send(new GetVertexQuery(address));
+                return result.CreateGetResponse();
             });
         });
 
