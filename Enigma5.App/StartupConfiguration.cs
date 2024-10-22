@@ -99,10 +99,10 @@ public class StartupConfiguration(IConfiguration configuration)
                 return Results.Ok(networkGraph.Graph);
             });*/
 
-            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
+            endpoints.MapGet(Endpoints.VerticesEndpoint, async (IMediator commandRouter) =>
             {
-                //TODO: refactor to use handler
-                return Results.Ok(networkGraph.NonLeafVertices);
+                var result = await commandRouter.Send(new GetVerticesQuery());
+                return result.CreateGetResponse();
             });
 
             endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
