@@ -87,7 +87,7 @@ public partial class RoutingHub(
         {
             var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address!));
 
-            if (result.IsSuccessNotNullResulValue())
+            if (result.IsSuccessNotNullResultValue())
             {
                 try
                 {
@@ -165,7 +165,7 @@ public partial class RoutingHub(
     {
         var result = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
-        if (result.IsSuccessNotNullResulValue())
+        if (result.IsSuccessNotNullResultValue())
         {
             return await SendBroadcast(result.Value!)
             ? Ok(true)
@@ -214,7 +214,7 @@ public partial class RoutingHub(
             }
             var result = await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
 
-            return result.IsSuccessNotNullResulValue() ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
+            return result.IsSuccessNotNullResultValue() ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
         }
         return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }

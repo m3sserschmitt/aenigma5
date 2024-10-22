@@ -90,7 +90,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapGet(Endpoints.InfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
             {
                 //TODO: refactor to use handler
-                var serializedGraph = JsonSerializer.Serialize(networkGraph.Graph);
+                var serializedGraph = JsonSerializer.Serialize(networkGraph.Vertices);
                 var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
 
                 return Results.Ok(new ServerInfo
@@ -101,16 +101,16 @@ public class StartupConfiguration(IConfiguration configuration)
                 });
             });
 
-            endpoints.MapGet(Endpoints.GraphEndpoint, (NetworkGraph networkGraph) =>
+            /* endpoints.MapGet(Endpoints.GraphEndpoint, (NetworkGraph networkGraph) =>
             {
                 //TODO: refactor to use handler
                 return Results.Ok(networkGraph.Graph);
-            });
+            });*/
 
             endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
             {
                 //TODO: refactor to use handler
-                return Results.Ok(networkGraph.Vertices);
+                return Results.Ok(networkGraph.NonLeafVertices);
             });
 
             endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
@@ -144,7 +144,7 @@ public class StartupConfiguration(IConfiguration configuration)
                     )
                 );
 
-                if (!result.IsSuccessNotNullResulValue())
+                if (!result.IsSuccessNotNullResultValue())
                 {
                     return Results.StatusCode(500);
                 }
@@ -164,14 +164,14 @@ public class StartupConfiguration(IConfiguration configuration)
             {
                 var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
 
-                if (!sharedData.IsSuccessNotNullResulValue())
+                if (!sharedData.IsSuccessNotNullResultValue())
                 {
                     return Results.NotFound();
                 }
 
                 var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag));
 
-                if(result.IsSuccessNotNullResulValue() && result.Value!.AccessCount > result.Value.MaxAccessCount)
+                if(result.IsSuccessNotNullResultValue() && result.Value!.AccessCount > result.Value.MaxAccessCount)
                 {
                     await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag));
                 }
@@ -181,13 +181,7 @@ public class StartupConfiguration(IConfiguration configuration)
 
             endpoints.MapGet(Endpoints.VertexEndpoint, async (string address, IMediator commandRouter) => {
                 var vertex = await commandRouter.Send(new GetVertexQuery(address));
-
-                if(vertex is null)
-                {
-                    return Results.NotFound();
-                }
-
-                return Results.Ok(vertex);
+                return vertex.IsSuccessNotNullResultValue() ? Results.Ok(vertex.Value) : Results.NotFound();
             });
         });
 

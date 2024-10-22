@@ -3,7 +3,6 @@
 set -e
 
 APP_NAME="aenigma"
-DB_NAME="aenigmaDb.sqlite"
 ARCH="amd64"
 EXECUTABLE_NAME="Enigma5.App"
 PUBLISH_DIR="bin/Release/net8.0/linux-x64/publish"
@@ -42,11 +41,8 @@ fi
 PKG_DIR="${APP_NAME}_${VERSION}-1_$ARCH"
 
 # Step 1: Publish the .NET app
-rm -fv Migrations/migrate-db.sql
-rm -fv "$DB_NAME"
+./db-migrate.sh
 dotnet publish -c Release -r linux-x64 --self-contained true
-dotnet ef migrations script -o Migrations/migrate-db.sql
-sqlite3 "$DB_NAME" < Migrations/migrate-db.sql
 
 # Step 2: Cleanup old package directory structure, then create a new one
 if [ -d "$PKG_DIR" ]; then
