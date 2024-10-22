@@ -31,13 +31,13 @@ namespace Enigma5.App.Data;
 public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData)
 {
     [JsonIgnore]
-    public DateTimeOffset LastUpdate { get; private set; }
+    public DateTimeOffset LastUpdate { get; private set; } = DateTimeOffset.Now;
 
     [JsonIgnore]
     public bool IsLeaf { get; private set; }
 
     [JsonIgnore]
-    public bool PossibleLeaf => Neighborhood.Neighbors.Count == 1;
+    public bool PossibleLeaf => Neighborhood.Neighbors.Count == 1 && Neighborhood.Hostname is null;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PublicKey { get; private set; } = publicKey;
@@ -55,8 +55,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             return false;
         }
 
-        var copy = this.CopyBySerialization();
-        var neighborhood = new Neighborhood([.. copy.Neighborhood.Neighbors], copy.Neighborhood.Address, null);
+        var neighborhood = new Neighborhood([.. Neighborhood.Neighbors], Neighborhood.Address, null);
         var leaf = new Vertex(neighborhood, null, null)
         {
             IsLeaf = true
