@@ -87,18 +87,10 @@ public class StartupConfiguration(IConfiguration configuration)
         {
             endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
 
-            endpoints.MapGet(Endpoints.InfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
+            endpoints.MapGet(Endpoints.InfoEndpoint, async (IMediator commandRouter) =>
             {
-                //TODO: refactor to use handler
-                var serializedGraph = JsonSerializer.Serialize(networkGraph.Vertices);
-                var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
-
-                return Results.Ok(new ServerInfo
-                {
-                    PublicKey = certificateManager.PublicKey,
-                    Address = certificateManager.Address,
-                    GraphVersion = graphVersion
-                });
+                var result = await commandRouter.Send(new GetServerInfoQuery());
+                return result.CreateGetResponse();
             });
 
             /* endpoints.MapGet(Endpoints.GraphEndpoint, (NetworkGraph networkGraph) =>
