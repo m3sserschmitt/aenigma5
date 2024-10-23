@@ -107,49 +107,13 @@ public class StartupConfiguration(IConfiguration configuration)
 
             endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
             {
-                //TODO: refactor to use handler
                 if (!sharedDataCreate.Valid)
                 {
                     return Results.BadRequest();
                 }
 
-                using var signatureVerification = Envelope.Factory.CreateSignatureVerification(sharedDataCreate.PublicKey!);
-
-                if (signatureVerification is null)
-                {
-                    return Results.StatusCode(500);
-                }
-
-                var decodedSignature = Convert.FromBase64String(sharedDataCreate.SignedData!);
-
-                if (decodedSignature is null
-                || decodedSignature.Length == 0
-                || !signatureVerification.Verify(decodedSignature))
-                {
-                    return Results.BadRequest();
-                }
-
-                var result = await commandRouter.Send(
-                    new CreateShareDataCommand(
-                        sharedDataCreate.SignedData!,
-                        sharedDataCreate.AccessCount
-                    )
-                );
-
-                if (!result.IsSuccessNotNullResultValue())
-                {
-                    return Results.StatusCode(500);
-                }
-
-                var resourceUrl = $"{(configuration.GetHostname() ?? "").Trim('/')}/{Endpoints.ShareEndpoint}?Tag={result.Value?.Tag}";
-
-                return Results.Ok(new
-                {
-                    result.Value?.Tag,
-                    ResourceUrl = resourceUrl,
-                    ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistancePeriod
-                }
-                );
+                var result = await commandRouter.Send(new CreateSharedDataCommand(sharedDataCreate));
+                return result.CreatePostResponse();
             });
 
             endpoints.MapGet(Endpoints.ShareEndpoint, async (string tag, IMediator commandRouter) =>
@@ -161,14 +125,14 @@ public class StartupConfiguration(IConfiguration configuration)
                     return Results.NotFound();
                 }
 
-                var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag));
+                var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag!));
 
                 if(result.IsSuccessNotNullResultValue() && result.Value!.AccessCount > result.Value.MaxAccessCount)
                 {
-                    await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag));
+                    await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag!));
                 }
                 
-                return Results.Ok(new { sharedData.Value.Tag, sharedData.Value.Data });
+                return sharedData.CreateGetResponse();
             });
 
             endpoints.MapGet(Endpoints.VertexEndpoint, async (string address, IMediator commandRouter) => {

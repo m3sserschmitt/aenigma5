@@ -32,7 +32,7 @@ public static class ConfigurationExtensions
     => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null);
 
     public static string? GetHostname(this IConfiguration configuration)
-    => configuration.GetValue<string?>("Hostname", null);
+    => configuration.GetValue<string?>("Hostname", null)?.Trim('/', ' ');
 
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
     => configuration.GetValue<string?>("PrivateKeyPath", null);
