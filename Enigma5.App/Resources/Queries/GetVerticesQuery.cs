@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -22,11 +22,6 @@ using Enigma5.App.Data;
 using Enigma5.App.Resources.Handlers;
 using MediatR;
 
-namespace Enigma5.App.Resources.Commands;
+namespace Enigma5.App.Resources.Queries;
 
-public class CreateShareDataCommand(string signedData, int accessCount = 1) : IRequest<CommandResult<SharedData>>
-{
-    public string SignedData { get; private set; } = signedData;
-
-    public int AccessCount { get; private set; } = accessCount;
-}
+public class GetVerticesQuery : IRequest<CommandResult<HashSet<Vertex>>> { }

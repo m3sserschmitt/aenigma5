@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,13 +18,16 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Data;
+using Enigma5.App.Resources.Queries;
 using MediatR;
 
-namespace Enigma5.App.Resources.Queries;
+namespace Enigma5.App.Resources.Handlers;
 
-public class GetSharedDataQuery(string tag) : IRequest<CommandResult<SharedData>>
+public class GetVerticesHandler(NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<HashSet<Vertex>>>
 {
-    public string Tag { get; private set; } = tag;
+    private readonly NetworkGraph _graph = graph;
+
+    public Task<CommandResult<HashSet<Vertex>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    => Task.FromResult(CommandResult.CreateResultSuccess(_graph.NonLeafVertices));
 }

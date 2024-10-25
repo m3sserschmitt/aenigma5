@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -24,7 +24,4 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetSharedDataQuery(string tag) : IRequest<CommandResult<SharedData>>
-{
-    public string Tag { get; private set; } = tag;
-}
+public class GetServerInfoQuery : IRequest<CommandResult<ServerInfo>> { }

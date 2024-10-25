@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,13 +18,21 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models;
-using Enigma5.App.Resources.Handlers;
-using MediatR;
+using System.Text.Json.Serialization;
 
-namespace Enigma5.App.Resources.Queries;
+namespace Enigma5.App.Models;
 
-public class GetSharedDataQuery(string tag) : IRequest<CommandResult<SharedData>>
+public class SharedData
 {
-    public string Tag { get; private set; } = tag;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Tag { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ResourceUrl { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Data { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTimeOffset? ValidUntil { get; set; }
 }

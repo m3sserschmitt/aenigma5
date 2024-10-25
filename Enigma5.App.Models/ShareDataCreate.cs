@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models.Extensions;
+
 namespace Enigma5.App.Models;
 
 public class SharedDataCreate
@@ -28,5 +30,5 @@ public class SharedDataCreate
 
     public int AccessCount { get; set; } = 1;
 
-    public bool Valid => PublicKey != null && SignedData != null;
+    public bool Valid => PublicKey.IsValidPublicKey() && SignedData.IsValidBase64();
 }
