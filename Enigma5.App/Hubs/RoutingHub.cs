@@ -32,6 +32,7 @@ using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.Extensions.Logging;
+using Enigma5.App.Resources.Handlers;
 
 namespace Enigma5.App.Hubs;
 
@@ -84,13 +85,13 @@ public partial class RoutingHub(
     {
         if (_sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
         {
-            var onions = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address!));
+            var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address!));
 
-            if (onions.Any())
+            if (result.IsSuccessNotNullResultValue())
             {
                 try
                 {
-                    var pendingMessages = onions.Select(item => new Models.PendingMessage
+                    var pendingMessages = result.Value?.Select(item => new Models.PendingMessage
                     {
                         Destination = item.Destination,
                         Content = item.Content,
@@ -162,11 +163,11 @@ public partial class RoutingHub(
     [ValidateModel]
     public async Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest broadcastAdjacencyList)
     {
-        var (localVertex, broadcasts) = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
+        var result = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
-        if (localVertex != null && broadcasts != null)
+        if (result.IsSuccessNotNullResultValue())
         {
-            return await SendBroadcast(broadcasts)
+            return await SendBroadcast(result.Value!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_FORWARDING_ERROR);
         }
@@ -180,7 +181,7 @@ public partial class RoutingHub(
     {
         var vertexBroadcastRequest = request.NewAddresses is null || request.NewAddresses.Count == 0
         ? _networkGraph.LocalVertex.ToVertexBroadcast()
-        : (await AddNewAdjacencies(request.NewAddresses)).broadcast;
+        : (await AddNewAdjacencies(request.NewAddresses));
 
         if (vertexBroadcastRequest is null)
         {
@@ -211,9 +212,9 @@ public partial class RoutingHub(
                 _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
                 return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
             }
-            var createPendingMessageCommand = new CreatePendingMessageCommand(Next!, encodedContent);
+            var result = await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
 
-            return await _commandRouter.Send(createPendingMessageCommand) is not null ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
+            return result.IsSuccessNotNullResultValue() ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
         }
         return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
@@ -227,7 +228,7 @@ public partial class RoutingHub(
             return;
         }
 
-        var (_, broadcast) = await RemoveAdjacencies([removedAddress!]);
+        var broadcast = await RemoveAdjacencies([removedAddress!]);
 
         if (broadcast != null)
         {

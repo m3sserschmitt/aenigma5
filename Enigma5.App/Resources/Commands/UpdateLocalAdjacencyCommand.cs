@@ -18,13 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
 using Enigma5.App.Models;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class UpdateLocalAdjacencyCommand(List<string> addresses, bool add) : IRequest<(Vertex localVertex, VertexBroadcastRequest? broadcast)>
+public class UpdateLocalAdjacencyCommand(List<string> addresses, bool add)
+: IRequest<CommandResult<VertexBroadcastRequest>>
 {
     public List<string> Address { get; private set; } = addresses;
 

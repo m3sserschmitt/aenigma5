@@ -26,10 +26,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Enigma5.App.Resources.Handlers;
 
 public class GetPendingMessagesByDestinationHandler(EnigmaDbContext context)
-: IRequestHandler<GetPendingMessagesByDestinationQuery, IEnumerable<PendingMessage>>
+: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<PendingMessage>>>
 {
-    private readonly EnigmaDbContext _context = context;
+    private readonly EnigmaDbContext _context = context;    
 
-    public async Task<IEnumerable<PendingMessage>> Handle(GetPendingMessagesByDestinationQuery query, CancellationToken cancellationToken)
-    => await _context.Messages.Where(item => item.Destination == query.Destination && item.Sent == false).ToListAsync(cancellationToken: cancellationToken);
+    async Task<CommandResult<List<PendingMessage>>> IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<PendingMessage>>>.Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination && item.Sent == false).ToListAsync(cancellationToken: cancellationToken));
 }

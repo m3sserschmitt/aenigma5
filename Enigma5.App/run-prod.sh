@@ -1,1 +1,1 @@
-ASPNETCORE_ENVIRONMENT=Production dotnet run
+ASPNETCORE_ENVIRONMENT=Production dotnet run "$@"

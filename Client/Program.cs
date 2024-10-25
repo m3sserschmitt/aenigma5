@@ -28,6 +28,7 @@ using Enigma5.Crypto;
 using System.Net.Http.Json;
 using Enigma5.App.Common.Constants;
 using Enigma5.App.Models.HubInvocation;
+using System.Text.Json;
 
 namespace Client;
 
@@ -68,15 +69,33 @@ public class Program
 
     public static void HandleServerResponse(dynamic invocationResponse, string methodName)
     {
-        if(!invocationResponse.Success)
+        if (!invocationResponse.Success)
         {
             var errors = invocationResponse.Errors as List<Error>;
             throw new Exception($"{methodName} method invocation failed; errors: {string.Join(", ", errors?.Select(error => error.Message) ?? [])}");
         }
     }
 
+    private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, byte[] privateKey, string passphrase)
+    {
+        var neighborhood = new AdjacencyList()
+        {
+            Address = localAddress,
+            Hostname = null,
+            Neighbors = [serverAddress]
+        };
+        var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
+        using var envelope = Envelope.Factory.CreateSignature(privateKey, passphrase ?? string.Empty);
+        var signature = envelope.Sign(serializedNeighborhood);
+        return new VertexBroadcastRequest{
+            PublicKey = publicKey,
+            SignedData = Convert.ToBase64String(signature!)
+        };
+    }
+
     public static async Task Main(string[] args)
     {
+        string localAddress;
         string publicKey;
         string privateKey;
         string passphrase = PKey.Passphrase;
@@ -87,11 +106,13 @@ public class Program
 
         if (args[0] == "1")
         {
+            localAddress = PKey.Address1;
             publicKey = PKey.PublicKey1;
             privateKey = PKey.PrivateKey1;
         }
         else
         {
+            localAddress = PKey.Address2;
             publicKey = PKey.PublicKey2;
             privateKey = PKey.PrivateKey2;
         }
@@ -144,20 +165,22 @@ public class Program
 
         Console.WriteLine($"Authenticated.");
 
-
         var message = "Test";
         var serverPublicKey = await RequestPublicKey(serverInfoEndpoint);
+        var broadcastVertexRequest = CreateVertexBroadcast(localAddress, CertificateHelper.GetHexAddressFromPublicKey(serverPublicKey), publicKey, Encoding.UTF8.GetBytes(privateKey), passphrase);
+        var broadcastResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Broadcast), broadcastVertexRequest);
+
+        Console.WriteLine($"Broadcast result: {broadcastResult.Data}");
 
         while (args[0] == "1" && serverPublicKey != null)
         {
             var destinationPublicKey = PKey.PublicKey2;
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
-            var localAddress = HashProvider.FromHexString(PKey.Address1);
 
             var onion = OnionBuilder
                 .Create()
                 .SetMessageContent(Encoding.UTF8.GetBytes(message))
-                .SetNextAddress(localAddress)
+                .SetNextAddress(HashProvider.FromHexString(PKey.Address1))
                 .Seal(destinationPublicKey)
                 .AddPeel()
                 .SetNextAddress(destinationAddress)

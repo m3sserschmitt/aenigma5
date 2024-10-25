@@ -18,16 +18,10 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
-namespace Enigma5.App.Resources.Commands;
+namespace Enigma5.App.Resources.Queries;
 
-public class MarkMessagesAsDeliveredCommand : IRequest
-{
-    public MarkMessagesAsDeliveredCommand(string destination)
-    {
-        Destination = destination;
-    }
-    
-    public string Destination { get; private set; }
-}
+public class GetVerticesQuery : IRequest<CommandResult<HashSet<Vertex>>> { }

@@ -19,26 +19,13 @@
 */
 
 using Enigma5.App.Data;
-using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
-namespace Enigma5.App.Resources.Handlers;
+namespace Enigma5.App.Resources.Commands;
 
-public class MarkMessagesAsDeliveredHandler(EnigmaDbContext context)
-: IRequestHandler<MarkMessagesAsDeliveredCommand>
+public class IncrementSharedDataAccessCountCommand(string tag)
+: IRequest<CommandResult<SharedData>>
 {
-    private readonly EnigmaDbContext _context = context;
-
-    public async Task Handle(MarkMessagesAsDeliveredCommand command, CancellationToken cancellationToken)
-    {
-        var messages = _context.Messages.Where(item => item.Destination == command.Destination);
-
-        foreach (var message in messages)
-        {
-            message.Sent = true;
-        }
-
-        _context.UpdateRange(messages);
-        await _context.SaveChangesAsync(cancellationToken);
-    }
+    public string Tag { get; private set; } = tag;
 }

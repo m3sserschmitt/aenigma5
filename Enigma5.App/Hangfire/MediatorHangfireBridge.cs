@@ -32,7 +32,7 @@ public class MediatorHangfireBridge(
 
     private readonly ILogger<MediatorHangfireBridge> _logger = logger;
 
-    public Task Send(IRequest command)
+    public Task Send<T>(IRequest<T> command)
     {
         _logger.LogInformation("Executing {CommandName} for Hangfire Job: {@Command}", command.GetType().Name, command);
         return _mediator.Send(command);

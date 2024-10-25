@@ -26,18 +26,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Enigma5.App.Resources.Handlers;
 
 public class CleanupMessagesHandler(EnigmaDbContext context)
-: IRequestHandler<CleanupMessagesCommand>
+: IRequestHandler<CleanupMessagesCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task Handle(CleanupMessagesCommand command, CancellationToken cancellationToken)
+    public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken)
     {
         // TODO: refactor this query
-        var time = DateTimeOffset.Now - command.TimeSpan;
+        var time = DateTimeOffset.Now - request.TimeSpan;
         var messages = await _context.Messages.ToListAsync(cancellationToken: cancellationToken);
         _context.Messages.RemoveRange(messages.Where(item =>
             time > item.DateReceived ||
-            (command.RemoveDelivered && item.Sent)));
-        await _context.SaveChangesAsync(cancellationToken);
+            (request.RemoveDelivered && item.Sent)));
+        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
     }
 }

@@ -25,14 +25,14 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class RemoveMessagesHandler(EnigmaDbContext context)
-: IRequestHandler<RemoveMessagesCommand>
+: IRequestHandler<RemoveMessagesCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task Handle(RemoveMessagesCommand command, CancellationToken cancellationToken)
+    async Task<CommandResult<int>> IRequestHandler<RemoveMessagesCommand, CommandResult<int>>.Handle(RemoveMessagesCommand request, CancellationToken cancellationToken)
     {
-        var messages = _context.Messages.Where(item => item.Destination == command.Destination);
+        var messages = _context.Messages.Where(item => item.Destination == request.Destination);
         _context.RemoveRange(messages);
-        await _context.SaveChangesAsync(cancellationToken);
+        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
     }
 }

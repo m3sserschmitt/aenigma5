@@ -26,6 +26,7 @@ using Enigma5.App.Resources.Queries;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.App.Resources.Handlers;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -56,8 +57,8 @@ public class AuthorizedServiceOnlyFilter(
             return EmptyErrorResult.Create(InvocationErrors.NOT_AUTHORIZED);
         }
 #pragma warning restore CS0162 // Unreachable code detected
-
-        if (!await _commandRouter.Send(new CheckAuthorizedServiceQuery(address!)))
+        var result = await _commandRouter.Send(new CheckAuthorizedServiceQuery(address!));
+        if (!result.IsSuccessResult() || !result.Value)
         {
             _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
             return EmptyErrorResult.Create(InvocationErrors.AUTHENTICATION_REQUIRED);

@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Constants;
 using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Common.Extensions;
@@ -31,7 +32,7 @@ public static class ConfigurationExtensions
     => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null);
 
     public static string? GetHostname(this IConfiguration configuration)
-    => configuration.GetValue<string?>("Hostname", null);
+    => configuration.GetValue<string?>("Hostname", null)?.Trim('/', ' ');
 
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
     => configuration.GetValue<string?>("PrivateKeyPath", null);
@@ -51,22 +52,20 @@ public static class ConfigurationExtensions
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
     => configuration.GetValue("DelayBetweenConnectionRetries", 0);
 
-    public static TimeSpan? GetNonActiveLeafsLifetime(this IConfiguration configuration)
+    private static TimeSpan GetTimeSpan(this IConfiguration configuration, string key, TimeSpan defaultValue)
     {
-        var value = configuration.GetValue<string?>("NonActiveLeafsLifetime", null);
+        var value = configuration.GetValue<string?>(key, null);
 
-        if (value is null)
+        if (value is null || !TimeSpan.TryParse(value, out var timeSpan))
         {
-            return null;
+            return defaultValue;
         }
 
-        if (TimeSpan.TryParse(value, out var timeSpan))
-        {
-            return timeSpan;
-        }
-
-        return null;
+        return timeSpan;
     }
+
+    public static TimeSpan GetLeafsLifetime(this IConfiguration configuration)
+    => GetTimeSpan(configuration, "LeafsLifetime", DataPersistencePeriod.LeafsLifetimeDefault);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetValue<string?>("AzureVaultUrl", null);

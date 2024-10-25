@@ -26,10 +26,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Enigma5.App.Resources.Handlers;
 
 public class CheckAuthorizedServiceHandler(EnigmaDbContext context)
-: IRequestHandler<CheckAuthorizedServiceQuery, bool>
+: IRequestHandler<CheckAuthorizedServiceQuery, CommandResult<bool>>
 {
     private readonly EnigmaDbContext _context = context;
-    
-    public async Task<bool> Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken)
-    => await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken);
+
+    async Task<CommandResult<bool>> IRequestHandler<CheckAuthorizedServiceQuery, CommandResult<bool>>.Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken));
 }

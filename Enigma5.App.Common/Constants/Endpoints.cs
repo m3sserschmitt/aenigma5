@@ -26,7 +26,7 @@ public static class Endpoints
 
     public const string InfoEndpoint = "Info";
 
-    public const string GraphEndpoint = "Graph";
+    // public const string GraphEndpoint = "Graph";
 
     public const string VerticesEndpoint = "Vertices";
 

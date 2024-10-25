@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,22 +18,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
-using Enigma5.App.Resources.Commands;
-using MediatR;
+using System.Buffers.Text;
 
-namespace Enigma5.App.Resources.Handlers;
+namespace Enigma5.App.Models.Extensions;
 
-public class CreateShareDataHandler(EnigmaDbContext context) : IRequestHandler<CreateShareDataCommand, string?>
+public static class Base64Extensions
 {
-    private readonly EnigmaDbContext _context = context;
-
-    public async Task<string?> Handle(CreateShareDataCommand request, CancellationToken cancellationToken)
-    {
-        var sharedData = new SharedData(request.SignedData, request.AccessCount);
-        await _context.AddAsync(sharedData, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return sharedData.Tag;
-    }
+    public static bool IsValidBase64(this string? data) => data is not null && Base64.IsValid(data);
 }

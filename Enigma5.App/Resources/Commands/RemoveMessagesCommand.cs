@@ -18,11 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class RemoveMessagesCommand(string destination) : IRequest
+public class RemoveMessagesCommand(string destination) : IRequest<CommandResult<int>>
 {
     public string Destination { get; private set; } = destination;
 }

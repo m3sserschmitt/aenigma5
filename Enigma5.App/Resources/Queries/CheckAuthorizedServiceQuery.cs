@@ -18,12 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
 public class CheckAuthorizedServiceQuery(string address)
-: IRequest<bool>
+: IRequest<CommandResult<bool>>
 {
-    public string Address { get; set; } = address;
+    public string Address { get; private set; } = address;
 }

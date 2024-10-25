@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -25,11 +25,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<RemoveSharedDataCommand, CommandResult<int>>
+public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
+: IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<SharedData>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<int>> IRequestHandler<RemoveSharedDataCommand, CommandResult<int>>.Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<SharedData>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,
@@ -37,10 +38,12 @@ public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<
 
         if (sharedData is not null)
         {
-            _context.Remove(sharedData);
-            return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+            sharedData.AccessCount += 1;
+            _context.Update(sharedData);
+            await _context.SaveChangesAsync(cancellationToken);
+            return CommandResult.CreateResultSuccess(sharedData);
         }
 
-        return CommandResult.CreateResultSuccess(0);
+        return CommandResult.CreateResultSuccess<SharedData>();
     }
 }
