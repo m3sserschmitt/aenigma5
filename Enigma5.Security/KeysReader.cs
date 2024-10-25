@@ -48,7 +48,7 @@ public class KeysReader(IPassphraseProvider passphraseProvider, IConfiguration c
 
     public bool PrivateKeyFileExists => File.Exists(configuration.GetPrivateKeyPath());
 
-    public byte[] PrivateKey => ExportToPem(ReadPrivateKeyFile());
+    public string PrivateKey => ExportToPem(ReadPrivateKeyFile());
 
     public string PublicKey => ReadPublicKeyFile();
 
@@ -84,7 +84,7 @@ public class KeysReader(IPassphraseProvider passphraseProvider, IConfiguration c
         return keyParameter;
     }
 
-    private static byte[] ExportToPem(AsymmetricKeyParameter key)
+    private static string ExportToPem(AsymmetricKeyParameter key)
     {
         var stringBuilder = new StringBuilder();
         using var stringWriter = new StringWriter(stringBuilder);
@@ -97,13 +97,6 @@ public class KeysReader(IPassphraseProvider passphraseProvider, IConfiguration c
         stringWriter.Flush();
         stringWriter.Close();
 
-        var keyMaterial = new char[stringBuilder.Length];
-        stringBuilder.CopyTo(0, keyMaterial, 0, stringBuilder.Length);
-        stringBuilder.Clear();
-
-        var keyBytes = Encoding.UTF8.GetBytes(keyMaterial);
-        Array.Clear(keyMaterial);
-
-        return keyBytes;
+        return stringBuilder.ToString();
     }
 }

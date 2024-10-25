@@ -20,7 +20,7 @@
 
 namespace Enigma5.Crypto.Contracts;
 
-public interface IEnvelopeSign : IDisposable
+public interface IEnvelopeSigner : IDisposable
 {
     byte[]? Sign(byte[] plaintext);
 }

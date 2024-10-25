@@ -42,9 +42,10 @@ public class VertexBroadcastRequest : IValidatable
             try
             {
                 _ = value ?? throw new Exception();
+                _ = PublicKey ?? throw new Exception();
 
                 var decodedData = Convert.FromBase64String(value);
-                var adjacencyList = decodedData.GetStringDataFromSignature() ?? throw new Exception();
+                var adjacencyList = decodedData.GetStringDataFromSignature(PublicKey) ?? throw new Exception();
 
                 AdjacencyList = JsonSerializer.Deserialize<AdjacencyList>(adjacencyList) ?? throw new Exception();
                 _signedData = value;

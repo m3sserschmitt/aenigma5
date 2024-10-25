@@ -20,7 +20,7 @@
 
 namespace Enigma5.Crypto.Contracts;
 
-public interface IEnvelopeSeal : IDisposable
+public interface IEnvelopeSealer : IDisposable
 {
     byte[]? Seal(byte[] plaintext);
 }

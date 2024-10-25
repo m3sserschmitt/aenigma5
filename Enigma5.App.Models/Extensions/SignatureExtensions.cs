@@ -19,19 +19,20 @@
 */
 
 using System.Text;
+using Enigma5.Crypto;
 
 namespace Enigma5.App.Models.Extensions;
 
 public static class SignatureExtensions
 {
-    public static byte[]? GetDataFromSignature(this byte[]? signature)
+    public static byte[]? GetDataFromSignature(this byte[]? signature, string publicKey)
     {
         if (signature == null)
         {
             return null;
         }
 
-        var digestLength = Crypto.Constants.DefaultPKeySize / 8;
+        var digestLength = SealProvider.GetPKeySize(publicKey);
 
         if (signature.Length < digestLength + 1)
         {
@@ -41,9 +42,9 @@ public static class SignatureExtensions
         return signature[..^digestLength];
     }
 
-    public static string? GetStringDataFromSignature(this byte[]? signature)
+    public static string? GetStringDataFromSignature(this byte[]? signature, string publicKey)
     {
-        var data = signature.GetDataFromSignature();
+        var data = signature.GetDataFromSignature(publicKey);
 
         if (data == null)
         {

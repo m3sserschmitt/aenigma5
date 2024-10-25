@@ -24,7 +24,6 @@ using Enigma5.App.Resources.Commands;
 using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Models;
-using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
@@ -33,6 +32,7 @@ using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Resources.Handlers;
+using Enigma5.Crypto;
 
 namespace Enigma5.App.Hubs;
 
@@ -140,8 +140,8 @@ public partial class RoutingHub(
             return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
-        using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-        var data = signature.Sign(decodedNonce);
+        var signer = SealProvider.Factory.CreateSigner(_certificateManager.PrivateKey);
+        var data = signer.Sign(decodedNonce);
 
         if (data == null)
         {

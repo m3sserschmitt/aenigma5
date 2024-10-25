@@ -43,7 +43,7 @@ public class CreateSharedDataHandler(
             return CommandResult.CreateResultFailure<Models.SharedData>();
         }
 
-        using var signatureVerification = Envelope.Factory.CreateSignatureVerification(request.SharedDataCreate.PublicKey);
+        using var signatureVerification = SealProvider.Factory.CreateVerifier(request.SharedDataCreate.PublicKey);
 
         if (signatureVerification is null)
         {
