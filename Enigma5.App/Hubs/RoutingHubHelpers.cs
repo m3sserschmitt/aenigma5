@@ -24,6 +24,7 @@ using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs;
 
@@ -36,8 +37,11 @@ public partial class RoutingHub
             await Clients.Client(Context.ConnectionId).SendAsync(method, arg1);
             return true;
         }
-        catch(Exception)
+        catch(Exception ex)
         {
+            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(RespondAsync),
+            Context.ConnectionId);
             return false;
         }
     }
@@ -49,8 +53,11 @@ public partial class RoutingHub
             await Clients.Client(connectionId).SendAsync(method, arg1);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(SendAsync),
+            Context.ConnectionId);
             return false;
         }
     }
@@ -67,8 +74,11 @@ public partial class RoutingHub
             await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest(Convert.ToBase64String(data)));
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(RouteMessage),
+            Context.ConnectionId);
             return false;
         }
     }
