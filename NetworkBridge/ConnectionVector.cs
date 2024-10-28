@@ -252,25 +252,24 @@ public class ConnectionVector
 
         try
         {
-            var nonce = await _target.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken), cancellationToken);
+            var nonce = await _target.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
 
             if (!nonce.Success || nonce.Data is null)
             {
                 return false;
             }
 
-            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IHub.SignToken), new SignatureRequest(nonce.Data), cancellationToken: cancellationToken);
+            var signature = await _source.InvokeAsync<InvocationResult<Signature>>(nameof(IEnigmaHub.SignToken), new SignatureRequest(nonce.Data), cancellationToken: cancellationToken);
 
             if (!signature.Success || signature.Data is null)
             {
                 return false;
             }
 
-            var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
+            var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest
             {
                 Signature = signature.Data.SignedData,
                 PublicKey = signature.Data.PublicKey,
-                SyncMessagesOnSuccess = false
             }, cancellationToken: cancellationToken);
 
             TargetAuthenticated = authentication.Success && authentication.Data;

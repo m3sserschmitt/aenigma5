@@ -18,37 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Contracts.Hubs;
-using Enigma5.App.Hubs.Extensions;
-using Microsoft.AspNetCore.SignalR;
+namespace Enigma5.App.Common.Contracts.Hubs;
 
-namespace Enigma5.App.Hubs.Adapters;
-
-public class OnionParsingHubAdapter(Hub hub) : IOnionParsingHub
+public interface IIdentityHub
 {
-    private readonly IOnionParsingHub? onionParserHub = hub.As<IOnionParsingHub>();
-
-    public string? Next
-    {
-        get => onionParserHub?.Next;
-        set
-        {
-            if (onionParserHub != null)
-            {
-                onionParserHub.Next = value;
-            }
-        }
-    }
-
-    public byte[]? Content
-    {
-        get => onionParserHub?.Content;
-        set
-        {
-            if (onionParserHub != null)
-            {
-                onionParserHub.Content = value;
-            }
-        }
-    }
+    public string? ClientAddress { get; set; }
 }

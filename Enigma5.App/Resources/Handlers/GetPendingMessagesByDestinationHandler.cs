@@ -18,18 +18,23 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetPendingMessagesByDestinationHandler(EnigmaDbContext context)
-: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<PendingMessage>>>
+public class GetPendingMessagesByDestinationHandler(Data.EnigmaDbContext context)
+: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<Models.PendingMessage>>>
 {
-    private readonly EnigmaDbContext _context = context;    
+    private readonly Data.EnigmaDbContext _context = context;    
 
-    async Task<CommandResult<List<PendingMessage>>> IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<PendingMessage>>>.Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination && item.Sent == false).ToListAsync(cancellationToken: cancellationToken));
+    async Task<CommandResult<List<Models.PendingMessage>>> IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<Models.PendingMessage>>>.Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination && !item.Sent)
+    .Select(item => new Models.PendingMessage
+    {
+        Destination = item.Destination,
+        Content = item.Content,
+        DateReceived = item.DateReceived
+    }).ToListAsync(cancellationToken));
 }

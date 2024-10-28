@@ -50,6 +50,7 @@ public class StartupConfiguration(IConfiguration configuration)
             options =>
                 {
                     options.AddFilter<LogFilter>();
+                    options.AddFilter<AuthenticatedFilter>();
                     options.AddFilter<AuthorizedServiceOnlyFilter>();
                     options.AddFilter<ValidateModelFilter>();
                     options.AddFilter<OnionParsingFilter>();

@@ -43,9 +43,10 @@ public partial class RoutingHub(
     IMediator commandRouter,
     ILogger<RoutingHub> logger) :
     Hub,
-    IHub,
+    IEnigmaHub,
     IOnionParsingHub,
-    IOnionRoutingHub
+    IOnionRoutingHub,
+    IIdentityHub
 {
     private readonly SessionManager _sessionManager = sessionManager;
 
@@ -59,11 +60,11 @@ public partial class RoutingHub(
 
     public string? DestinationConnectionId { get; set; }
 
-    public int Size { get; set; }
-
     public string? Next { get; set; }
 
     public byte[]? Content { get; set; }
+
+    public string? ClientAddress { get; set; }
 
     public Task<InvocationResult<string>> GenerateToken()
     {
@@ -81,58 +82,70 @@ public partial class RoutingHub(
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
+    [Authenticated]
+    [AuthorizedServiceOnly]
     public async Task Synchronize()
     {
-        if (_sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
+        if (ClientAddress is null)
         {
-            var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address!));
+            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(Synchronize),
+            Context.ConnectionId);
+            return;
+        }
 
-            if (result.IsSuccessNotNullResultValue())
-            {
-                try
-                {
-                    var pendingMessages = result.Value?.Select(item => new Models.PendingMessage
-                    {
-                        Destination = item.Destination,
-                        Content = item.Content,
-                        DateReceived = item.DateReceived
-                    });
-                    await RespondAsync(nameof(Synchronize), pendingMessages);
-                }
-                catch
-                {
-                    return;
-                }
+        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
 
-                await _commandRouter.Send(new RemoveMessagesCommand(address!));
-            }
+        if (result.IsSuccessNotNullResultValue() && await RespondAsync(nameof(Synchronize), result.Value))
+        {
+            await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
         }
     }
 
+    [Authenticated]
+    public async Task<InvocationResult<List<Models.PendingMessage>>> Pull()
+    {
+        if (ClientAddress is null)
+        {
+            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(Pull),
+            Context.ConnectionId);
+            return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
+        }
+
+        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
+
+        if (result.IsSuccessNotNullResultValue())
+        {
+            await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
+            return Ok(result.Value!);
+        }
+
+        _logger.LogError($"Could not retrieve pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        nameof(Pull),
+        Context.ConnectionId,
+        result);
+        return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
+    }
+
     [ValidateModel]
-    public async Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request)
+    public Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request)
     {
         var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!);
 
         if (!authenticated)
         {
             _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
-        }
-
-        if (request.SyncMessagesOnSuccess)
-        {
-            await Synchronize();
+            return ErrorAsync<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
         _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
-        return Ok(true);
+        return OkAsync(true);
     }
 
     [ValidateModel]
     public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
     {
-
         var decodedNonce = Convert.FromBase64String(request.Nonce!);
         if (decodedNonce is null)
         {
@@ -176,6 +189,7 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
+    [Authenticated]
     [AuthorizedServiceOnly]
     public async Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request)
     {
@@ -197,6 +211,7 @@ public partial class RoutingHub(
     [ValidateModel]
     [OnionParsing]
     [OnionRouting]
+    [Authenticated]
     public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
     {
         if (DestinationConnectionId != null && Content != null)

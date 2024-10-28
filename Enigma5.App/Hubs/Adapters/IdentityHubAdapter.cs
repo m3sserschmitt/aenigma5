@@ -24,30 +24,18 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs.Adapters;
 
-public class OnionParsingHubAdapter(Hub hub) : IOnionParsingHub
+public class IdentityHubAdapter(Hub hub) : IIdentityHub
 {
-    private readonly IOnionParsingHub? onionParserHub = hub.As<IOnionParsingHub>();
+    private readonly IIdentityHub? _hub = hub.As<IIdentityHub>();
 
-    public string? Next
+    public string? ClientAddress
     {
-        get => onionParserHub?.Next;
+        get => _hub?.ClientAddress;
         set
         {
-            if (onionParserHub != null)
+            if (_hub is not null)
             {
-                onionParserHub.Next = value;
-            }
-        }
-    }
-
-    public byte[]? Content
-    {
-        get => onionParserHub?.Content;
-        set
-        {
-            if (onionParserHub != null)
-            {
-                onionParserHub.Content = value;
+                _hub.ClientAddress = value;
             }
         }
     }

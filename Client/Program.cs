@@ -88,7 +88,8 @@ public class Program
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
         using var envelope = SealProvider.Factory.CreateSigner(privateKey, passphrase ?? string.Empty);
         var signature = envelope.Sign(serializedNeighborhood);
-        return new VertexBroadcastRequest{
+        return new VertexBroadcastRequest
+        {
             PublicKey = publicKey,
             SignedData = Convert.ToBase64String(signature!)
         };
@@ -131,7 +132,7 @@ public class Program
             })
             .Build();
 
-        connection.On<RoutingRequest>(nameof(IHub.RouteMessage), message =>
+        connection.On<RoutingRequest>(nameof(IEnigmaHub.RouteMessage), message =>
         {
             HandleMessage(message.Payload!, privateKey, passphrase);
         });
@@ -149,27 +150,35 @@ public class Program
 
         await connection.StartAsync();
 
-        var tokenResult = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
-        HandleServerResponse(tokenResult, nameof(IHub.GenerateToken));
+        var tokenResult = await connection.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken));
+        HandleServerResponse(tokenResult, nameof(IEnigmaHub.GenerateToken));
 
         using var signature = SealProvider.Factory.CreateSigner(privateKey, passphrase);
         var encodedNonce = Convert.FromBase64String(tokenResult.Data!) ?? throw new Exception("Failed to base64 decode nonce.");
         var data = signature.Sign(encodedNonce) ?? throw new Exception("Nonce signature failed.");
-
-        var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
+        var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest
         {
             PublicKey = publicKey,
-            Signature = Convert.ToBase64String(data),
-            SyncMessagesOnSuccess = true,
+            Signature = Convert.ToBase64String(data)
         });
-        HandleServerResponse(authenticationResult, nameof(IHub.Authenticate));
+        HandleServerResponse(authenticationResult, nameof(IEnigmaHub.Authenticate));
 
         Console.WriteLine($"Authenticated.");
+
+        var pullResult = await connection.InvokeAsync<InvocationResult<List<PendingMessage>>>(nameof(IEnigmaHub.Pull));
+        HandleServerResponse(pullResult, nameof(IEnigmaHub.Pull));
+        foreach (var pendingMessage in pullResult.Data!)
+        {
+            if (pendingMessage.Content != null)
+            {
+                HandleMessage(pendingMessage.Content, privateKey, passphrase);
+            }
+        }
 
         var message = "Test";
         var serverPublicKey = await RequestPublicKey(serverInfoEndpoint);
         var broadcastVertexRequest = CreateVertexBroadcast(localAddress, CertificateHelper.GetHexAddressFromPublicKey(serverPublicKey), publicKey, privateKey, passphrase);
-        var broadcastResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Broadcast), broadcastVertexRequest);
+        var broadcastResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Broadcast), broadcastVertexRequest);
 
         Console.WriteLine($"Broadcast result: {broadcastResult.Data}");
 
@@ -179,7 +188,7 @@ public class Program
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
 
             var onion = OnionBuilder.Build(Encoding.UTF8.GetBytes(message), [destinationPublicKey, serverPublicKey], [PKey.Address1, PKey.Address2]);
-            await connection.InvokeAsync(nameof(IHub.RouteMessage), new RoutingRequest(onion!));
+            await connection.InvokeAsync(nameof(IEnigmaHub.RouteMessage), new RoutingRequest(onion!));
 
             Console.ReadLine();
         }

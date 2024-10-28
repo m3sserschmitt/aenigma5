@@ -28,7 +28,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilter<IHub, ValidateModelAttribute>
+public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilter<IEnigmaHub, ValidateModelAttribute>
 {
     private readonly ILogger<ValidateModelFilter> _logger = logger;
 

@@ -30,8 +30,6 @@ public class AuthenticationRequest: IValidatable
 
     public string? Signature { get; set; }
 
-    public bool SyncMessagesOnSuccess { get; set; }
-
     public IEnumerable<Error> Validate()
     {
         if(string.IsNullOrWhiteSpace(PublicKey))

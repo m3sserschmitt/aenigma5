@@ -34,7 +34,7 @@ public class AuthorizedServiceOnlyFilter(
     SessionManager sessionManager,
     IMediator commandRouter,
     ILogger<AuthorizedServiceOnlyFilter> logger
-    ) : BaseFilter<IHub, AuthorizedServiceOnlyAttribute>
+    ) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
 {
     private readonly SessionManager _sessionManager = sessionManager;
 

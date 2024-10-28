@@ -31,13 +31,12 @@ public static class HubConnectionExtensions
     public static async Task<bool> AuthenticateAsync(
         this HubConnection connection,
         CertificateManager certificateManager,
-        bool syncOnSuccess = false,
         CancellationToken cancellationToken = default
     )
     {
         try
         {
-            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken), cancellationToken);
+            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
 
             if (!nonce.Success || nonce.Data is null)
             {
@@ -52,11 +51,10 @@ public static class HubConnectionExtensions
                 return false;
             }
 
-            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Authenticate), new AuthenticationRequest
+            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest
             {
                 PublicKey = certificateManager.PublicKey,
                 Signature = Convert.ToBase64String(data),
-                SyncMessagesOnSuccess = syncOnSuccess,
             }, cancellationToken);
 
             return authentication.Success && authentication.Data;
