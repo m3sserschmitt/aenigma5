@@ -25,7 +25,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 
 namespace Enigma5.App;
-
+//test
 public class App
 {
     public static void Main(string[] args)
