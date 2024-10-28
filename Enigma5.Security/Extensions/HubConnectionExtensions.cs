@@ -44,7 +44,7 @@ public static class HubConnectionExtensions
                 return false;
             }
 
-            using var signature = Envelope.Factory.CreateSignature(certificateManager.PrivateKey, string.Empty);
+            using var signature = SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
             var data = signature.Sign(Convert.FromBase64String(nonce.Data));
 
             if (data is null)

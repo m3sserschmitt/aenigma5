@@ -20,13 +20,11 @@
 
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Models.Extensions;
-using Enigma5.Security.Contracts;
 using Enigma5.Crypto;
-using Enigma5.Structures;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateManager certificateManager)
+public class SessionManager(ConnectionsMapper connectionsMapper)
 {
     private const int TOKEN_SIZE = 64;
 
@@ -36,11 +34,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateMan
 
     private readonly HashSet<string> _authenticated = [];
 
-    private readonly Dictionary<string, OnionParser> _parsers = [];
-
     private readonly ConnectionsMapper _connectionsMapper = connectionsMapper;
-
-    private readonly ICertificateManager _certificateManager = certificateManager;
 
     private bool AddPending(string connectionId, string token)
     => _pending.TryAdd(connectionId, token);
@@ -60,35 +54,22 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateMan
             _locker);
     }
 
-    private bool AddParser(string connectionId)
-    {
-        var parser = OnionParser.Factory.Create(_certificateManager.PrivateKey, string.Empty);
-
-        return _parsers.TryAdd(connectionId, parser);
-    }
-
     private bool LogOut(string connectionId, out string? address)
     {
         _pending.Remove(connectionId);
         _authenticated.Remove(connectionId);
-        if (_parsers.TryGetValue(connectionId, out var parser))
-        {
-            parser.Dispose();
-        }
-        _parsers.Remove(connectionId);
-
         return _connectionsMapper.Remove(connectionId, out address);
     }
 
     public bool Authenticate(string connectionId, string publicKey, string signature)
     {
-        using var signatureVerifier = Envelope.Factory.CreateSignatureVerification(publicKey);
+        using var signatureVerifier = SealProvider.Factory.CreateVerifier(publicKey);
         var decodedSignature = Convert.FromBase64String(signature);
 
         return ThreadSafeExecution.Execute(
             () =>
             {
-                var token = decodedSignature.GetDataFromSignature();
+                var token = decodedSignature.GetDataFromSignature(publicKey);
 
                 if (token is null)
                 {
@@ -112,9 +93,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateMan
                 }
 
                 var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
-                var added = _connectionsMapper.TryAdd(address, connectionId);
-
-                return added && AddParser(connectionId);
+                return _connectionsMapper.TryAdd(address, connectionId);
             },
             false,
             _locker
@@ -142,14 +121,6 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ICertificateMan
         (out string? addr) => _connectionsMapper.TryGetAddress(connectionId, out addr),
         false,
         out address,
-        _locker
-    );
-
-    public bool TryGetParser(string connectionId, out OnionParser? onionParser)
-    => ThreadSafeExecution.Execute(
-        (out OnionParser? parser) => _parsers.TryGetValue(connectionId, out parser),
-        false,
-        out onionParser,
         _locker
     );
 }

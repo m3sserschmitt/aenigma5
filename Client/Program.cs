@@ -39,7 +39,8 @@ public class Program
         Console.WriteLine($"Message received");
         var decodedData = Convert.FromBase64String(message);
 
-        using var onionParser = OnionParser.Factory.Create(Encoding.UTF8.GetBytes(privateKey), passphrase);
+        using var unsealer = SealProvider.Factory.CreateUnsealer(privateKey, passphrase);
+        var onionParser = new OnionParser(unsealer);
 
         if (onionParser.Parse(new Onion { Content = decodedData }))
         {
@@ -76,7 +77,7 @@ public class Program
         }
     }
 
-    private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, byte[] privateKey, string passphrase)
+    private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
     {
         var neighborhood = new AdjacencyList()
         {
@@ -85,7 +86,7 @@ public class Program
             Neighbors = [serverAddress]
         };
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
-        using var envelope = Envelope.Factory.CreateSignature(privateKey, passphrase ?? string.Empty);
+        using var envelope = SealProvider.Factory.CreateSigner(privateKey, passphrase ?? string.Empty);
         var signature = envelope.Sign(serializedNeighborhood);
         return new VertexBroadcastRequest{
             PublicKey = publicKey,
@@ -151,7 +152,7 @@ public class Program
         var tokenResult = await connection.InvokeAsync<InvocationResult<string>>(nameof(IHub.GenerateToken));
         HandleServerResponse(tokenResult, nameof(IHub.GenerateToken));
 
-        using var signature = Envelope.Factory.CreateSignature(Encoding.UTF8.GetBytes(privateKey), passphrase);
+        using var signature = SealProvider.Factory.CreateSigner(privateKey, passphrase);
         var encodedNonce = Convert.FromBase64String(tokenResult.Data!) ?? throw new Exception("Failed to base64 decode nonce.");
         var data = signature.Sign(encodedNonce) ?? throw new Exception("Nonce signature failed.");
 
@@ -167,7 +168,7 @@ public class Program
 
         var message = "Test";
         var serverPublicKey = await RequestPublicKey(serverInfoEndpoint);
-        var broadcastVertexRequest = CreateVertexBroadcast(localAddress, CertificateHelper.GetHexAddressFromPublicKey(serverPublicKey), publicKey, Encoding.UTF8.GetBytes(privateKey), passphrase);
+        var broadcastVertexRequest = CreateVertexBroadcast(localAddress, CertificateHelper.GetHexAddressFromPublicKey(serverPublicKey), publicKey, privateKey, passphrase);
         var broadcastResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.Broadcast), broadcastVertexRequest);
 
         Console.WriteLine($"Broadcast result: {broadcastResult.Data}");
@@ -177,16 +178,8 @@ public class Program
             var destinationPublicKey = PKey.PublicKey2;
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
 
-            var onion = OnionBuilder
-                .Create()
-                .SetMessageContent(Encoding.UTF8.GetBytes(message))
-                .SetNextAddress(HashProvider.FromHexString(PKey.Address1))
-                .Seal(destinationPublicKey)
-                .AddPeel()
-                .SetNextAddress(destinationAddress)
-                .Seal(serverPublicKey)
-                .Build();
-            await connection.InvokeAsync(nameof(IHub.RouteMessage), new RoutingRequest(Convert.ToBase64String(onion.Content)));
+            var onion = OnionBuilder.Build(Encoding.UTF8.GetBytes(message), [destinationPublicKey, serverPublicKey], [PKey.Address1, PKey.Address2]);
+            await connection.InvokeAsync(nameof(IHub.RouteMessage), new RoutingRequest(onion!));
 
             Console.ReadLine();
         }

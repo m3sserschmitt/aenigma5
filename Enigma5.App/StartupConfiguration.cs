@@ -34,6 +34,8 @@ using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
 using Hangfire;
+using Enigma5.Crypto;
+using Enigma5.Structures;
 
 namespace Enigma5.App;
 
@@ -61,6 +63,15 @@ public class StartupConfiguration(IConfiguration configuration)
         
         services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
         services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
+        services.AddTransient(provider => {
+            var certificateManager = provider.GetRequiredService<ICertificateManager>();
+            return SealProvider.Factory.CreateUnsealer(certificateManager.PrivateKey);
+        });
+        services.AddTransient(provider => {
+            var certificateManager = provider.GetRequiredService<ICertificateManager>();
+            return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
+        });
+        services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
 

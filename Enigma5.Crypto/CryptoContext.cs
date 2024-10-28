@@ -20,7 +20,7 @@
 
 namespace Enigma5.Crypto;
 
-internal sealed class CryptoContext : IDisposable
+public sealed class CryptoContext : IDisposable
 {
     private bool disposed = false;
 
@@ -70,51 +70,16 @@ internal sealed class CryptoContext : IDisposable
     internal static class Factory
     {
         public static CryptoContext CreateAsymmetricEncryptionContext(string key)
-        {
-            return new CryptoContext(Native.CreateAsymmetricEncryptionContext(key));
-        }
+        => new(Native.CreateAsymmetricEncryptionContext(key));
 
-        public static CryptoContext CreateAsymmetricDecryptionContext(byte[] key, string passphrase)
-        {
-            var nativeBuffer = KeyUtil.CopyKeyToNativeBuffer(key);
-            var ctx = new CryptoContext(Native.CreateAsymmetricDecryptionContext(nativeBuffer, passphrase));
-            KeyUtil.FreeKeyNativeBuffer(nativeBuffer, key);
+        public static CryptoContext CreateAsymmetricDecryptionContext(string key, string passphrase)
+        => new(Native.CreateAsymmetricDecryptionContext(key, passphrase));
 
-            return ctx;
-        }
 
-        public static CryptoContext CreateAsymmetricEncryptionContextFromFile(string path)
-        {
-            return new CryptoContext(Native.CreateAsymmetricEncryptionContextFromFile(path));
-        }
-
-        public static CryptoContext CreateAsymmetricDecryptionContextFromFile(string path, string passphrase)
-        {
-            return new CryptoContext(Native.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
-        }
-
-        public static CryptoContext CreateSignatureContext(byte[] key, string passphrase)
-        {
-            var nativeBuffer = KeyUtil.CopyKeyToNativeBuffer(key);
-            var ctx = new CryptoContext(Native.CreateSignatureContext(nativeBuffer, passphrase));
-            KeyUtil.FreeKeyNativeBuffer(nativeBuffer, key);
-
-            return ctx;
-        }
-
-        public static CryptoContext CreateSignatureContextFromFile(string path, string passphrase)
-        {
-            return new CryptoContext(Native.CreateSignatureContextFromFile(path, passphrase));
-        }
+        public static CryptoContext CreateSignatureContext(string key, string passphrase)
+        => new(Native.CreateSignatureContext(key, passphrase));
 
         public static CryptoContext CreateSignatureVerificationContext(string key)
-        {
-            return new CryptoContext(Native.CreateVerificationContext(key));
-        }
-
-        public static CryptoContext CreateSignatureVerificationContextFromFile(string path)
-        {
-            return new CryptoContext(Native.CreateVerificationContextFromFile(path));
-        }
+        => new(Native.CreateVerificationContext(key));
     }
 }

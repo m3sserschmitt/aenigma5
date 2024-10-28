@@ -21,7 +21,6 @@
 using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
 using Enigma5.App.Common.Extensions;
-using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
@@ -41,7 +40,7 @@ public class AzureKeysReader(
 
     private readonly AzureClient _azureClient = azureClient;
 
-    public byte[] PrivateKey => ReadPrivateKey();
+    public string PrivateKey => ReadPrivateKey();
 
     public string PublicKey => ReadPublicKey();
 
@@ -59,12 +58,12 @@ public class AzureKeysReader(
         }
     }
 
-    private byte[] ReadPrivateKey()
+    private string ReadPrivateKey()
     {
         try
         {
             var publicKeyPath = _configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_SECRET_NAME_NOT_PROVIDED);
-            return Encoding.UTF8.GetBytes(_azureClient.GetSecret(publicKeyPath));
+            return _azureClient.GetSecret(publicKeyPath);
         }
         catch (Exception ex)
         {

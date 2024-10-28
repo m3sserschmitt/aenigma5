@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text;
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto;
 
@@ -32,12 +31,12 @@ public class TestCertificateManager : ICertificateManager
 
     public string PublicKey => _publicKey;
 
-    public byte[] PrivateKey => Encoding.UTF8.GetBytes(_privateKey);
+    public string PrivateKey => _privateKey;
 
     public string Address => CertificateHelper.GetHexAddressFromPublicKey(PublicKey);
 
     public TestCertificateManager()
     {
-        (_publicKey, _privateKey) = KeysGenerator.GenerateKeys();
+        (_publicKey, _privateKey) = KeysGenerator.GenerateKeys(2048);
     }
 }

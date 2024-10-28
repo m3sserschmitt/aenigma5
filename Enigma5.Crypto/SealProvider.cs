@@ -23,12 +23,12 @@ using System.Runtime.InteropServices;
 
 namespace Enigma5.Crypto;
 
-internal sealed class SealProvider :
+public sealed class SealProvider :
     IDisposable,
-    IEnvelopeSeal,
-    IEnvelopeUnseal,
-    IEnvelopeSign,
-    IEnvelopeVerify
+    IEnvelopeSealer,
+    IEnvelopeUnsealer,
+    IEnvelopeSigner,
+    IEnvelopeVerifier
 {
     private readonly CryptoContext _ctx;
 
@@ -60,14 +60,13 @@ internal sealed class SealProvider :
         return output;
     }
 
-    public byte[]? Seal(byte[] plaintext)
-    => Execute(plaintext, Native.EncryptData);
+    public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.EncryptData);
 
-    public byte[]? Unseal(byte[] ciphertext)
-    => Execute(ciphertext, Native.DecryptData);
+    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.DecryptData);
 
-    public IntPtr UnsealOnion(byte[] ciphertext, out int outLen)
-    => Native.UnsealOnion(_ctx, ciphertext, out outLen);
+    public IntPtr UnsealOnion(byte[] ciphertext, out int outLen) => Native.UnsealOnion(_ctx, ciphertext, out outLen);
+
+    public static int GetPKeySize(string publicKey) => (int)Native.GetPKeySize(publicKey);
 
     public static IntPtr SealOnion(
         byte[] plaintext,
@@ -83,11 +82,9 @@ internal sealed class SealProvider :
         return Native.SealOnion(plaintext, (uint)plaintext.Length, keys, addresses, (uint)keys.Length, out outLen);
     }
 
-    public byte[]? Sign(byte[] plaintext)
-    => Execute(plaintext, Native.SignData);
+    public byte[]? Sign(byte[] plaintext) => Execute(plaintext, Native.SignData);
 
-    public bool Verify(byte[] ciphertext)
-    => Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
+    public bool Verify(byte[] ciphertext) => Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
 
     public void Dispose()
     {
@@ -97,7 +94,20 @@ internal sealed class SealProvider :
 
     public static class Factory
     {
-        public static SealProvider Create(CryptoContext ctx) => new(ctx);
+        public static IEnvelopeSigner CreateSigner(string key, string passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateSignatureContext(key, passphrase));
+
+        public static IEnvelopeSigner CreateSigner(string key)
+        => CreateSigner(key, string.Empty);
+
+        public static IEnvelopeVerifier CreateVerifier(string key)
+        => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key));
+
+        public static IEnvelopeUnsealer CreateUnsealer(string key, string passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase));
+
+        public static IEnvelopeUnsealer CreateUnsealer(string key)
+        => CreateUnsealer(key, string.Empty);
     }
 
 }

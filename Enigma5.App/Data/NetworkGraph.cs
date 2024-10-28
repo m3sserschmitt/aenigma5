@@ -21,6 +21,7 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
+using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
 
@@ -29,6 +30,8 @@ namespace Enigma5.App.Data;
 public class NetworkGraph
 {
     private readonly object _locker = new();
+
+    private readonly IEnvelopeSigner _signer;
 
     private readonly ICertificateManager _certificateManager;
 
@@ -50,8 +53,9 @@ public class NetworkGraph
 
     public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker);
 
-    public NetworkGraph(ICertificateManager certificateManager, IConfiguration configuration)
+    public NetworkGraph(IEnvelopeSigner signer, ICertificateManager certificateManager, IConfiguration configuration)
     {
+        _signer = signer;
         _certificateManager = certificateManager;
         _configuration = configuration;
         _localVertex = CreateInitialVertex();
@@ -83,7 +87,7 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, _certificateManager, out Vertex? newVertex)
+            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, _signer, _certificateManager, out Vertex? newVertex)
                 && ValidateNewVertex(newVertex!))
             {
                 ReplaceLocalVertex(newVertex!);
@@ -102,7 +106,7 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, _certificateManager, out Vertex? newVertex))
+            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, _signer, _certificateManager, out Vertex? newVertex))
             {
                 ReplaceLocalVertex(newVertex!);
                 CleanupGraph();
@@ -203,7 +207,7 @@ public class NetworkGraph
         _graph = new Graph(_certificateManager.PublicKey, encodedSignature);
     }*/
 
-    private Vertex CreateInitialVertex() => Vertex.Factory.CreateWithEmptyNeighborhood(_certificateManager, _configuration.GetHostname());
+    private Vertex CreateInitialVertex() => Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname());
 
     private bool ValidateNewVertex(Vertex vertex)
     {
@@ -246,11 +250,11 @@ public class NetworkGraph
 
         if (result < 0)
         {
-            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _certificateManager, out newLocalVertex);
+            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _signer, _certificateManager, out newLocalVertex);
         }
         else if (result > 0)
         {
-            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _certificateManager, out newLocalVertex);
+            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _signer, _certificateManager, out newLocalVertex);
         }
 
         if (result == 0)
