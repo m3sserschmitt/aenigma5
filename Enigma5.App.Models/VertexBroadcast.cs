@@ -21,7 +21,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
-using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 

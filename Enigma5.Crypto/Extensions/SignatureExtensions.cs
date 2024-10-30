@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,30 +18,38 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Crypto;
+using System.Text;
 
-namespace Enigma5.Structures;
+namespace Enigma5.Crypto.Extensions;
 
-public static class OnionBuilder
+public static class SignatureExtensions
 {
-    public static string? Build(byte[] plaintext, string[] keys, string[] addresses)
+    public static byte[]? GetDataFromSignature(this byte[]? signature, string publicKey)
     {
-        try
-        {
-            var data = SealProvider.SealOnion(plaintext, keys, addresses, out var outLen);
-
-            if (data == IntPtr.Zero || outLen < 0)
-            {
-                return null;
-            }
-
-            var managedBuffer = KeyUtil.CopyKeyFromNativeBuffer(data, outLen);
-            KeyUtil.FreeKeyNativeBuffer(data, outLen);
-            return Convert.ToBase64String(managedBuffer);
-        }
-        catch
+        if (signature == null)
         {
             return null;
         }
+
+        var digestLength = SealProvider.GetPKeySize(publicKey);
+
+        if (signature.Length < digestLength + 1)
+        {
+            return null;
+        }
+
+        return signature[..^digestLength];
+    }
+
+    public static string? GetStringDataFromSignature(this byte[]? signature, string publicKey)
+    {
+        var data = signature.GetDataFromSignature(publicKey);
+
+        if (data == null)
+        {
+            return null;
+        }
+
+        return Encoding.UTF8.GetString(data);
     }
 }

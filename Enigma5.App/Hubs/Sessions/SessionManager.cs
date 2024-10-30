@@ -19,7 +19,7 @@
 */
 
 using Enigma5.App.Common.Utils;
-using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 using Enigma5.Crypto;
 
 namespace Enigma5.App.Hubs.Sessions;
