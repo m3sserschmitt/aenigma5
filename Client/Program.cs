@@ -187,7 +187,7 @@ public class Program
             var destinationPublicKey = PKey.PublicKey2;
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
 
-            var onion = OnionBuilder.Build(Encoding.UTF8.GetBytes(message), [destinationPublicKey, serverPublicKey], [PKey.Address1, PKey.Address2]);
+            var onion = SealProvider.SealOnion(Encoding.UTF8.GetBytes(message), [destinationPublicKey, serverPublicKey], [PKey.Address1, PKey.Address2]);
             await connection.InvokeAsync(nameof(IEnigmaHub.RouteMessage), new RoutingRequest(onion!));
 
             Console.ReadLine();

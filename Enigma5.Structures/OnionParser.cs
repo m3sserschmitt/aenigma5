@@ -36,18 +36,16 @@ public class OnionParser(IEnvelopeUnsealer envelopeUnseal)
     {
         try
         {
-            var data = _unsealService.UnsealOnion(onion.Content, out int outLen);
-
-            if (data == IntPtr.Zero || outLen < Constants.AddressSize)
+            byte[]? next = null;
+            byte[]? content = null;
+            if(_unsealService.UnsealOnion(onion.Content, ref next, ref content))
             {
-                return false;
+                NextAddress = HashProvider.ToHex(next!);
+                Content = content;
+                return true;
             }
 
-            var nextAddress = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
-            Content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
-            NextAddress = HashProvider.ToHex(nextAddress);
-
-            return true;
+            return false;
         }
         catch
         {

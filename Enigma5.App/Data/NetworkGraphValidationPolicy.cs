@@ -20,7 +20,7 @@
 
 using Enigma5.Crypto;
 using System.Text.Json;
-using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Data;
 

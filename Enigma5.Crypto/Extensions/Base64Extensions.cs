@@ -20,9 +20,9 @@
 
 using System.Buffers.Text;
 
-namespace Enigma5.App.Models.Extensions;
+namespace Enigma5.Crypto.Extensions;
 
 public static class Base64Extensions
 {
-    public static bool IsValidBase64(this string? data) => data is not null && Base64.IsValid(data);
+    public static bool IsValidBase64(this string? data) => !string.IsNullOrWhiteSpace(data) && Base64.IsValid(data);
 }

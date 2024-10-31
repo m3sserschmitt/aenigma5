@@ -50,16 +50,16 @@ internal static unsafe partial class Native
     internal static partial uint GetKernelKeyMaxSize();
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateAsymmetricEncryptionContext([MarshalAs(UnmanagedType.LPStr)] string key);
+    internal static partial IntPtr CreateAsymmetricEncryptionContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string key, [MarshalAs(UnmanagedType.LPStr)] string passphrase);
+    internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [MarshalAs(UnmanagedType.LPStr)] string passphrase);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string key, [MarshalAs(UnmanagedType.LPStr)] string passphrase);
+    internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [MarshalAs(UnmanagedType.LPStr)] string passphrase);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateVerificationContext([MarshalAs(UnmanagedType.LPStr)] string key);
+    internal static partial IntPtr CreateVerificationContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
     [LibraryImport("libaenigma")]
     internal static partial void FreeContext(IntPtr ctx);
