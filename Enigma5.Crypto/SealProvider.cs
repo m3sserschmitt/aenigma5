@@ -92,7 +92,7 @@ public sealed class SealProvider :
             next = null;
             if(nextBytes is not null)
             {
-                next = Convert.ToBase64String(nextBytes);
+                next = HashProvider.ToHex(nextBytes);
             }
             content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
 

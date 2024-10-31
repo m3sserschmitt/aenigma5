@@ -21,9 +21,9 @@
 using System.Collections;
 using Enigma5.Crypto.DataProviders;
 
-namespace Enigma5.Crypto.Tests.TestData;
+namespace Enigma5.Structures.Tests.TestData;
 
-public class OnionUnsealerData : IEnumerable<object?[]>
+public class ParserData : IEnumerable<object?[]>
 {
     public IEnumerator<object?[]> GetEnumerator()
     {
@@ -31,6 +31,7 @@ public class OnionUnsealerData : IEnumerable<object?[]>
             "AUhnrSEaW19iDvnKz6uLWKOt81j0qyBWt7ZYX17jG5kf3eYmcyqlgtEmk5YAqhd5JVWNJNwdqP8FSYuOz36W1KED1VeE4649KRljMsLoEbzEVH1cVryqQGA1Y7kkYKW1vj1IPeAhwch12rX8k8dZAbMDcwkK+8BuzS9CrXajfVUVzE2WpZk//EXV/fduAb7xpq+1UMYO/hRXh7k2M3H+y106Xsre8G9uKJMIlzZj+MRWxS5sbta/LdKwX4Wv+oEa4WpKThcjtqtGF90UulJIvVPbSBWkVHwrafllfNnsVePHneCtJ1t7bjZMtKYDTOtPw/2IVo6iekbsKGKlSVDxQxB4sEIwF6tJH8SWgU0i99p/W3IGx050xiEId/I8lyxUkvDF5JEgOtalPznHtdIQfE4tcd8cKJVikQFBpCiyFcfSQMhDy5+xAgWA",
             PKey.PrivateKey1,
             PKey.Passphrase,
+            true,
             PKey.Address1,
             new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }
         };
@@ -38,23 +39,26 @@ public class OnionUnsealerData : IEnumerable<object?[]>
             "AUhnrSEaW19iDvnKz6uLWKOt81j0qyBWt7ZYX17jG5kf3eYmcyqlgtEmk5YAqhd5JVWNJNwdqP8FSYuOz36W1KED1VeE4649KRljMsLoEbzEVH1cVryqQGA1Y7kkYKW1vj1IPeAhwch12rX8k8dZAbMDcwkK+8BuzS9CrXajfVUVzE2WpZk//EXV/fduAb7xpq+1UMYO/hRXh7k2M3H+y106Xsre8G9uKJMIlzZj+MRWxS5sbta/LdKwX4Wv+oEa4WpKThcjtqtGF90UulJIvVPbSBWkVHwrafllfNnsVePHneCtJ1t7bjZMtKYDTOtPw/2IVo6iekbsKGKlSVDxQxB4sEIwF6tJH8SWgU0i99p/W3IGx050xiEId/I8lyxUkvDF5JEgOtalPznHtdIQfE4tcd8cKJVikQFBpCiyFcfSQMhDy5+xAgWA",
             PKey.PrivateKey2,
             PKey.Passphrase,
+            false,
             null,
             null
         }; // wrong key
         yield return new object?[] {
             "AUhnrSEaW19iDvnKz6uLWKOt81j0qyBWt7ZYX17jG5kf3eYmcyqlgtEmk5YAqhd5JVWNJNwdqP8FSYuOz36W1KED1VeE4649KRljMsLoEbzEVH1cVryqQGA1Y7kkYKW1vj1IPeAhwch12rX8k8dZAbMDcwkK+8BuzS9CrXajfVUVzE2WpZk//EXV/fduAb7xpq+1UMYO/hRXh7k2M3H+y106Xsre8G9uKJMIlzZj+MRWxS5sbta/LdKwX4Wv+oEa4WpKThcjtqtGF90UulJIvVPbSBWkVHwrafllfNnsVePHneCtJ1t7bjZMtKYDTOtPw/2IVo6iekbsKGKlSVDxQxB4sEIwF6tJH8SWgU0i99p/W3IGx050xiEId/I8lyxUkvDF5JEgOtalPznHtdIQfE4tcd8cKJVikQFBpCiyFcfSQMhDy5+xAgWA",
             PKey.PrivateKey1,
-            "kdaoifhoijdspaofoinvaspfpsok",
+            "djaofhsjkdqwi9494t798ahdnajd09q375qjwlakjfsjg",
+            false,
             null,
             null
         }; // wrong passphrase
         yield return new object?[] {
-            "AUhnrSEaW19iDvnKz6uLWKOt81j1qyBWt7ZYX17jG5kf3eYmcyqlgtEmk5YAqhd5JVWNJNwdqP8FSYuOz36W1KED1VeE4649KRljMsLoEbzEVH1cVryqQGA1Y7kkYKW1vj1IPeAhwch12rX8k8dZAbMDcwkK+8BuzS9CrXajfVUVzE2WpZk//EXV/fduAb7xpq+1UMYO/hRXh7k2M3H+y106Xsre8G9uKJMIlzZj+MRWxS5sbta/LdKwX4Wv+oEa4WpKThcjtqtGF90UulJIvVPbSBWkVHwrafllfNnsVePHneCtJ1t7bjZMtKYDTOtPw/2IVo6iekbsKGKlSVDxQxB4sEIwF6tJH8SWgU0i99p/W3IGx050xiEId/I8lyxUkvDF5JEgOtalPznHtdIQfE4tcd8cKJVikQFBpCiyFcfSQMhDy5+xAgWA",
+            "AUhnrSEaW19iDvnKz6uLWKOt81j0qyBWt7ZYX17jG5kf3eYmcyqlgtEmk5YAqhd5JVWNJNwdqP8FSYuOz37W1KED1VeE4649KRljMsLoEbzEVH1cVryqQGA1Y7kkYKW1vj1IPeAhwch12rX8k8dZAbMDcwkK+8BuzS9CrXajfVUVzE2WpZk//EXV/fduAb7xpq+1UMYO/hRXh7k2M3H+y106Xsre8G9uKJMIlzZj+MRWxS5sbta/LdKwX4Wv+oEa4WpKThcjtqtGF90UulJIvVPbSBWkVHwrafllfNnsVePHneCtJ1t7bjZMtKYDTOtPw/2IVo6iekbsKGKlSVDxQxB4sEIwF6tJH8SWgU0i99p/W3IGx050xiEId/I8lyxUkvDF5JEgOtalPznHtdIQfE4tcd8cKJVikQFBpCiyFcfSQMhDy5+xAgWA",
             PKey.PrivateKey1,
             PKey.Passphrase,
+            false,
             null,
-            null // modified ciphertext
-        };
+            null
+        }; // modified ciphertext
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

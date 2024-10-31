@@ -101,7 +101,7 @@ public class SealProviderTests
 
     [Theory]
     [ClassData(typeof(OnionUnsealerData))]
-    public void ShouldUnsealOnion(string onion, string key, string passphrase, byte[] expectedPlaintext)
+    public void ShouldUnsealOnion(string onion, string key, string passphrase, string? expectedNext, byte[]? expectedPlaintext)
     {
         // Arrange
         using var unsealer = SealProvider.Factory.CreateUnsealer(key, passphrase);
@@ -113,5 +113,6 @@ public class SealProviderTests
 
         // Assert
         content.Should().Equal(expectedPlaintext);
+        next.Should().Be(expectedNext);
     }
 }
