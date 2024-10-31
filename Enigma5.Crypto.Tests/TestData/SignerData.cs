@@ -27,9 +27,9 @@ public class SignerData: IEnumerable<object[]>
 {
     public IEnumerator<object[]> GetEnumerator()
     {
-        yield return new object[] {new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, PKey.PrivateKey1, PKey.Passphrase, 256 + 12 };
-        yield return new object[] {new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, PKey.PrivateKey2, PKey.Passphrase, 256 + 6 };
-        yield return new object[] {new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, PKey.PrivateKey3, string.Empty, 256 + 8 };
+        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, PKey.PrivateKey1, PKey.Passphrase, 256 + 12 };
+        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, PKey.PrivateKey2, PKey.Passphrase, 256 + 6 };
+        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, PKey.PrivateKey3, string.Empty, 256 + 8 };
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

@@ -84,4 +84,34 @@ public class SealProviderTests
         // Assert
         result.Should().Be(expectedResult);
     }
+
+    [Theory]
+    [ClassData(typeof(OnionSealerData))]
+    public void ShouldSealOnion(byte[] plaintext, List<string> keys, List<string> addresses, int expectedOnionLength)
+    {
+        // Arrange
+
+        // Act
+        var onion = SealProvider.SealOnion(plaintext, keys, addresses);
+        
+        // Assert
+        onion.Should().NotBeNull();
+        onion!.Length.Should().Be(expectedOnionLength);
+    }
+
+    [Theory]
+    [ClassData(typeof(OnionUnsealerData))]
+    public void ShouldUnsealOnion(string onion, string key, string passphrase, byte[] expectedPlaintext)
+    {
+        // Arrange
+        using var unsealer = SealProvider.Factory.CreateUnsealer(key, passphrase);
+
+        // Act
+        string? next = null;
+        byte[]? content = null;
+        unsealer.UnsealOnion(onion, ref next, ref content);
+
+        // Assert
+        content.Should().Equal(expectedPlaintext);
+    }
 }

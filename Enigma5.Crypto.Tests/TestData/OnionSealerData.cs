@@ -23,13 +23,13 @@ using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.Crypto.Tests.TestData;
 
-public class SealerData : IEnumerable<object[]>
+public class OnionSealerData : IEnumerable<object[]>
 {
     public IEnumerator<object[]> GetEnumerator()
     {
-        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, PKey.PublicKey1, 256 + 12 + 16 + 12 };
-        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, PKey.PublicKey2, 256 + 12 + 16 + 6 };
-        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, PKey.PublicKey3, 256 + 12 + 16 + 8 };
+        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, new List<string> { PKey.PublicKey1, PKey.PublicKey2 }, new List<string> { PKey.Address1, PKey.Address2 }, 864 };
+        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, new List<string> { PKey.PublicKey2, PKey.PublicKey3 }, new List<string> { PKey.Address2, PKey.Address2 }, 856 };
+        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, new List<string> { PKey.PublicKey1, PKey.PublicKey2 }, new List<string> { PKey.Address1, PKey.Address2 }, 860 };
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
