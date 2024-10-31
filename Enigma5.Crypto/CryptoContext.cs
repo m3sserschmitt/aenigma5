@@ -18,9 +18,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.Crypto.Extensions;
+
 namespace Enigma5.Crypto;
 
-public sealed class CryptoContext : IDisposable
+internal sealed class CryptoContext : IDisposable
 {
     private bool disposed = false;
 
@@ -28,11 +30,6 @@ public sealed class CryptoContext : IDisposable
 
     private CryptoContext(IntPtr handle)
     {
-        if (handle == IntPtr.Zero)
-        {
-            throw new Exception("Encryption context is null.");
-        }
-
         this.handle = handle;
     }
 
@@ -46,6 +43,8 @@ public sealed class CryptoContext : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    public bool IsNull => handle == IntPtr.Zero;
 
     private void Dispose(bool disposing)
     {
@@ -69,17 +68,16 @@ public sealed class CryptoContext : IDisposable
 
     internal static class Factory
     {
-        public static CryptoContext CreateAsymmetricEncryptionContext(string key)
-        => new(Native.CreateAsymmetricEncryptionContext(key));
+        public static CryptoContext CreateAsymmetricEncryptionContext(string publicKey)
+        => new(publicKey.IsValidPublicKey() ? Native.CreateAsymmetricEncryptionContext(publicKey) : IntPtr.Zero);
 
-        public static CryptoContext CreateAsymmetricDecryptionContext(string key, string passphrase)
-        => new(Native.CreateAsymmetricDecryptionContext(key, passphrase));
+        public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, string passphrase)
+        => new(privateKey.IsValidPrivateKey() ? Native.CreateAsymmetricDecryptionContext(privateKey, passphrase) : IntPtr.Zero);
 
+        public static CryptoContext CreateSignatureContext(string privateKey, string passphrase)
+        => new(privateKey.IsValidPrivateKey() ? Native.CreateSignatureContext(privateKey, passphrase) : IntPtr.Zero);
 
-        public static CryptoContext CreateSignatureContext(string key, string passphrase)
-        => new(Native.CreateSignatureContext(key, passphrase));
-
-        public static CryptoContext CreateSignatureVerificationContext(string key)
-        => new(Native.CreateVerificationContext(key));
+        public static CryptoContext CreateSignatureVerificationContext(string publicKey)
+        => new(publicKey.IsValidPublicKey() ? Native.CreateVerificationContext(publicKey) : IntPtr.Zero);
     }
 }

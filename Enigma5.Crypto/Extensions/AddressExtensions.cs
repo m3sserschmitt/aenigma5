@@ -20,7 +20,7 @@
 
 using System.Text.RegularExpressions;
 
-namespace Enigma5.App.Models.Extensions;
+namespace Enigma5.Crypto.Extensions;
 
 public static partial class AddressExtensions
 {
