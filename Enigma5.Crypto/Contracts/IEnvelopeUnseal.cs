@@ -24,5 +24,5 @@ public interface IEnvelopeUnsealer : IDisposable
 {
     byte[]? Unseal(byte[] ciphertext);
 
-    bool UnsealOnion(byte[] ciphertext, ref byte[]? next, ref byte[]? content);
+    bool UnsealOnion(string onion, ref string? next, ref byte[]? content);
 }

@@ -18,9 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
-using Enigma5.Structures.Contracts;
 
 namespace Enigma5.Structures;
 
@@ -32,15 +30,15 @@ public class OnionParser(IEnvelopeUnsealer envelopeUnseal)
 
     public byte[]? Content { get; private set; }
 
-    public bool Parse(IOnion onion)
+    public bool Parse(string onion)
     {
         try
         {
-            byte[]? next = null;
+            string? next = null;
             byte[]? content = null;
-            if(_unsealService.UnsealOnion(onion.Content, ref next, ref content))
+            if(_unsealService.UnsealOnion(onion, ref next, ref content))
             {
-                NextAddress = HashProvider.ToHex(next!);
+                NextAddress = next;
                 Content = content;
                 return true;
             }
