@@ -46,7 +46,7 @@ public sealed class SealProvider :
 
     private byte[]? Execute(byte[] input, NativeExecutor executor)
     {
-        if(_ctx.IsNull)
+        if(_ctx.IsNull || input.Length == 0)
         {
             return null;
         }
@@ -65,39 +65,58 @@ public sealed class SealProvider :
 
     public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.DecryptData);
 
-    public bool UnsealOnion(byte[] ciphertext, ref byte[]? next, ref byte[]? content)
+    public bool UnsealOnion(string onion, ref string? next, ref byte[]? content)
     {
-        if(_ctx.IsNull)
+        if(_ctx.IsNull || string.IsNullOrWhiteSpace(onion))
         {
             return false;
         }
 
-        var data = Native.UnsealOnion(_ctx, ciphertext, out var outLen);
+        try
+        {
+            var decodedOnion = Convert.FromBase64String(onion);
 
-        if (data == IntPtr.Zero || outLen < Constants.AddressSize)
+            if(decodedOnion is null)
+            {
+                return false;
+            }
+
+            var data = Native.UnsealOnion(_ctx, decodedOnion, out var outLen);
+
+            if (data == IntPtr.Zero || outLen < Constants.AddressSize)
+            {
+                return false;
+            }
+
+            var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
+            next = null;
+            if(nextBytes is not null)
+            {
+                next = HashProvider.ToHex(nextBytes);
+            }
+            content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
+
+            return next is not null && content is not null;
+        }
+        catch(Exception)
         {
             return false;
         }
-
-        next = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
-        content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
-
-        return next is not null && content is not null;
     }
 
     public static int GetPKeySize(string publicKey) => publicKey.IsValidPublicKey() ? (int)Native.GetPKeySize(publicKey) : -1;
 
     public static string? SealOnion(
         byte[] plaintext,
-        string[] keys,
-        string[] addresses)
+        List<string> keys,
+        List<string> addresses)
     {
-        if (keys.Length != addresses.Length || keys.Any(item => !item.IsValidPublicKey()) || addresses.Any(item => !item.IsValidAddress()))
+        if (keys.Count != addresses.Count || keys.Any(item => !item.IsValidPublicKey()) || addresses.Any(item => !item.IsValidAddress()) || plaintext.Length == 0)
         {
             return null;
         }
 
-        var data = Native.SealOnion(plaintext, (uint)plaintext.Length, keys, addresses, (uint)keys.Length, out var outLen);
+        var data = Native.SealOnion(plaintext, (uint)plaintext.Length, [.. keys], [.. addresses], (uint)keys.Count, out var outLen);
 
         if (data == IntPtr.Zero || outLen < 0)
         {
@@ -105,19 +124,14 @@ public sealed class SealProvider :
         }
 
         var managedBuffer = KeyUtil.CopyKeyFromNativeBuffer(data, outLen);
-
-        if(managedBuffer is null)
-        {
-            return null;
-        }
-
         KeyUtil.FreeKeyNativeBuffer(data, outLen);
-        return Convert.ToBase64String(managedBuffer);
+        
+        return managedBuffer is not null ? Convert.ToBase64String(managedBuffer) : null;
     }
 
     public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.SignData) : null;
 
-    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
+    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
 
     public void Dispose()
     {
@@ -141,6 +155,8 @@ public sealed class SealProvider :
 
         public static IEnvelopeUnsealer CreateUnsealer(string key)
         => CreateUnsealer(key, string.Empty);
-    }
 
+        public static IEnvelopeSealer CreateSealer(string key)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));
+    }
 }

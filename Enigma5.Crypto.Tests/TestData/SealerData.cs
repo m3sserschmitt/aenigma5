@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,21 +18,19 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Structures.Contracts;
+using System.Collections;
+using Enigma5.Crypto.DataProviders;
 
-namespace Enigma5.Structures;
+namespace Enigma5.Crypto.Tests.TestData;
 
-public class Onion : IOnion
+public class SealerData : IEnumerable<object[]>
 {
-    public Onion()
+    public IEnumerator<object[]> GetEnumerator()
     {
-        Content = [0x00];
+        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, PKey.PublicKey1, 256 + 12 + 16 + 12 };
+        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, PKey.PublicKey2, 256 + 12 + 16 + 6 };
+        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, PKey.PublicKey3, 256 + 12 + 16 + 8 };
     }
 
-    public Onion(byte[] content)
-    {
-        Content = content;
-    }
-
-    public byte[] Content { get; set; }
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

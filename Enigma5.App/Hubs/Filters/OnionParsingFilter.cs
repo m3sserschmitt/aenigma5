@@ -45,9 +45,7 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
         var request = invocationContext.MethodInvocationArgument<RoutingRequest>(0);
         if (request != null)
         {
-            var decodedData = Convert.FromBase64String(request.Payload!);
-
-            if (decodedData is not null && _parser!.Parse(new Onion { Content = decodedData }))
+            if (_parser.Parse(request.Payload!))
             {
                 _ = new OnionParsingHubAdapter(invocationContext.Hub)
                 {

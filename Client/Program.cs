@@ -37,12 +37,11 @@ public class Program
     private static void HandleMessage(string message, string privateKey, string passphrase)
     {
         Console.WriteLine($"Message received");
-        var decodedData = Convert.FromBase64String(message);
 
         using var unsealer = SealProvider.Factory.CreateUnsealer(privateKey, passphrase);
         var onionParser = new OnionParser(unsealer);
 
-        if (onionParser.Parse(new Onion { Content = decodedData }))
+        if (onionParser.Parse(message))
         {
             Console.WriteLine($"Message: {Encoding.UTF8.GetString(onionParser.Content!, 0, onionParser.Content!.Length)}");
         }
