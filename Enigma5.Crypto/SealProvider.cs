@@ -108,6 +108,8 @@ public sealed class SealProvider :
 
         public static IEnvelopeUnsealer CreateUnsealer(string key)
         => CreateUnsealer(key, string.Empty);
-    }
 
+        public static IEnvelopeSealer CreateSealer(string key)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));
+    }
 }

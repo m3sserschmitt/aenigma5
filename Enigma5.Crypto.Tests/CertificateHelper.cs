@@ -19,6 +19,7 @@
 */
 
 using Enigma5.Crypto.DataProviders;
+using FluentAssertions;
 using Xunit;
 
 namespace Enigma5.Crypto.Tests;
@@ -26,7 +27,7 @@ namespace Enigma5.Crypto.Tests;
 public class CertificateHelperTests
 {
     [Fact]
-    public void CertificateHelper_ShouldComputeCorrectAddressFromPublicKey()
+    public void ShouldComputeCorrectAddressFromPublicKey()
     {
         // Arrange
 
@@ -34,6 +35,6 @@ public class CertificateHelperTests
         var address = CertificateHelper.GetHexAddressFromPublicKey(PKey.PublicKey1);
 
         // Assert
-        Assert.Equal(PKey.Address1, address);
+        address.Should().Be(PKey.Address1);
     }
 }
