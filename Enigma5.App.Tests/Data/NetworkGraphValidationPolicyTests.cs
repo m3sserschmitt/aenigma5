@@ -96,7 +96,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     public void ShouldNotValidateVertexWithInvalidNeighborAddress()
     {
         // Arrange
-        var invalidAddresses = new List<string> { "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffxyz" };
+        var invalidAddresses = new HashSet<string> { "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffxyz" };
         var vertex = _scope.ResolveAdjacentVertex(invalidAddresses);
 
         // Act

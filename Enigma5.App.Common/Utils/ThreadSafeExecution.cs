@@ -18,33 +18,44 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Microsoft.Extensions.Logging;
+
 namespace Enigma5.App.Common.Utils;
 
 public static class ThreadSafeExecution
 {
     public delegate T Func<T, U>(out U a);
 
-    public static T Execute<T>(Func<T> action, T defaultReturn, object locker)
+    public static T Execute<T>(Func<T> action, T defaultReturn, object locker, ILogger? logger = null)
     {
-        T result = defaultReturn;
-
-        lock (locker)
+        try
         {
-            result = action();
+            lock (locker)
+            {
+                return action();
+            }
         }
-
-        return result;
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Exception thrown");
+        }
+        return defaultReturn;
     }
 
-    public static T Execute<T, U>(Func<T, U> action, T defaultReturn, out U outParam, object locker)
+    public static T Execute<T, U>(Func<T, U?> action, T defaultReturn, out U? outParam, object locker, ILogger? logger = null)
     {
-        T result = defaultReturn;
-
-        lock(locker)
+        try
         {
-            result = action(out outParam);
+            lock (locker)
+            {
+                return action(out outParam);
+            }
         }
-
-        return result;
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Exception thrown.");
+        }
+        outParam = default;
+        return defaultReturn;
     }
 }

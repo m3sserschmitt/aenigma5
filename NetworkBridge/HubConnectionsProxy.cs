@@ -21,9 +21,9 @@
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models;
-using Enigma5.App.Models.Extensions;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.Crypto;
+using Enigma5.Crypto.Extensions;
 using Enigma5.Security;
 using Enigma5.Security.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;

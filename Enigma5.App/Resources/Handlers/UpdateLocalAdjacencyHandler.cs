@@ -39,7 +39,7 @@ public class UpdateLocalAdjacencyHandler(
 
     private readonly ILogger<UpdateLocalAdjacencyHandler> _logger = logger;
 
-    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
     {
         var (newLocalVertex, updated) = request.Add ?
         await _networkGraph.AddAdjacencyAsync(request.Address, cancellationToken)

@@ -31,9 +31,12 @@ public class BroadcastHandlerTests : AppTestBase
 {
     private readonly BroadcastHandler _handler;
 
+    private readonly NetworkGraph _graph;
+
     public BroadcastHandlerTests()
     {
         _handler = _scope.Resolve<BroadcastHandler>();
+        _graph = _scope.Resolve<NetworkGraph>();
     }
 
     [Fact]
@@ -45,15 +48,18 @@ public class BroadcastHandlerTests : AppTestBase
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
-        var (localVertex, broadcasts) = await _handler.Handle(request);
+        var result = await _handler.Handle(request);
 
         // Assert
+        var localVertex = _graph.LocalVertex;
+        var broadcasts = result.Value;
+        broadcast.Should().NotBeNull();
         localVertex.Should().BeOfType<Vertex>();
         broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
-        localVertex.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
+        localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts.Should().HaveCount(2);
-        var broadcastLocal = broadcasts.Single(item => item.PublicKey == localVertex.PublicKey);
-        var broadcastRemote = broadcasts.Single(item => item.PublicKey == vertex.PublicKey);
+        var broadcastLocal = broadcasts!.Single(item => item.PublicKey == localVertex.PublicKey);
+        var broadcastRemote = broadcasts!.Single(item => item.PublicKey == vertex.PublicKey);
         broadcastLocal.SignedData.Should().Be(localVertex.SignedData);
         broadcastRemote.SignedData.Should().Be(vertex.SignedData);
     }
@@ -67,13 +73,19 @@ public class BroadcastHandlerTests : AppTestBase
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
-        var (localVertex1, broadcasts1) = await _handler.Handle(request);
-        var (localVertex2, broadcasts2) = await _handler.Handle(request);
+        var result1 = await _handler.Handle(request);
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(request);
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
-        localVertex1.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
+        var broadcasts1 = result1.Value;
+        var broadcasts2 = result2.Value;
+        broadcasts1.Should().NotBeNull();
+        broadcasts2.Should().NotBeNull();
+        localVertex1!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts1.Should().HaveCount(2);
-        localVertex2.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
+        localVertex2!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts2.Should().BeEmpty();
     }
 
@@ -89,13 +101,19 @@ public class BroadcastHandlerTests : AppTestBase
         var request2 = new HandleBroadcastCommand(finalBroadcast);
     
         // Act
-        var (localVertex1, broadcasts1) = await _handler.Handle(request1);
-        var (localVertex2, broadcasts2) = await _handler.Handle(request2);
+        var result1 = await _handler.Handle(request1);
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(request2);
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
-        localVertex1.Neighborhood.Neighbors.Single().Should().Be(adjacentVertex.Neighborhood.Address);
+        var broadcasts1 = result1.Value;
+        var broadcasts2 = result2.Value;
+        broadcasts1.Should().NotBeNull();
+        broadcasts2.Should().NotBeNull();
+        localVertex1!.Neighborhood.Neighbors.Single().Should().Be(adjacentVertex.Neighborhood.Address);
         broadcasts1.Should().HaveCount(2);
-        localVertex2.Neighborhood.Neighbors.Should().BeEmpty();
+        localVertex2!.Neighborhood.Neighbors.Should().BeEmpty();
         broadcasts2.Should().HaveCount(2);
         broadcasts2.Should().Contain(item => item.PublicKey == adjacentVertex.PublicKey);
         broadcasts2.Should().Contain(item => item.PublicKey == localVertex1.PublicKey);

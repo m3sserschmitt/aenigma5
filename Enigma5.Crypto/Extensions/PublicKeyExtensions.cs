@@ -25,36 +25,37 @@ namespace Enigma5.Crypto.Extensions;
 public static partial class PublicKeyExtensions
 {
     private static bool IsValidKey(this string? key, Func<Regex> regex)
+    => key.GetKeyBase64Content(regex).IsValidBase64();
+
+    private static string? GetKeyBase64Content(this string? key, Func<Regex> regex)
     {
         try
         {
-            if(string.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(key))
             {
-                return false;
-            }
-            
-            var matches = regex.Invoke().Match(key);
-            
-            if (matches.Success)
-            {
-                var base64Content = matches.Groups[1].Value
-                .Replace("\n", "")
-                .Replace("\r", "")
-                .Replace(" ", "");
-                return base64Content.IsValidBase64();
+                return null;
             }
 
-            return false;
+            var matches = regex.Invoke().Match(key);
+
+            if (matches.Success)
+            {
+                return matches.Groups[1].Value.Replace("\n", string.Empty).Replace("\r", string.Empty).Replace(" ", string.Empty);
+            }
+
+            return null;
         }
-        catch
+        catch (Exception)
         {
-            return false;
+            return null;
         }
     }
 
     public static bool IsValidPublicKey(this string? publicKey) => publicKey.IsValidKey(PublicKeyRegex);
 
     public static bool IsValidPrivateKey(this string? privateKey) => privateKey.IsValidKey(PrivateKeyRegex);
+
+    public static string? GetPublicKeyBase64(this string? publicKey) => publicKey.GetKeyBase64Content(PublicKeyRegex);
 
     [GeneratedRegex(@"^-----BEGIN(?: [A-Z]+)* PRIVATE KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PRIVATE KEY-----$", RegexOptions.Multiline)]
     private static partial Regex PrivateKeyRegex();

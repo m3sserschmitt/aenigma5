@@ -19,12 +19,14 @@
 */
 
 using Autofac;
-using AutoMapper.Contrib.Autofac.DependencyInjection;
+using Autofac.Extensions.DependencyInjection;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Handlers;
+using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
-using Enigma5.Security.DataProviders;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace Enigma5.App.Tests;
@@ -37,17 +39,25 @@ public class AppTestBase
 
     public AppTestBase()
     {
+        var serviceCollection = new ServiceCollection();
         var builder = new ContainerBuilder();
 
-        builder.RegisterType<NetworkGraph>();
+        builder.RegisterType<NetworkGraph>().InstancePerLifetimeScope();
         builder.RegisterType<TestCertificateManager>().As<ICertificateManager>().SingleInstance();
         builder.RegisterVertex();
         builder.Register(_ => Substitute.For<IConfiguration>());
-
+        builder.Register(c => {
+            var certificateManager = c.Resolve<ICertificateManager>();
+            return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
+        });
+        serviceCollection.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
+        builder.Populate(serviceCollection);
         builder.RegisterType<UpdateLocalAdjacencyHandler>();
         builder.RegisterType<BroadcastHandler>();
-
-        builder.RegisterAutoMapper(typeof(App).Assembly);
 
         _container = builder.Build();
         _scope = _container.BeginLifetimeScope();
