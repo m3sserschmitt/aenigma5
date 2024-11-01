@@ -23,6 +23,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto.Contracts;
+using Enigma5.Crypto;
 
 namespace Enigma5.App.Data;
 
@@ -67,32 +68,37 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
     public static class Factory
     {
-        public static Vertex Create(
+        public static Vertex? Create(
         string publicKey,
         IEnvelopeSigner signer,
-        string address,
         HashSet<string> neighbors,
         string? hostname = null)
         {
-            var neighborhood = new Neighborhood([.. neighbors], address, hostname);
-            var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
-            var signature = signer.Sign(serializedNeighborhood);
+            try
+            {
+                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname);
+                var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
+                var signature = signer.Sign(serializedNeighborhood);
 
-            return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature!));
+                return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature!));
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
-        public static Vertex Create(IEnvelopeSigner signer, ICertificateManager certificateManager, HashSet<string> neighbors, string? hostname = null)
+        public static Vertex? Create(IEnvelopeSigner signer, ICertificateManager certificateManager, HashSet<string> neighbors, string? hostname = null)
         => Create(
             certificateManager.PublicKey,
             signer,
-            certificateManager.Address,
             neighbors,
             hostname);
 
-        public static Vertex CreateWithEmptyNeighborhood(IEnvelopeSigner signer, ICertificateManager certificateManager, string? hostname = null)
+        public static Vertex? CreateWithEmptyNeighborhood(IEnvelopeSigner signer, ICertificateManager certificateManager, string? hostname = null)
         => Create(signer, certificateManager, [], hostname);
 
-        public static Vertex Create(string address)
+        public static Vertex? Create(string address)
         => new(new([], address, null), string.Empty, null);
 
         public static class Prototype

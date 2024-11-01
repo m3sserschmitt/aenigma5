@@ -38,7 +38,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldAddNewVertex()
+    public void ShouldAddNewVertex()
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
@@ -55,7 +55,7 @@ public class NetworkGraphTests : AppTestBase
         var adjacentVertex = vertices.Single(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
         adjacentVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         adjacentVertex.Neighborhood.Neighbors.Should().Contain(_certificateManager.Address);
-        _graph.LocalVertex.Neighborhood.Neighbors.Should().HaveCount(1);
+        _graph.LocalVertex!.Neighborhood.Neighbors.Should().HaveCount(1);
         _graph.LocalVertex.Neighborhood.Neighbors.Should().Contain(vertex.Neighborhood.Address);
         _graph.Vertices.Should().HaveCount(2);
         _graph.Vertices.Should().Contain(_graph.LocalVertex);
@@ -63,7 +63,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldRemoveAdjacency()
+    public void ShouldRemoveAdjacency()
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
@@ -85,7 +85,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldNotUpdateGraphTwice()
+    public void ShouldNotUpdateGraphTwice()
     {
         // Arrange
         var vertex = _scope.ResolveAdjacentVertex();
@@ -109,7 +109,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldAddNeighbor()
+    public void ShouldAddNeighbor()
     {
         // Arrange
 
@@ -124,7 +124,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldNotAddNeighborTwice()
+    public void ShouldNotAddNeighborTwice()
     {
         // Arrange
 
@@ -140,7 +140,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldNotAddAdjacencyWithInvalidAddress()
+    public void ShouldNotAddAdjacencyWithInvalidAddress()
     {
         // Arrange
 
@@ -152,7 +152,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldAddAndRemoveNeighbor()
+    public void ShouldAddAndRemoveNeighbor()
     {
         // Arrange
 

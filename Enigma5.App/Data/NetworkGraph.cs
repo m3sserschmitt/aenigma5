@@ -24,6 +24,7 @@ using Enigma5.App.Data.Extensions;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Data;
 
@@ -37,6 +38,8 @@ public class NetworkGraph
 
     private readonly IConfiguration _configuration;
 
+    private readonly ILogger<NetworkGraph> _logger;
+
     private Vertex _localVertex;
 
     private readonly HashSet<Vertex> _vertices;
@@ -45,21 +48,22 @@ public class NetworkGraph
 
     // public Graph Graph => ThreadSafeExecution.Execute(() => _graph.CopyBySerialization(), new Graph(_certificateManager.PublicKey, string.Empty), _locker);
 
-    public HashSet<Vertex> Vertices => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker);
+    public HashSet<Vertex> Vertices => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker, _logger);
 
-    public Vertex LocalVertex => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), CreateInitialVertex(), _locker);
+    public Vertex? LocalVertex => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), null, _locker, _logger);
 
-    public HashSet<string> NeighboringAddresses => [.. ThreadSafeExecution.Execute(() => _localVertex.Neighborhood.Neighbors.CopyBySerialization(), [], _locker)];
+    public HashSet<string> NeighboringAddresses => ThreadSafeExecution.Execute(() => _localVertex.Neighborhood.Neighbors.CopyBySerialization(), [], _locker, _logger);
 
-    public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker);
+    public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker, _logger);
 
-    public NetworkGraph(IEnvelopeSigner signer, ICertificateManager certificateManager, IConfiguration configuration)
+    public NetworkGraph(IEnvelopeSigner signer, ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger)
     {
         _signer = signer;
         _certificateManager = certificateManager;
         _configuration = configuration;
         _localVertex = CreateInitialVertex();
         _vertices = [_localVertex];
+        _logger = logger;
         // SignGraph();
         // _graph ??= new Graph(_certificateManager.PublicKey, string.Empty);
     }
@@ -68,13 +72,14 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (_vertices.TryGetValue(Vertex.Factory.Create(address), out var foundVertex))
+            var v = Vertex.Factory.Create(address);
+            if (v is not null && _vertices.TryGetValue(v, out var foundVertex))
             {
                 return foundVertex.CopyBySerialization();
             }
 
             return null;
-        }, null, _locker
+        }, null, _locker, _logger
     );
 
     public Task<Vertex?> GetVertexAsync(string address, CancellationToken cancellationToken = default)
@@ -99,7 +104,8 @@ public class NetworkGraph
             return (_localVertex.CopyBySerialization(), false);
         },
         (_localVertex.CopyBySerialization(), false),
-        _locker
+        _locker,
+        _logger
     );
 
     public (Vertex localVertex, bool updated) RemoveAdjacency(List<string> addresses)
@@ -117,7 +123,8 @@ public class NetworkGraph
             return (_localVertex.CopyBySerialization(), false);
         },
         (_localVertex.CopyBySerialization(), false),
-        _locker
+        _locker,
+        _logger
     );
 
     public Task<(Vertex localVertex, bool updated)> AddAdjacencyAsync(List<string> addresses, CancellationToken cancellationToken = default)
@@ -180,7 +187,8 @@ public class NetworkGraph
                 return updatedVertices;
             },
             [],
-            _locker
+            _locker,
+            _logger
         );
     }
 
@@ -207,7 +215,17 @@ public class NetworkGraph
         _graph = new Graph(_certificateManager.PublicKey, encodedSignature);
     }*/
 
-    private Vertex CreateInitialVertex() => Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname());
+    private Vertex CreateInitialVertex()
+    { 
+        var v = Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname());
+        if(v is null)
+        {
+            var ex = new Exception("Initial vertex resolved to null.");
+            _logger.LogCritical(ex, "Critical error occurred while creating initial vertex.");
+            throw ex;
+        }
+        return v;
+    }
 
     private bool ValidateNewVertex(Vertex vertex)
     {
@@ -219,7 +237,8 @@ public class NetworkGraph
         return ThreadSafeExecution.Execute(
             () => ValidateGraphPolicy(vertex),
             false,
-            _locker
+            _locker,
+            _logger
         );
     }
 
@@ -281,7 +300,7 @@ public class NetworkGraph
 
         foreach (var vertex in _vertices.Where(item => !item.IsLeaf))
         {
-            union.UnionWith(vertex.Neighborhood.Neighbors.Select(Vertex.Factory.Create));
+            union.UnionWith(vertex.Neighborhood.Neighbors.Select(Vertex.Factory.Create).Where(item => item is not null)!);
         }
 
         return union;

@@ -20,23 +20,15 @@
 
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto;
+using Enigma5.Crypto.DataProviders;
 
-namespace Enigma5.Security.DataProviders;
+namespace Enigma5.App.Tests;
 
 public class TestCertificateManager : ICertificateManager
 {
-    private readonly string _publicKey;
+    public string PublicKey => PKey.PublicKey3;
 
-    private readonly string _privateKey;
-
-    public string PublicKey => _publicKey;
-
-    public string PrivateKey => _privateKey;
+    public string PrivateKey => PKey.PrivateKey3;
 
     public string Address => CertificateHelper.GetHexAddressFromPublicKey(PublicKey);
-
-    public TestCertificateManager()
-    {
-        (_publicKey, _privateKey) = KeysGenerator.GenerateKeys(2048);
-    }
 }

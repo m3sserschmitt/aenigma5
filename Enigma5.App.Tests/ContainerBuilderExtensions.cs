@@ -21,6 +21,7 @@
 using Autofac;
 using Autofac.Builder;
 using Enigma5.App.Data;
+using Enigma5.Crypto.Contracts;
 
 namespace Enigma5.App.Tests;
 
@@ -31,13 +32,11 @@ public static class ContainerBuilderExtensions
         return containerBuilder.Register((c, args) =>
         {
             var publicKey = args.Named<string>("publicKey");
-            var privateKey = args.Named<byte[]>("privateKey");
-            var passphrase = args.Named<string>("passphrase");
-            var address = args.Named<string>("address");
-            var neighbors = args.Named<List<string>>("neighbors");
+            var signer = args.Named<IEnvelopeSigner>("signer");
+            var neighbors = args.Named<HashSet<string>>("neighbors");
             var hostname = args.Named<string>("hostname");
 
-            return Vertex.Factory.Create(publicKey, privateKey, address, [..neighbors], passphrase, hostname == string.Empty ? null : hostname);
+            return Vertex.Factory.Create(publicKey, signer, neighbors, string.IsNullOrWhiteSpace(hostname) ? null : hostname)!;
         });
     }
 }

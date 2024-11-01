@@ -32,12 +32,15 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
 {
     private readonly ICertificateManager _certificateManager;
 
+    private readonly NetworkGraph _graph;
+
     private readonly UpdateLocalAdjacencyHandler _handler;
 
     public UpdateLocalAdjacencyHandlerTests()
     {
         _certificateManager = _scope.Resolve<ICertificateManager>();
         _handler = _scope.Resolve<UpdateLocalAdjacencyHandler>();
+        _graph = _scope.Resolve<NetworkGraph>();
     }
 
     [Fact]
@@ -47,10 +50,12 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
 
         // Act
-        var (localVertex, broadcast) = await _handler.Handle(request);
+        var result = await _handler.Handle(request);
 
+        var localVertex = _graph.LocalVertex;
+        var broadcast = result.Value;
         localVertex.Should().BeOfType<Vertex>();
-        localVertex.PublicKey.Should().Be(_certificateManager.PublicKey);
+        localVertex!.PublicKey.Should().Be(_certificateManager.PublicKey);
         localVertex.SignedData.Should().NotBeEmpty();
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
@@ -67,14 +72,16 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
 
         // Act
-        var (localVertex1, broadcast1) = await _handler.Handle(request);
-        var (localVertex2, broadcast2) = await _handler.Handle(request);
+        var result1 = await _handler.Handle(request);
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(request);
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
         localVertex1.Should().Be(localVertex2);
-        localVertex1.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
-        broadcast1.Should().NotBeNull();
-        broadcast2.Should().BeNull();
+        localVertex1!.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
+        result1.Value.Should().NotBeNull();
+        result2.Value.Should().BeNull();
     }
 
     [Fact]
@@ -84,14 +91,15 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], false);
 
         // Act
-        var (localVertex, broadcast) = await _handler.Handle(request);
+        var result = await _handler.Handle(request);
 
         // Assert
-        localVertex.PublicKey.Should().Be(_certificateManager.PublicKey);
+        var localVertex = _graph.LocalVertex;
+        localVertex!.PublicKey.Should().Be(_certificateManager.PublicKey);
         localVertex.SignedData.Should().NotBeEmpty();
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().BeEmpty();
-        broadcast.Should().BeNull();
+        result.Value.Should().BeNull();
     }
 
     [Fact]
@@ -100,13 +108,15 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
         // Arrange
 
         // Act
-        var (localVertex1, broadcast1) = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], true));
-        var (localVertex2, broadcast2) = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], false));
+        var result1 = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], true));
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], false));
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
-        localVertex1.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
-        broadcast1.Should().NotBeNull();
-        localVertex2.Neighborhood.Neighbors.Should().BeEmpty();
-        broadcast2.Should().NotBeNull();
+        localVertex1!.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
+        result1.Value.Should().NotBeNull();
+        localVertex2!.Neighborhood.Neighbors.Should().BeEmpty();
+        result2.Should().NotBeNull();
     }
 }

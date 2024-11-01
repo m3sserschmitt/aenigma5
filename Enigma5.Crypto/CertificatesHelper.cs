@@ -18,45 +18,40 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.Crypto;
 
 public static class CertificateHelper
 {
-    public static byte[] GetAddressFromPublicKey(string publicKey)
+    public static byte[]? GetAddressFromPublicKey(string? publicKey)
     {
-        if (string.IsNullOrWhiteSpace(publicKey))
-        {
-            return [];
-        }
-
         try
         {
-            string[] lines = publicKey.Split('\n').Where(l => l.Length != 0).ToArray();
-
-            StringBuilder base64ContentBuilder = new();
-            for (int i = 1; i < lines.Length - 1; i++)
+            var content = publicKey.GetPublicKeyBase64();
+            
+            if(content is null)
             {
-                base64ContentBuilder.Append(lines[i].Trim());
+                return null;
             }
 
-            return HashProvider.Sha256(Convert.FromBase64String(base64ContentBuilder.ToString()));
+            return HashProvider.Sha256(Convert.FromBase64String(content));
         }
         catch
         {
-            return [];
+            return null;
         }
     }
 
     public static string GetHexAddressFromPublicKey(string? publicKey)
     {
-        if (string.IsNullOrWhiteSpace(publicKey))
+        var hash = GetAddressFromPublicKey(publicKey);
+
+        if(hash is null)
         {
             return string.Empty;
         }
-
-        var hash = GetAddressFromPublicKey(publicKey);
+        
         return BitConverter.ToString(hash).Replace("-", string.Empty).ToLower();
     }
 }
