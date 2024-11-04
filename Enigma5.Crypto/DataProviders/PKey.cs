@@ -212,5 +212,7 @@ scwY6pZjQOpaJL/iLBmqZA==
 
     public static readonly string Address2 = "a186a6fba0ff7570b116b3df639e3713fab0a21f1cf62fb616d84c19217c8023";
 
+    public static readonly string Address3 = "ba31d23e282003c678dcfec48c17d044061f340d3e6e7f7a1109dd1db32d1d95";
+
     public static readonly string Passphrase = "12345678";
 }

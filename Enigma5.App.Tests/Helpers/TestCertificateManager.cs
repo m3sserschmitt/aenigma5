@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,25 +18,16 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Autofac;
-using Autofac.Builder;
-using Enigma5.App.Data;
-using Enigma5.Crypto.Contracts;
+using Enigma5.Security.Contracts;
+using Enigma5.Crypto.DataProviders;
 
-namespace Enigma5.App.Tests;
+namespace Enigma5.App.Tests.Helpers;
 
-public static class ContainerBuilderExtensions
+public class TestCertificateManager : ICertificateManager
 {
-    public static IRegistrationBuilder<Vertex, SimpleActivatorData, SingleRegistrationStyle> RegisterVertex(this ContainerBuilder containerBuilder)
-    {
-        return containerBuilder.Register((c, args) =>
-        {
-            var publicKey = args.Named<string>("publicKey");
-            var signer = args.Named<IEnvelopeSigner>("signer");
-            var neighbors = args.Named<HashSet<string>>("neighbors");
-            var hostname = args.Named<string>("hostname");
+    public string PublicKey => PKey.PublicKey3;
 
-            return Vertex.Factory.Create(publicKey, signer, neighbors, string.IsNullOrWhiteSpace(hostname) ? null : hostname)!;
-        });
-    }
+    public string PrivateKey => PKey.PrivateKey3;
+
+    public string Address => PKey.Address3;
 }

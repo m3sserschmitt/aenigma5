@@ -25,26 +25,23 @@ using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
+using Enigma5.App.Tests.Helpers;
+using Xunit;
+using FluentAssertions;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
 public class UpdateLocalAdjacencyHandlerTests : AppTestBase
 {
-    private readonly ICertificateManager _certificateManager;
-
-    private readonly NetworkGraph _graph;
-
     private readonly UpdateLocalAdjacencyHandler _handler;
 
     public UpdateLocalAdjacencyHandlerTests()
     {
-        _certificateManager = _scope.Resolve<ICertificateManager>();
-        _handler = _scope.Resolve<UpdateLocalAdjacencyHandler>();
-        _graph = _scope.Resolve<NetworkGraph>();
+        _handler = _container.Resolve<UpdateLocalAdjacencyHandler>();
     }
 
     [Fact]
-    public async void ShouldAddNewNeighbor()
+    public async Task ShouldAddNewNeighbor()
     {
         // Arrange
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
@@ -54,7 +51,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
 
         var localVertex = _graph.LocalVertex;
         var broadcast = result.Value;
-        localVertex.Should().BeOfType<Vertex>();
+        localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
         localVertex!.PublicKey.Should().Be(_certificateManager.PublicKey);
         localVertex.SignedData.Should().NotBeEmpty();
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
@@ -66,7 +63,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     }
 
     [Fact]
-    public async void ShouldNotAddNeighborTwice()
+    public async Task ShouldNotAddNeighborTwice()
     {
         // Arrange
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
@@ -85,7 +82,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     }
 
     [Fact]
-    public async void ShouldNotRemoveNonExistentNeighbor()
+    public async Task ShouldNotRemoveNonExistentNeighbor()
     {
         // Arrange
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], false);
@@ -103,7 +100,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     }
 
     [Fact]
-    public async void ShouldAddAndRemoveNeighbor()
+    public async Task ShouldAddAndRemoveNeighbor()
     {
         // Arrange
 

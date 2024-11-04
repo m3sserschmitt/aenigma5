@@ -22,26 +22,19 @@ using Autofac;
 using Enigma5.App.Data;
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
+using Enigma5.App.Tests.Helpers;
+using Xunit;
+using FluentAssertions;
 
 namespace Enigma5.App.Tests.Data;
 
 public class NetworkGraphTests : AppTestBase
 {
-    private readonly ICertificateManager _certificateManager;
-
-    private readonly NetworkGraph _graph;
-
-    public NetworkGraphTests()
-    {
-        _certificateManager = _scope.Resolve<ICertificateManager>();
-        _graph = _scope.Resolve<NetworkGraph>();
-    }
-
     [Fact]
     public void ShouldAddNewVertex()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
         // Act
         var vertices = _graph.Update(vertex);
@@ -66,9 +59,9 @@ public class NetworkGraphTests : AppTestBase
     public void ShouldRemoveAdjacency()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
-        var updatedVertex = _scope.ResolveNonAdjacentVertex();
+        var updatedVertex = _container.ResolveNonAdjacentVertex();
 
         // Act
         var vertices = _graph.Update(vertex);
@@ -88,7 +81,7 @@ public class NetworkGraphTests : AppTestBase
     public void ShouldNotUpdateGraphTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
         // Act
         var vertices = _graph.Update(vertex);

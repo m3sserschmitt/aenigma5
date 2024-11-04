@@ -18,13 +18,17 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models;
-using Enigma5.App.Resources.Handlers;
-using MediatR;
+using System.Text.Json.Serialization;
 
-namespace Enigma5.App.Resources.Queries;
+namespace Enigma5.App.Models;
 
-public class GetVertexQuery(string address): IRequest<CommandResult<Vertex>>
+public class Vertex
 {
-    public string Address { get; private set; } = address;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PublicKey { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SignedData { get; set; }
+
+    public Neighborhood? Neighborhood { get; set; }
 }

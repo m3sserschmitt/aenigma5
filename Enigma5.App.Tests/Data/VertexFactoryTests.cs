@@ -20,22 +20,22 @@
 
 using Autofac;
 using Enigma5.App.Data;
-using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto.Contracts;
+using Enigma5.App.Tests.Helpers;
+using Xunit;
+using FluentAssertions;
+using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.App.Tests.Data;
 
 public class VertexFactoryTests : AppTestBase
 {
-    private readonly ICertificateManager _certificateManager;
-
     private readonly IEnvelopeSigner _signer;
 
     public VertexFactoryTests()
     {
-        _certificateManager = _scope.Resolve<ICertificateManager>();
-        _signer = _scope.Resolve<IEnvelopeSigner>();
+        _signer = _container.Resolve<IEnvelopeSigner>();
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class VertexFactoryTests : AppTestBase
     public void ShouldAddNeighbor()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex();
+        var vertex = _container.ResolveLocalVertex();
 
         // Act
         var added = Vertex.Factory.Prototype.AddNeighbor(vertex, PKey.Address1, _signer, _certificateManager, out Vertex? newVertex);
@@ -74,14 +74,14 @@ public class VertexFactoryTests : AppTestBase
         newVertex.SignedData.Should().NotBeEmpty();
         newVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         newVertex.Neighborhood.Neighbors.Should().Contain(PKey.Address1);
-        newVertex.Neighborhood.Hostname.Should().Be("localhost");
+        newVertex.Neighborhood.Hostname.Should().Be(_configuration.GetHostname());
     }
 
     [Fact]
     public void ShouldNotAddNeighborTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex([PKey.Address1]);
+        var vertex = _container.ResolveLocalVertex([PKey.Address1]);
 
         // Act
         var secondAdded = Vertex.Factory.Prototype.AddNeighbor(vertex, PKey.Address1, _signer, _certificateManager, out Vertex? newVertex);
@@ -95,7 +95,7 @@ public class VertexFactoryTests : AppTestBase
     public void ShouldRemoveNeighbor()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex([PKey.Address1]);
+        var vertex = _container.ResolveLocalVertex([PKey.Address1]);
 
         // Act
         var removed = Vertex.Factory.Prototype.RemoveNeighbor(vertex, PKey.Address1, _signer, _certificateManager, out Vertex? newVertex);
@@ -109,14 +109,14 @@ public class VertexFactoryTests : AppTestBase
         newVertex.SignedData.Should().NotBeEmpty();
         newVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         newVertex.Neighborhood.Neighbors.Should().NotContain(PKey.Address1);
-        newVertex.Neighborhood.Hostname.Should().Be("localhost");
+        newVertex.Neighborhood.Hostname.Should().Be(_configuration.GetHostname());
     }
 
     [Fact]
     public void ShouldNotRemoveNonexistentNeighbor()
     {
         // Arrange
-        var vertex = _scope.ResolveLocalVertex();
+        var vertex = _container.ResolveLocalVertex();
 
         // Act
         var removed = Vertex.Factory.Prototype.RemoveNeighbor(vertex, PKey.Address1, _signer, _certificateManager, out Vertex? newVertex);
