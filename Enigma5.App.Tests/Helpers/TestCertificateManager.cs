@@ -20,9 +20,11 @@
 
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests.Helpers;
 
+[ExcludeFromCodeCoverage]
 public class TestCertificateManager : ICertificateManager
 {
     public string PublicKey => PKey.PublicKey3;

@@ -19,18 +19,18 @@
 */
 
 using Autofac;
-using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.App.Tests.Helpers;
 using Xunit;
 using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
+[ExcludeFromCodeCoverage]
 public class UpdateLocalAdjacencyHandlerTests : AppTestBase
 {
     private readonly UpdateLocalAdjacencyHandler _handler;

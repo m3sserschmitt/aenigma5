@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Autofac;
 using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
@@ -29,6 +30,7 @@ using Xunit;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
+[ExcludeFromCodeCoverage]
 public class BroadcastHandlerTests : AppTestBase
 {
     private readonly BroadcastHandler _handler;

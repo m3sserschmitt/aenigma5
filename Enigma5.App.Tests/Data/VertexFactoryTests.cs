@@ -26,9 +26,11 @@ using Enigma5.App.Tests.Helpers;
 using Xunit;
 using FluentAssertions;
 using Enigma5.App.Common.Extensions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests.Data;
 
+[ExcludeFromCodeCoverage]
 public class VertexFactoryTests : AppTestBase
 {
     private readonly IEnvelopeSigner _signer;

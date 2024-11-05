@@ -18,16 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Autofac;
-using Enigma5.App.Data;
-using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.App.Tests.Helpers;
 using Xunit;
 using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests.Data;
 
+[ExcludeFromCodeCoverage]
 public class NetworkGraphTests : AppTestBase
 {
     [Fact]

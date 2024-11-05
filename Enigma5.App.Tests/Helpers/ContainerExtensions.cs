@@ -25,8 +25,10 @@ using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto;
 using Enigma5.App.Common.Extensions;
 using Microsoft.Extensions.Configuration;
+using System.Diagnostics.CodeAnalysis;
 namespace Enigma5.App.Tests.Helpers;
 
+[ExcludeFromCodeCoverage]
 public static class ContainerExtensions
 {
     public static Vertex ResolveVertex(this IContainer scope, string publicKey, string privateKey, string passphrase, HashSet<string> neighbors, string? hostname)

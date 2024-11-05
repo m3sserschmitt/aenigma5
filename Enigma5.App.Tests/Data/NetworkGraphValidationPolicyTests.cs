@@ -23,9 +23,11 @@ using Enigma5.Crypto.DataProviders;
 using Enigma5.App.Tests.Helpers;
 using Xunit;
 using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests.Data;
 
+[ExcludeFromCodeCoverage]
 public class NetworkGraphValidationPolicyTests : AppTestBase
 {
     [Fact]

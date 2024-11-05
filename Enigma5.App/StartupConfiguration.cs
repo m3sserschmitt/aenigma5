@@ -36,9 +36,11 @@ using Enigma5.Security;
 using Hangfire;
 using Enigma5.Crypto;
 using Enigma5.Structures;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App;
 
+[ExcludeFromCodeCoverage]
 public class StartupConfiguration(IConfiguration configuration)
 {
     private readonly IConfiguration _configuration = configuration;

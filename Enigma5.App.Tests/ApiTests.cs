@@ -27,11 +27,15 @@ using Xunit;
 using System.Text.RegularExpressions;
 using Enigma5.Crypto.Extensions;
 using Enigma5.App.Common.Extensions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests;
 
+[ExcludeFromCodeCoverage]
 public partial class ApiTests : AppTestBase
 {
+    #region INFO
+
     [Fact]
     public async Task ShouldGetInfo()
     {
@@ -49,6 +53,10 @@ public partial class ApiTests : AppTestBase
         response.Value.Address.Should().NotBeNullOrWhiteSpace();
         response.Value.GraphVersion.Should().NotBeNullOrWhiteSpace();
     }
+
+    #endregion INFO
+
+    #region SHARE
 
     [Fact]
     public async Task ShouldCreateSharedData()
@@ -85,6 +93,22 @@ public partial class ApiTests : AppTestBase
         var response = result as ProblemHttpResult;
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
+    [Fact]
+    public async Task ShouldNotCreateSharedDataWithInvalidData()
+    {
+        // Arrange
+        var sharedDataCreate = DataSeeder.CreateSharedDataCreate();
+        sharedDataCreate.SignedData = "invalid signed data";
+
+        // Act
+        var result = await Api.PostShare(sharedDataCreate, _mediator);
+
+        // Assert
+        var response = result as BadRequest;
+        response.Should().NotBeNull();
+        response!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 
     [Fact]
@@ -144,6 +168,10 @@ public partial class ApiTests : AppTestBase
         response!.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
 
+    #endregion SHARE
+
+    #region VERTICES
+
     [Fact]
     public async Task ShouldGetVertices()
     {
@@ -200,6 +228,8 @@ public partial class ApiTests : AppTestBase
         .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
 
+    #endregion VERTICES
+    
     [GeneratedRegex(@"^http://localhost/Share\?Tag=[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$")]
     private static partial Regex SharedResourceUrl();
 

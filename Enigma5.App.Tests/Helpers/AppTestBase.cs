@@ -30,9 +30,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
+using Enigma5.App.Hubs;
+using Enigma5.App.Hubs.Sessions;
+using NSubstitute;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.App.Tests.Helpers;
 
+[ExcludeFromCodeCoverage]
 public class AppTestBase
 {
     protected readonly IContainer _container;
@@ -46,6 +52,10 @@ public class AppTestBase
     protected readonly NetworkGraph _graph;
 
     protected readonly EnigmaDbContext _dbContext;
+
+    protected readonly RoutingHub _hub;
+
+    protected readonly SessionManager _sessionManager;
 
     protected readonly DataSeeder _dataSeeder;
 
@@ -64,15 +74,19 @@ public class AppTestBase
         _graph = _container.Resolve<NetworkGraph>();
         _configuration = _container.Resolve<IConfiguration>();
         _dbContext = _container.Resolve<EnigmaDbContext>();
+        _hub = _container.Resolve<RoutingHub>();
+        _sessionManager = _container.Resolve<SessionManager>();
         _dataSeeder = new DataSeeder(_dbContext);
         _dataSeeder.Seed();
+        ConfigureSignalRHub(_hub);
     }
 
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<ICertificateManager, TestCertificateManager>();
-
-        services.AddScoped<NetworkGraph>();
+        services.AddSingleton<ConnectionsMapper>();
+        services.AddSingleton<SessionManager>();
+        services.AddSingleton<NetworkGraph>();
 
         services.AddTransient(provider =>
         {
@@ -81,6 +95,7 @@ public class AppTestBase
         });
         services.AddTransient<UpdateLocalAdjacencyHandler>();
         services.AddTransient<BroadcastHandler>();
+        services.AddTransient<RoutingHub>();
 
         services.AddLogging(builder =>
         {
@@ -88,7 +103,17 @@ public class AppTestBase
             builder.SetMinimumLevel(LogLevel.Debug);
         });
         services.SetupMediatR();
-        
+    }
+
+    private static void ConfigureSignalRHub(RoutingHub hub)
+    {
+        var hubCallerContext = Substitute.For<HubCallerContext>();
+        var clients = Substitute.For<IHubCallerClients>();
+
+        hubCallerContext.ConnectionId.Returns("test-connection-id");
+
+        hub.Context = hubCallerContext;
+        hub.Clients = clients;
     }
 
     private static void ConfigureContainer(ContainerBuilder builder, IServiceCollection services)

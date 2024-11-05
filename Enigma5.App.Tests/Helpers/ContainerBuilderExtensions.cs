@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using Autofac;
@@ -28,6 +29,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Tests.Helpers;
 
+[ExcludeFromCodeCoverage]
 public static class ContainerBuilderExtensions
 {
     public static IRegistrationBuilder<Vertex, SimpleActivatorData, SingleRegistrationStyle> RegisterVertex(this ContainerBuilder containerBuilder)

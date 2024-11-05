@@ -23,5 +23,5 @@ namespace Enigma5.App.Data.Extensions;
 public static class AdjacencyListExtensions
 {
     public static Neighborhood ToNeighborhood(this Models.Neighborhood adjacencyList)
-    => new([.. adjacencyList.Neighbors], adjacencyList.Address ?? string.Empty, adjacencyList.Hostname);
+    => new(adjacencyList.Neighbors ?? [ ], adjacencyList.Address ?? string.Empty, adjacencyList.Hostname);
 }

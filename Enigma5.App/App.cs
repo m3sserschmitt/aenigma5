@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -25,6 +26,7 @@ using Serilog;
 
 namespace Enigma5.App;
 
+[ExcludeFromCodeCoverage]
 public class App
 {
     public static void Main(string[] args)
