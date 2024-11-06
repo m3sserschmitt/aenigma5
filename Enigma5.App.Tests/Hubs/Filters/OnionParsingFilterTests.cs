@@ -18,21 +18,32 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using Enigma5.App.Hubs.Filters;
+using Enigma5.App.Models;
+using Enigma5.App.Tests.Helpers;
 using Enigma5.Crypto.DataProviders;
+using FluentAssertions;
+using NSubstitute;
+using Xunit;
 
-namespace Enigma5.Crypto.Tests.TestData;
+namespace Enigma5.App.Tests.Hubs.Filters;
 
 [ExcludeFromCodeCoverage]
-public class SignerData: IEnumerable<object[]>
+public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
 {
-    public IEnumerator<object[]> GetEnumerator()
+    [Fact]
+    public async Task ShouldParseOnion()
     {
-        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, PKey.PrivateKey1, PKey.Passphrase, 256 + 12 };
-        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, PKey.PrivateKey2, PKey.Passphrase, 256 + 6 };
-        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, PKey.PrivateKey3, string.Empty, 256 + 8 };
-    }
+        // Arrange
+        var data = new byte[] { 0x01, 0x02, 0x03, 0x04 };
+        var onion = DataSeeder.ModelsFactory.CreateOnion(data);
+        _hubMethodArguments[0].Returns(new RoutingRequest { Payload = onion });
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        // Act
+        await _filter.Handle(_hubInvocationContext, _ => ValueTask.FromResult<object?>(default));
+
+        // Assert
+        _hub.Next.Should().Be(PKey.Address2);
+    }
 }

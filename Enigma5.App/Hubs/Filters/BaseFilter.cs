@@ -33,7 +33,7 @@ where TMarker : Attribute
 
     protected virtual bool CheckHubType(HubInvocationContext invocationContext) => invocationContext.Hub is THub;
 
-    protected abstract ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next);
+    public abstract ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next);
 
     protected bool Check(HubInvocationContext invocationContext) =>
     CheckMarker(invocationContext) && CheckHubType(invocationContext) && CheckArguments(invocationContext);

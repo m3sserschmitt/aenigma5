@@ -30,7 +30,7 @@ public class CleanupSharedDataHandler(EnigmaDbContext context)
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<int>> IRequestHandler<CleanupSharedDataCommand, CommandResult<int>>.Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<int>> Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken = default)
     {
         // TODO: refactor this query
         var time = DateTimeOffset.Now - request.TimeSpan;

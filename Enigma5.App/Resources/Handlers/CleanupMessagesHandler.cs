@@ -30,7 +30,7 @@ public class CleanupMessagesHandler(EnigmaDbContext context)
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken = default)
     {
         // TODO: refactor this query
         var time = DateTimeOffset.Now - request.TimeSpan;

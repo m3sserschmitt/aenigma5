@@ -35,7 +35,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
     protected override bool CheckArguments(HubInvocationContext invocationContext)
     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is IValidatable;
 
-    protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
+    public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         // TODO: refactor this to support any number of arguments;
         var data = invocationContext.MethodInvocationArgument<IValidatable>(0);

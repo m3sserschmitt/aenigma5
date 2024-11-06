@@ -22,9 +22,11 @@ using Xunit;
 using Enigma5.Structures.Tests.TestData;
 using Enigma5.Crypto;
 using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Enigma5.Structures.Tests;
 
+[ExcludeFromCodeCoverage]
 public class OnionParserTests
 {
     [Theory]

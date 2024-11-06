@@ -44,7 +44,7 @@ public class AuthorizedServiceOnlyFilter(
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
-    protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
+    public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
 #if DEBUG
         _logger.LogDebug($"Authorization skipped for {{{nameof(invocationContext.HubMethodName)}}} invocation in debug mode.", invocationContext.HubMethodName);

@@ -62,7 +62,7 @@ public partial class ApiTests : AppTestBase
     public async Task ShouldCreateSharedData()
     {
         // Arrange
-        var sharedDataCreate = DataSeeder.CreateSharedDataCreate();
+        var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
 
         // Act
         var result = await Api.PostShare(sharedDataCreate, _mediator);
@@ -83,7 +83,7 @@ public partial class ApiTests : AppTestBase
     public async Task ShouldNotCreateSharedDataWithInvalidPublicKey()
     {
         // Arrange
-        var sharedDataCreate = DataSeeder.CreateSharedDataCreate();
+        var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
         sharedDataCreate.PublicKey = PKey.PublicKey2;
 
         // Act
@@ -99,7 +99,7 @@ public partial class ApiTests : AppTestBase
     public async Task ShouldNotCreateSharedDataWithInvalidData()
     {
         // Arrange
-        var sharedDataCreate = DataSeeder.CreateSharedDataCreate();
+        var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
         sharedDataCreate.SignedData = "invalid signed data";
 
         // Act
@@ -115,7 +115,7 @@ public partial class ApiTests : AppTestBase
     public async Task ShouldGetSharedData()
     {
         // Arrange
-        var testData = await _dataSeeder.SharedData;
+        var testData = DataSeeder.DataFactory.SharedData;
         
         // Act
         var result = await Api.GetShare(testData!.Tag, _mediator);
@@ -135,7 +135,7 @@ public partial class ApiTests : AppTestBase
     public async Task ShouldRemoveSharedDataAfterAccessCountExceeded()
     {
         // Arrange
-        var testData = await _dataSeeder.SharedData;
+        var testData = DataSeeder.DataFactory.SharedData;
         
         // Act
         var result1 = await Api.GetShare(testData!.Tag, _mediator);

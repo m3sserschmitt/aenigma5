@@ -39,7 +39,7 @@ public class AuthenticatedFilter(
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
-    protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
+    public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         if (_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
         {

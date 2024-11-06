@@ -27,6 +27,7 @@ using Enigma5.App.Tests.Helpers;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto.Extensions;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Enigma5.App.Tests.Hubs;
@@ -75,7 +76,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldPullPendingMessages()
     {
         // Arrange
-        var pendingMessage = await _dataSeeder.PendingMessage;
+        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
         _hub.ClientAddress = pendingMessage!.Destination;
 
         // Act
@@ -86,18 +87,16 @@ public class RoutingHubTests : AppTestBase
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().NotBeNull();
-        result.Data!.Count.Should().Be(1);
-        var returnedMessage = result.Data.Single();
-        returnedMessage.Destination.Should().Be(pendingMessage.Destination);
-        returnedMessage.Content.Should().Be(pendingMessage.Content);
-        returnedMessage.DateReceived.Should().Be(pendingMessage.DateReceived);
+        result.Data!.Count.Should().Be(2);
+        result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
+        result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
     }
 
     [Fact]
     public async Task ShouldNotPullPendingMessagesTwice()
     {
         // Arrange
-        var pendingMessage = await _dataSeeder.PendingMessage;
+        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
         _hub.ClientAddress = pendingMessage!.Destination;
 
         // Act
@@ -108,7 +107,7 @@ public class RoutingHubTests : AppTestBase
         result1.Success.Should().BeTrue();
         result1.Errors.Should().BeEmpty();
         result1.Data.Should().NotBeNull();
-        result1.Data!.Count.Should().Be(1);
+        result1.Data!.Count.Should().Be(2);
         result2.Success.Should().BeTrue();
         result2.Data.Should().NotBeNull();
         result2.Data.Should().BeEmpty();
@@ -119,7 +118,7 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var nonce = _sessionManager.AddPending(_hub.Context.ConnectionId);
-        var request = DataSeeder.CreateAuthenticationRequest(nonce!);
+        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
 
         // Act
         var result = await _hub.Authenticate(request);
@@ -137,7 +136,7 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var nonce = _sessionManager.AddPending(_hub.Context.ConnectionId);
-        var request = DataSeeder.CreateAuthenticationRequest(nonce!);
+        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
 
         // Act
         var result1 = await _hub.Authenticate(request);
@@ -157,7 +156,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldSignNonce()
     {
         // Arrange
-        var request = DataSeeder.CreateSignatureRequest();
+        var request = DataSeeder.ModelsFactory.CreateSignatureRequest();
 
         // Act
         var result = await _hub.SignToken(request);
@@ -319,6 +318,7 @@ public class RoutingHubTests : AppTestBase
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
-        _dbContext.Messages.FirstOrDefault(item => item.Destination == PKey.Address2 && item.Content == "AQID").Should().NotBeNull();
+        var pendingMessage = await _dbContext.Messages.FirstOrDefaultAsync(item => item.Destination == PKey.Address2 && item.Content == "AQID");
+        pendingMessage.Should().NotBeNull();
     }
 }

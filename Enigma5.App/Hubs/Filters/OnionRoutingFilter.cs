@@ -36,7 +36,7 @@ public class OnionRoutingFilter(SessionManager sessionManager, ILogger<OnionRout
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
-    protected override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
+    public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         var onionParserHub = new OnionParsingHubAdapter(invocationContext.Hub);
 

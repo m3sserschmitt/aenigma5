@@ -18,12 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Enigma5.Crypto.Tests.TestData;
 using FluentAssertions;
 using Xunit;
 
 namespace Enigma5.Crypto.Tests;
 
+[ExcludeFromCodeCoverage]
 public class SealProviderTests
 {
     [Theory]

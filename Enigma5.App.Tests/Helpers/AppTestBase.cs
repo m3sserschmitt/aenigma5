@@ -35,11 +35,14 @@ using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Sessions;
 using NSubstitute;
 using System.Diagnostics.CodeAnalysis;
+using Xunit;
+using Enigma5.App.Hubs.Filters;
+using Enigma5.Structures;
 
 namespace Enigma5.App.Tests.Helpers;
 
 [ExcludeFromCodeCoverage]
-public class AppTestBase
+public class AppTestBase : IAsyncLifetime
 {
     protected readonly IContainer _container;
 
@@ -56,6 +59,8 @@ public class AppTestBase
     protected readonly RoutingHub _hub;
 
     protected readonly SessionManager _sessionManager;
+
+    protected readonly ConnectionsMapper _connectionMapper;
 
     protected readonly DataSeeder _dataSeeder;
 
@@ -76,8 +81,8 @@ public class AppTestBase
         _dbContext = _container.Resolve<EnigmaDbContext>();
         _hub = _container.Resolve<RoutingHub>();
         _sessionManager = _container.Resolve<SessionManager>();
-        _dataSeeder = new DataSeeder(_dbContext);
-        _dataSeeder.Seed();
+        _connectionMapper = _container.Resolve<ConnectionsMapper>();
+        _dataSeeder = _container.Resolve<DataSeeder>();
         ConfigureSignalRHub(_hub);
     }
 
@@ -93,10 +98,21 @@ public class AppTestBase
             var certificateManager = provider.GetRequiredService<ICertificateManager>();
             return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
         });
-        services.AddTransient<UpdateLocalAdjacencyHandler>();
+        services.AddTransient(provider => {
+            var certificateManager = provider.GetRequiredService<ICertificateManager>();
+            return SealProvider.Factory.CreateUnsealer(certificateManager.PrivateKey);
+        });
         services.AddTransient<BroadcastHandler>();
+        services.AddTransient<CheckAuthorizedServiceHandler>();
+        services.AddTransient<UpdateLocalAdjacencyHandler>();
+        services.AddTransient<CleanupMessagesHandler>();
+        services.AddTransient<CleanupSharedDataHandler>();
+        services.AddTransient<AuthenticatedFilter>();
+        services.AddTransient<OnionParsingFilter>();
+        services.AddTransient<OnionParser>();
         services.AddTransient<RoutingHub>();
-
+        services.AddTransient<DataSeeder>();
+        
         services.AddLogging(builder =>
         {
             builder.AddConsole();
@@ -126,12 +142,22 @@ public class AppTestBase
 
             var context = new EnigmaDbContext(options);
             context.Database.OpenConnection();
+            context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
-
             return context;
-        }).As<EnigmaDbContext>().InstancePerLifetimeScope();
+        }).As<EnigmaDbContext>().SingleInstance();
         builder.RegisterVertex();
         builder.SetupConfiguration();
         builder.Populate(services);
+    }
+
+    public async Task InitializeAsync()
+    {
+        await _dataSeeder.Seed();
+    }
+
+    public Task DisposeAsync()
+    {
+        return Task.CompletedTask;
     }
 }
