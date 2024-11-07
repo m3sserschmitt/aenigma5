@@ -24,6 +24,7 @@ using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
+using NSubstitute;
 using Xunit;
 
 namespace Enigma5.App.Tests.Hubs.Filters;
@@ -35,29 +36,33 @@ public class AuthenticatedFilterTests : FiltersTestBase<AuthenticatedFilter>
     public async Task ShouldResolveClientAddress()
     {
         // Arrange
-        _connectionMapper.TryAdd(PKey.Address1, "test-connection-id");
         
         // Act
-        await _filter.Handle(_hubInvocationContext, _ => ValueTask.FromResult<object?>(default));
+        await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
         _hub.ClientAddress.Should().Be(PKey.Address1);
+        await _next.Received(1)(_hubInvocationContext);
     }
 
     [Fact]
     public async Task ShouldNotResolveNotExistentConnectionId()
     {
         // Arrange
-        _connectionMapper.TryAdd(PKey.Address1, "test-connection-id-2");
-        
+        _sessionManager.TryGetAddress(Arg.Any<string>(), out Arg.Any<string?>()).Returns(call => {
+            call[1] = null;
+            return false;
+        });
+
         // Act
-        var result = await _filter.Handle(_hubInvocationContext, _ => ValueTask.FromResult<object?>(default));
+        var result = await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
         _hub.ClientAddress.Should().BeNull();
         var response = result as EmptyErrorResult;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_PARSING_FAILED);
+        response.Errors.Single().Message.Should().Be(InvocationErrors.AUTHENTICATION_REQUIRED);
+        _next.DidNotReceiveWithAnyArgs();
     }
 }

@@ -20,17 +20,17 @@
 
 using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Attributes;
-using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Hubs.Adapters;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class OnionRoutingFilter(SessionManager sessionManager, ILogger<OnionRoutingFilter> logger) : BaseFilter<IOnionParsingHub, OnionRoutingAttribute>
+public class OnionRoutingFilter(ISessionManager sessionManager, ILogger<OnionRoutingFilter> logger) : BaseFilter<IOnionParsingHub, OnionRoutingAttribute>
 {
-    private readonly SessionManager _sessionManager = sessionManager;
+    private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly ILogger<OnionRoutingFilter> _logger = logger;
 

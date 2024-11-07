@@ -21,7 +21,7 @@
 using Enigma5.App.Attributes;
 using Enigma5.App.Common.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR;
-using Enigma5.App.Hubs.Sessions;
+using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -31,12 +31,12 @@ using Enigma5.App.Resources.Handlers;
 namespace Enigma5.App.Hubs.Filters;
 
 public class AuthorizedServiceOnlyFilter(
-    SessionManager sessionManager,
+    ISessionManager sessionManager,
     IMediator commandRouter,
     ILogger<AuthorizedServiceOnlyFilter> logger
     ) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
 {
-    private readonly SessionManager _sessionManager = sessionManager;
+    private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly IMediator _commandRouter = commandRouter;
 

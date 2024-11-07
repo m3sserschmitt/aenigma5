@@ -21,9 +21,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
-using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.App.Tests.Helpers;
 using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 using NSubstitute;
@@ -32,60 +30,55 @@ using Xunit;
 namespace Enigma5.App.Tests.Hubs.Filters;
 
 [ExcludeFromCodeCoverage]
-public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
+public class OnionRoutingFilterTests : FiltersTestBase<OnionRoutingFilter>
 {
     [Fact]
-    public async Task ShouldParseOnion()
+    public async Task ShouldMapToConnectionId()
     {
         // Arrange
-        var data = new byte[] { 0x01, 0x02, 0x03, 0x04 };
-        var onion = DataSeeder.ModelsFactory.CreateOnion(data);
-        _hubMethodArguments[0].Returns(new RoutingRequest { Payload = onion });
+        _hub.Next = PKey.Address2;
 
         // Act
         await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        _hub.Next.Should().Be(PKey.Address2);
-        _hub.Content.Should().NotBeNull();
+        _hub.DestinationConnectionId.Should().Be("test-connection-id-2");
         await _next.Received(1)(_hubInvocationContext);
     }
 
     [Fact]
-    public async Task ShouldNotParseInvalidOnionReturnsError()
+    public async Task ShouldNotMapToConnectionIdForNullNextAddress()
     {
         // Arrange
-        _hubMethodArguments[0].Returns(new RoutingRequest { Payload = "invalid-onion" });
+        _hub.Next = null;
 
         // Act
         var result = await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        _hub.Next.Should().BeNull();
-        _hub.Content.Should().BeNull();
+        _hub.DestinationConnectionId.Should().BeNull();
         var response = result as EmptyErrorResult;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_PARSING_FAILED);
+        response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_ROUTING_FAILED);
         _next.DidNotReceiveWithAnyArgs();
     }
 
     [Fact]
-    public async Task ShouldNotParseReturnsErrorForInvalidInvocationData()
+    public async Task ShouldNotMapToConnectionIdWhenNotAuthenticated()
     {
         // Arrange
-        _hubMethodArguments[0].Returns("invalid-invocation-data");
+        _hub.Next = PKey.Address2;
+        _sessionManager.TryGetConnectionId(Arg.Any<string>(), out Arg.Any<string?>()).Returns(args => {
+            args[1] = null;
+            return false;
+        });
 
         // Act
-        var result = await _filter.Handle(_hubInvocationContext, _next);
+        await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        _hub.Next.Should().BeNull();
-        _hub.Content.Should().BeNull();
-        var response = result as EmptyErrorResult;
-        response.Should().NotBeNull();
-        response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_INVOCATION_DATA);
-        _next.DidNotReceiveWithAnyArgs();
+        _hub.DestinationConnectionId.Should().BeNull();
+        await _next.Received(1)(_hubInvocationContext);
     }
 }

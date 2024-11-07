@@ -38,6 +38,8 @@ using System.Diagnostics.CodeAnalysis;
 using Xunit;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.Structures;
+using Enigma5.App.Hubs.Sessions.Contracts;
+using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.App.Tests.Helpers;
 
@@ -58,7 +60,7 @@ public class AppTestBase : IAsyncLifetime
 
     protected readonly RoutingHub _hub;
 
-    protected readonly SessionManager _sessionManager;
+    protected readonly ISessionManager _sessionManager;
 
     protected readonly ConnectionsMapper _connectionMapper;
 
@@ -80,18 +82,20 @@ public class AppTestBase : IAsyncLifetime
         _configuration = _container.Resolve<IConfiguration>();
         _dbContext = _container.Resolve<EnigmaDbContext>();
         _hub = _container.Resolve<RoutingHub>();
-        _sessionManager = _container.Resolve<SessionManager>();
+        _sessionManager = _container.Resolve<ISessionManager>();
         _connectionMapper = _container.Resolve<ConnectionsMapper>();
         _dataSeeder = _container.Resolve<DataSeeder>();
-        ConfigureSignalRHub(_hub);
+        ConfigureSignalRHub();
+        ConfigureSessionManager();
     }
 
     private static void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<ICertificateManager, TestCertificateManager>();
-        services.AddSingleton<ConnectionsMapper>();
-        services.AddSingleton<SessionManager>();
-        services.AddSingleton<NetworkGraph>();
+        services.AddScoped<ICertificateManager, TestCertificateManager>();
+        services.AddScoped(provider => Substitute.For<ISessionManager>());
+        services.AddScoped<ConnectionsMapper>();
+        services.AddScoped<NetworkGraph>();
+        services.AddScoped<RoutingHub>();
 
         services.AddTransient(provider =>
         {
@@ -109,8 +113,8 @@ public class AppTestBase : IAsyncLifetime
         services.AddTransient<CleanupSharedDataHandler>();
         services.AddTransient<AuthenticatedFilter>();
         services.AddTransient<OnionParsingFilter>();
+        services.AddTransient<OnionRoutingFilter>();
         services.AddTransient<OnionParser>();
-        services.AddTransient<RoutingHub>();
         services.AddTransient<DataSeeder>();
         
         services.AddLogging(builder =>
@@ -121,15 +125,26 @@ public class AppTestBase : IAsyncLifetime
         services.SetupMediatR();
     }
 
-    private static void ConfigureSignalRHub(RoutingHub hub)
+    private void ConfigureSignalRHub()
     {
         var hubCallerContext = Substitute.For<HubCallerContext>();
-        var clients = Substitute.For<IHubCallerClients>();
-
         hubCallerContext.ConnectionId.Returns("test-connection-id");
+        _hub.Context = hubCallerContext;
+        _hub.Clients = Substitute.For<IHubCallerClients>();
+    }
 
-        hub.Context = hubCallerContext;
-        hub.Clients = clients;
+    private void ConfigureSessionManager()
+    {
+        _sessionManager.AddPending(_hub.Context.ConnectionId).Returns("test-nonce");
+        _sessionManager.Authenticate(_hub.Context.ConnectionId, PKey.PublicKey1, Arg.Any<string>()).Returns(true);
+        _sessionManager.TryGetAddress(_hub.Context.ConnectionId, out Arg.Any<string?>()).Returns(args => {
+            args[1] = PKey.Address1;
+            return true;
+        });
+        _sessionManager.TryGetConnectionId(PKey.Address2, out Arg.Any<string?>()).Returns(args => {
+            args[1] = "test-connection-id-2";
+            return true;
+        });
     }
 
     private static void ConfigureContainer(ContainerBuilder builder, IServiceCollection services)

@@ -28,6 +28,8 @@ using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto.Extensions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Enigma5.App.Tests.Hubs;
@@ -47,29 +49,23 @@ public class RoutingHubTests : AppTestBase
         result.Should().BeOfType<SuccessResult<string>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
-        result.Data.IsValidBase64().Should().BeTrue();
+        result.Data.Should().Be("test-nonce");
     }
 
     [Fact]
-    public async Task ShouldNotGenerateTokenTwice()
+    public async Task ShouldReturnErrorWhenNonceNotGenerated()
     {
         // Arrange
+        _sessionManager.AddPending(Arg.Any<string>()).ReturnsNull();
 
         // Act
-        var result1 = await _hub.GenerateToken();
-        var result2 = await _hub.GenerateToken();
+        var result = await _hub.GenerateToken();
 
-        result1.Should().NotBeNull();
-        result1.Should().BeOfType<SuccessResult<string>>();
-        result1.Success.Should().BeTrue();
-        result1.Errors.Should().BeEmpty();
-        result1.Data.IsValidBase64().Should().BeTrue();
-        result2.Should().NotBeNull();
-        result2.Should().BeOfType<ErrorResult<string>>();
-        result2.Success.Should().BeFalse();
-        result2.Data.Should().BeNull();
-        result2.Errors.Count().Should().Be(1);
-        result2.Errors.Single().Message.Should().Be(InvocationErrors.NONCE_GENERATION_ERROR);
+        result.Should().NotBeNull();
+        result.Should().BeOfType<ErrorResult<string>>();
+        result.Success.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Errors.Single().Message.Should().Be(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
     [Fact]
@@ -88,7 +84,6 @@ public class RoutingHubTests : AppTestBase
         result.Errors.Should().BeEmpty();
         result.Data.Should().NotBeNull();
         result.Data!.Count.Should().Be(2);
-        result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
         result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
     }
 
@@ -117,8 +112,10 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldAuthenticate()
     {
         // Arrange
-        var nonce = _sessionManager.AddPending(_hub.Context.ConnectionId);
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
+        var request = new AuthenticationRequest {
+            PublicKey = PKey.PublicKey1,
+            Signature = "test-signature"
+        };
 
         // Act
         var result = await _hub.Authenticate(request);
@@ -132,24 +129,24 @@ public class RoutingHubTests : AppTestBase
     }
 
     [Fact]
-    public async Task ShouldNotAuthenticateTwice()
+    public async Task ShouldReturnErrorWhenAuthenticationFails()
     {
         // Arrange
-        var nonce = _sessionManager.AddPending(_hub.Context.ConnectionId);
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
+        var request = new AuthenticationRequest {
+            PublicKey = PKey.PublicKey1,
+            Signature = "test-signature"
+        };
+        _sessionManager.Authenticate(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
 
         // Act
-        var result1 = await _hub.Authenticate(request);
-        var result2 = await _hub.Authenticate(request);
+        var result = await _hub.Authenticate(request);
 
         // Assert
-        result1.Success.Should().BeTrue();
-        result1.Errors.Should().BeEmpty();
-        result1.Data.Should().BeTrue();
-        result2.Success.Should().BeFalse();
-        result2.Errors.Should().HaveCount(1);
-        result2.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_NONCE_SIGNATURE);
-        result2.Data.Should().BeFalse();
+        result.Should().NotBeNull();
+        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Success.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_NONCE_SIGNATURE);
     }
 
     [Fact]

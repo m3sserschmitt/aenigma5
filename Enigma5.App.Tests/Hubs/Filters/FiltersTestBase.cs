@@ -41,6 +41,8 @@ where T : notnull
 
     protected readonly IReadOnlyList<object?> _hubMethodArguments;
 
+    protected readonly Func<HubInvocationContext, ValueTask<object?>> _next;
+
     public FiltersTestBase()
     {
         _filter = _container.Resolve<T>();
@@ -50,5 +52,6 @@ where T : notnull
         _hubInvocationContext = new HubInvocationContext(_hubCallerContext, Substitute.For<IServiceProvider>(), _hub, _methodInfo, _hubMethodArguments);
         _methodInfo.Name.Returns("test-method");
         _hubCallerContext.ConnectionId.Returns("test-connection-id");
+        _next = Substitute.For<Func<HubInvocationContext, ValueTask<object?>>>();
     }
 }

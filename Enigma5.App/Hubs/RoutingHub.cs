@@ -33,11 +33,12 @@ using Enigma5.App.Models.HubInvocation;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.Crypto;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub(
-    SessionManager sessionManager,
+    ISessionManager sessionManager,
     ICertificateManager certificateManager,
     NetworkGraph networkGraph,
     IMediator commandRouter,
@@ -48,7 +49,7 @@ public partial class RoutingHub(
     IOnionRoutingHub,
     IIdentityHub
 {
-    private readonly SessionManager _sessionManager = sessionManager;
+    private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 

@@ -37,6 +37,7 @@ using Hangfire;
 using Enigma5.Crypto;
 using Enigma5.Structures;
 using System.Diagnostics.CodeAnalysis;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App;
 
@@ -60,7 +61,7 @@ public class StartupConfiguration(IConfiguration configuration)
                 });
 
         services.AddSingleton<ConnectionsMapper>();
-        services.AddSingleton<SessionManager>();
+        services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
         
