@@ -34,7 +34,8 @@ public class GetSharedDataHandler(Data.EnigmaDbContext context) : IRequestHandle
         return sharedData is null ? CommandResult.CreateResultSuccess<Models.SharedData>() : CommandResult.CreateResultSuccess(new Models.SharedData
         {
             Tag = sharedData.Tag,
-            Data = sharedData.Data
+            Data = sharedData.Data,
+            PublicKey = sharedData.PublicKey
         });
     }
 }

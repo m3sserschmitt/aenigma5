@@ -89,12 +89,12 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
 
     public static class DataFactory
     {
-        private static readonly Enigma5.App.Data.SharedData _sharedData = new ("shared-data", 2)
+        private static readonly Enigma5.App.Data.SharedData _sharedData = new ("shared-data", PKey.PublicKey1, 2)
         {
             Tag = "acde070d-8c4c-4f0d-9d8a-162843c10333"
         };
 
-        private static readonly Enigma5.App.Data.SharedData _oldSharedData = new ("old-shared-data", 2)
+        private static readonly Enigma5.App.Data.SharedData _oldSharedData = new ("old-shared-data", PKey.PublicKey1, 2)
         {
             Tag = "acdeaddd-8c4c-4f0d-9d8a-162843c10355",
             DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2)

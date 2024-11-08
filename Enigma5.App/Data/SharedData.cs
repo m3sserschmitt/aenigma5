@@ -22,12 +22,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Enigma5.App.Data;
 
-public class SharedData(string data, int maxAccessCount = 1)
+public class SharedData(string data, string publicKey, int maxAccessCount = 1)
 {
     [Key]
     public string Tag { get; set; } = Guid.NewGuid().ToString();
 
     public string Data { get; set; } = data;
+
+    public string PublicKey { get; set; } = publicKey;
 
     public int AccessCount { get; set; }
 

@@ -57,7 +57,7 @@ public class CreateSharedDataHandler(
             return CommandResult.CreateResultFailure<Models.SharedData>();
         }
 
-        var sharedData = new Data.SharedData(request.SharedDataCreate.SignedData, request.SharedDataCreate.AccessCount);
+        var sharedData = new Data.SharedData(request.SharedDataCreate.SignedData, request.SharedDataCreate.PublicKey, request.SharedDataCreate.AccessCount);
         await _context.AddAsync(sharedData, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         var hostname = _configuration.GetHostname();
@@ -67,7 +67,8 @@ public class CreateSharedDataHandler(
             Tag = sharedData.Tag,
             ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.ShareEndpoint}?Tag={sharedData.Tag}" : null,
             ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistancePeriod,
-            Data = sharedData.Data
+            Data = sharedData.Data,
+            PublicKey = sharedData.PublicKey
         });
     }
 }
