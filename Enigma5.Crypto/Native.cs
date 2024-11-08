@@ -44,7 +44,7 @@ internal static unsafe partial class Native
     }
 
     [LibraryImport("libaenigma")]
-    internal static partial uint GetPKeySize([MarshalAs(UnmanagedType.LPStr)] string publicKey);
+    internal static partial int GetPKeySize([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
     [LibraryImport("libaenigma-kernelkeys")]
     internal static partial uint GetKernelKeyMaxSize();

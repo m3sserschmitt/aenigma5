@@ -104,7 +104,7 @@ public sealed class SealProvider :
         }
     }
 
-    public static int GetPKeySize(string publicKey) => publicKey.IsValidPublicKey() ? (int)Native.GetPKeySize(publicKey) : -1;
+    public static int GetPKeySize(string publicKey) => publicKey.IsValidPublicKey() ? Native.GetPKeySize(publicKey) : -1;
 
     public static string? SealOnion(
         byte[] plaintext,
