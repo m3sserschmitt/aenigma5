@@ -23,28 +23,34 @@ using Enigma5.App.Data;
 using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto;
+using Enigma5.App.Common.Extensions;
+using Microsoft.Extensions.Configuration;
+using System.Diagnostics.CodeAnalysis;
+namespace Enigma5.App.Tests.Helpers;
 
-namespace Enigma5.App.Tests;
-
-public static class LifetimeScopeExtensions
+[ExcludeFromCodeCoverage]
+public static class ContainerExtensions
 {
-    public static Vertex ResolveVertex(this ILifetimeScope scope, string publicKey, string privateKey, string passphrase, HashSet<string> neighbors, string? hostname = null)
+    public static Vertex ResolveVertex(this IContainer scope, string publicKey, string privateKey, string passphrase, HashSet<string> neighbors, string? hostname)
     {
         var signer = SealProvider.Factory.CreateSigner(privateKey, passphrase);
+        hostname ??= string.Empty;
         return scope.Resolve<Vertex>(
             new NamedParameter("publicKey", publicKey),
             new NamedParameter("signer", signer),
             new NamedParameter("neighbors", neighbors),
-            new NamedParameter("hostname", hostname ?? string.Empty));
+            new NamedParameter("hostname", hostname));
     }
 
-    public static Vertex ResolveLocalVertex(this ILifetimeScope scope, HashSet<string> neighbors, string? hostname = "localhost")
-    => scope.ResolveVertex(PKey.PublicKey3, PKey.PrivateKey3, string.Empty, neighbors, hostname);
+    public static Vertex ResolveLocalVertex(this IContainer scope, HashSet<string> neighbors)
+    {
+        var config = scope.Resolve<IConfiguration>();
+        return scope.ResolveVertex(PKey.PublicKey3, PKey.PrivateKey3, string.Empty, neighbors, config.GetHostname());
+    }
+    public static Vertex ResolveLocalVertex(this IContainer scope)
+    => scope.ResolveLocalVertex([]);
 
-    public static Vertex ResolveLocalVertex(this ILifetimeScope scope, string? hostname = "localhost")
-    => scope.ResolveLocalVertex([], hostname);
-
-    public static Vertex ResolveAdjacentVertex(this ILifetimeScope scope, HashSet<string> neighbors, string? hostname = "adjacent-hostname")
+    public static Vertex ResolveAdjacentVertex(this IContainer scope, HashSet<string> neighbors, string? hostname = "adjacent-hostname")
     {
         var certificateManager = scope.Resolve<ICertificateManager>();
         var allNeighbors = new HashSet<string>() { certificateManager.Address };
@@ -52,12 +58,12 @@ public static class LifetimeScopeExtensions
         return scope.ResolveVertex(PKey.PublicKey1, PKey.PrivateKey1, PKey.Passphrase, allNeighbors, hostname);
     }
 
-    public static Vertex ResolveAdjacentVertex(this ILifetimeScope scope, string? hostname = "adjacent-hostname")
+    public static Vertex ResolveAdjacentVertex(this IContainer scope, string? hostname = "adjacent-hostname")
     => scope.ResolveAdjacentVertex([], hostname);
 
-    public static Vertex ResolveNonAdjacentVertex(this ILifetimeScope scope, HashSet<string> neighbors, string? hostname = "adjacent-hostname")
+    public static Vertex ResolveNonAdjacentVertex(this IContainer scope, HashSet<string> neighbors, string? hostname = "adjacent-hostname")
     => scope.ResolveVertex(PKey.PublicKey1, PKey.PrivateKey1, PKey.Passphrase, neighbors, hostname);
 
-    public static Vertex ResolveNonAdjacentVertex(this ILifetimeScope scope, string? hostname = "adjacent-hostname")
+    public static Vertex ResolveNonAdjacentVertex(this IContainer scope, string? hostname = "adjacent-hostname")
     => scope.ResolveNonAdjacentVertex([], hostname);
 }

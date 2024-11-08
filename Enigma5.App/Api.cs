@@ -24,7 +24,6 @@ using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App;
 
@@ -36,7 +35,7 @@ public static class Api
         return result.CreateGetResponse();
     }
 
-    public static async Task<IResult> PostShare(SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration)
+    public static async Task<IResult> PostShare(SharedDataCreate sharedDataCreate, IMediator commandRouter)
     {
         if (!sharedDataCreate.Valid)
         {
@@ -58,7 +57,7 @@ public static class Api
 
         var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag!));
 
-        if (result.IsSuccessNotNullResultValue() && result.Value!.AccessCount > result.Value.MaxAccessCount)
+        if (result.IsSuccessNotNullResultValue() && result.Value!.AccessCount >= result.Value.MaxAccessCount)
         {
             await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag!));
         }

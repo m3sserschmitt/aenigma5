@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Enigma5.App.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class DbContextExtensions
 {
     public static IServiceCollection SetupDbContext(this IServiceCollection services, IConfiguration configuration)

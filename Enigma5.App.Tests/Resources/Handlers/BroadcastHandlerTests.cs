@@ -18,32 +18,33 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Autofac;
-using Enigma5.App.Data;
 using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Tests.Helpers;
+using FluentAssertions;
+using Xunit;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
+[ExcludeFromCodeCoverage]
 public class BroadcastHandlerTests : AppTestBase
 {
     private readonly BroadcastHandler _handler;
 
-    private readonly NetworkGraph _graph;
-
     public BroadcastHandlerTests()
     {
-        _handler = _scope.Resolve<BroadcastHandler>();
-        _graph = _scope.Resolve<NetworkGraph>();
+        _handler = _container.Resolve<BroadcastHandler>();
     }
 
     [Fact]
-    public async void ShouldAddNewNeighbor()
+    public async Task ShouldAddNewNeighbor()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
         var broadcast = vertex.ToVertexBroadcast();
         var request = new HandleBroadcastCommand(broadcast);
 
@@ -54,7 +55,7 @@ public class BroadcastHandlerTests : AppTestBase
         var localVertex = _graph.LocalVertex;
         var broadcasts = result.Value;
         broadcast.Should().NotBeNull();
-        localVertex.Should().BeOfType<Vertex>();
+        localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
         broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
         localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts.Should().HaveCount(2);
@@ -65,10 +66,10 @@ public class BroadcastHandlerTests : AppTestBase
     }
 
     [Fact]
-    public async void ShouldNotAddNeighborTwice()
+    public async Task ShouldNotAddNeighborTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
         var broadcast = vertex.ToVertexBroadcast();
         var request = new HandleBroadcastCommand(broadcast);
 
@@ -90,11 +91,11 @@ public class BroadcastHandlerTests : AppTestBase
     }
 
     [Fact]
-    public async void ShouldAddAndRemoveNeighbor()
+    public async Task ShouldAddAndRemoveNeighbor()
     {
         // Arrange
-        var adjacentVertex = _scope.ResolveAdjacentVertex();
-        var nonAdjacentVertex = _scope.ResolveNonAdjacentVertex();
+        var adjacentVertex = _container.ResolveAdjacentVertex();
+        var nonAdjacentVertex = _container.ResolveNonAdjacentVertex();
         var initialBroadcast = adjacentVertex.ToVertexBroadcast();
         var finalBroadcast = nonAdjacentVertex.ToVertexBroadcast();
         var request1 = new HandleBroadcastCommand(initialBroadcast);

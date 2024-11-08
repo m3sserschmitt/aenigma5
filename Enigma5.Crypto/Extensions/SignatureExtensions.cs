@@ -43,13 +43,20 @@ public static class SignatureExtensions
 
     public static string? GetStringDataFromSignature(this byte[]? signature, string publicKey)
     {
-        var data = signature.GetDataFromSignature(publicKey);
+        try
+        {
+            var data = signature.GetDataFromSignature(publicKey);
 
-        if (data == null)
+            if (data == null)
+            {
+                return null;
+            }
+
+            return Encoding.UTF8.GetString(data);
+        }
+        catch(Exception)
         {
             return null;
         }
-
-        return Encoding.UTF8.GetString(data);
     }
 }

@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hangfire;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,7 @@ using Newtonsoft.Json;
 
 namespace Enigma5.App.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class HangfireExtensions
 {
     public static IServiceCollection SetupHangfire(this IServiceCollection services)

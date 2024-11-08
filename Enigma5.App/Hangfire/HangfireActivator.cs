@@ -18,10 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Hangfire;
 
 namespace Enigma5.App.Hangfire;
 
+[ExcludeFromCodeCoverage]
 public class HangfireActivator : JobActivator
 {
     private readonly IServiceProvider _serviceProvider;

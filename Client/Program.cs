@@ -78,7 +78,7 @@ public class Program
 
     private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
     {
-        var neighborhood = new AdjacencyList()
+        var neighborhood = new Neighborhood()
         {
             Address = localAddress,
             Hostname = null,

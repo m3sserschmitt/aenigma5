@@ -18,11 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hangfire;
 
+[ExcludeFromCodeCoverage]
 public class MediatorHangfireBridge(
     IMediator mediator,
     ILogger<MediatorHangfireBridge> logger

@@ -19,10 +19,12 @@
 */
 
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using Enigma5.Crypto.DataProviders;
 
 namespace Enigma5.Structures.Tests.TestData;
 
+[ExcludeFromCodeCoverage]
 public class ParserData : IEnumerable<object?[]>
 {
     public IEnumerator<object?[]> GetEnumerator()

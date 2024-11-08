@@ -21,10 +21,11 @@
 using Enigma5.App.Common.Utils;
 using Enigma5.Crypto.Extensions;
 using Enigma5.Crypto;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class SessionManager(ConnectionsMapper connectionsMapper)
+public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManager
 {
     private const int TOKEN_SIZE = 64;
 

@@ -18,16 +18,26 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetVerticesHandler(NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<HashSet<Vertex>>>
+public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<Models.Vertex>>>
 {
-    private readonly NetworkGraph _graph = graph;
+    private readonly Data.NetworkGraph _graph = graph;
 
-    public Task<CommandResult<HashSet<Vertex>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
-    => Task.FromResult(CommandResult.CreateResultSuccess(_graph.NonLeafVertices));
+    public Task<CommandResult<List<Models.Vertex>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    { 
+        var vertices = _graph.NonLeafVertices.Select(item => new Models.Vertex {
+            PublicKey = item.PublicKey,
+            SignedData = item.SignedData,
+            Neighborhood = new() {
+                Address = item.Neighborhood.Address,
+                Hostname = item.Neighborhood.Hostname,
+                Neighbors = item.Neighborhood.Neighbors
+            }
+        }).ToList();
+        return Task.FromResult(CommandResult.CreateResultSuccess(vertices));
+    }
 }

@@ -18,15 +18,17 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public partial class AdjacencyList : IValidatable
+public class Neighborhood : IValidatable
 {
     public string? Address { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Hostname { get; set; }
 
     public HashSet<string>? Neighbors { get; set; }

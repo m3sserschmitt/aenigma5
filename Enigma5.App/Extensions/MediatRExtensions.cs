@@ -18,11 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Resources.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Enigma5.App.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class MediatRExtensions
 {
     public static IServiceCollection SetupMediatR(this IServiceCollection services)
