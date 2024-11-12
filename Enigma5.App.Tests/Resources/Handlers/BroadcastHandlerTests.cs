@@ -54,7 +54,7 @@ public class BroadcastHandlerTests : AppTestBase
         // Assert
         var localVertex = _graph.LocalVertex;
         var broadcasts = result.Value;
-        broadcast.Should().NotBeNull();
+        broadcasts.Should().NotBeNull();
         localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
         broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
         localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
@@ -63,6 +63,29 @@ public class BroadcastHandlerTests : AppTestBase
         var broadcastRemote = broadcasts!.Single(item => item.PublicKey == vertex.PublicKey);
         broadcastLocal.SignedData.Should().Be(localVertex.SignedData);
         broadcastRemote.SignedData.Should().Be(vertex.SignedData);
+    }
+
+    [Fact]
+    public async Task ShouldAddLeaf()
+    {
+        // Arrange
+        var vertex = _container.ResolveAdjacentLeaf();
+        var vertexBroadcast = vertex.ToVertexBroadcast();
+        var request = new HandleBroadcastCommand(vertexBroadcast);
+
+        // Act
+        var result = await _handler.Handle(request);
+
+        // Assert
+        var localVertex = _graph.LocalVertex;
+        localVertex!.Neighborhood.Neighbors.Should().BeEmpty();
+        result.Value.Should().HaveCount(1);
+        var broadcast = result.Value!.Single();
+        broadcast.PublicKey.Should().Be(vertexBroadcast.PublicKey);
+        broadcast.SignedData.Should().Be(vertexBroadcast.SignedData);
+        broadcast.AdjacencyList.Address.Should().Be(vertexBroadcast.AdjacencyList.Address);
+        broadcast.AdjacencyList.Hostname.Should().Be(vertexBroadcast.AdjacencyList.Hostname);
+        broadcast.AdjacencyList.Neighbors.Should().Equal(vertexBroadcast.AdjacencyList.Neighbors);
     }
 
     [Fact]

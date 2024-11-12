@@ -45,6 +45,7 @@ public class RoutingHubTests : AppTestBase
         // Act
         var result = await _hub.GenerateToken();
 
+        // Assert
         result.Should().NotBeNull();
         result.Should().BeOfType<SuccessResult<string>>();
         result.Success.Should().BeTrue();
@@ -61,12 +62,13 @@ public class RoutingHubTests : AppTestBase
         // Act
         var result = await _hub.GenerateToken();
 
+        // Assert
         result.Should().NotBeNull();
         result.Should().BeOfType<ErrorResult<string>>();
         result.Success.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
         result.Errors.Single().Message.Should().Be(InvocationErrors.NONCE_GENERATION_ERROR);
-    }
+    }    
 
     [Fact]
     public async Task ShouldPullPendingMessages()
@@ -78,6 +80,7 @@ public class RoutingHubTests : AppTestBase
         // Act
         var result = await _hub.Pull();
 
+        // Assert
         result.Should().NotBeNull();
         result.Should().BeOfType<SuccessResult<List<PendingMessage>>>();
         result.Success.Should().BeTrue();
@@ -85,6 +88,26 @@ public class RoutingHubTests : AppTestBase
         result.Data.Should().NotBeNull();
         result.Data!.Count.Should().Be(2);
         result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
+        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
+        pendingMessages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ShouldNotPullPendingMessagesWhenClientAddressNull()
+    {
+        // Arrange
+        _hub.ClientAddress = null;
+
+        // Act
+        var result = await _hub.Pull();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeOfType<ErrorResult<List<PendingMessage>>>();
+        result.Success.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Data.Should().BeNull();
+        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
     }
 
     [Fact]
@@ -98,6 +121,7 @@ public class RoutingHubTests : AppTestBase
         var result1 = await _hub.Pull();
         var result2 = await _hub.Pull();
 
+        // Assert
         result1.Should().NotBeNull();
         result1.Success.Should().BeTrue();
         result1.Errors.Should().BeEmpty();

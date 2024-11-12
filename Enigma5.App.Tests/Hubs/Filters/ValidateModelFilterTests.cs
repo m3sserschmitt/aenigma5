@@ -24,68 +24,65 @@ using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Tests.Helpers;
-using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Enigma5.App.Tests.Hubs.Filters;
 
 [ExcludeFromCodeCoverage]
-public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
+public class ValidateModelFilterTests : FiltersTestBase<ValidateModelFilter>
 {
     [Fact]
-    public async Task ShouldParseOnion()
+    public async Task ShouldValidateModel()
     {
         // Arrange
-        var data = new byte[] { 0x01, 0x02, 0x03, 0x04 };
-        var onion = DataSeeder.ModelsFactory.CreateOnion(data);
-        _hubMethodArguments[0].Returns(new RoutingRequest { Payload = onion });
+        var request = DataSeeder.ModelsFactory.CreateSignatureRequest();
+        _hubMethodArguments[0].Returns(request);
 
         // Act
         await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        _hub.Next.Should().Be(PKey.Address2);
-        _hub.Content.Should().NotBeNull();
         await _next.Received(1)(_hubInvocationContext);
     }
 
     [Fact]
-    public async Task ShouldNotParseInvalidOnionReturnsError()
+    public async Task ShouldNotValidateForNotExistentIValidableObject()
     {
         // Arrange
-        _hubMethodArguments[0].Returns(new RoutingRequest { Payload = "invalid-onion" });
+        _hubMethodArguments[0].Throws(new IndexOutOfRangeException());
 
         // Act
         var result = await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        _hub.Next.Should().BeNull();
-        _hub.Content.Should().BeNull();
-        var response = result as EmptyErrorResult;
-        response.Should().NotBeNull();
-        response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_PARSING_FAILED);
-        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
-    }
-
-    [Fact]
-    public async Task ShouldNotParseReturnsErrorForInvalidInvocationData()
-    {
-        // Arrange
-        _hubMethodArguments[0].Returns("invalid-invocation-data");
-
-        // Act
-        var result = await _filter.Handle(_hubInvocationContext, _next);
-
-        // Assert
-        _hub.Next.Should().BeNull();
-        _hub.Content.Should().BeNull();
         var response = result as EmptyErrorResult;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_INVOCATION_DATA);
+        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
+    }
+
+    [Fact]
+    public async Task ShouldReturnErrorsForInvalidRequest()
+    {
+        // Arrange
+        var request = new SignatureRequest { Nonce = null };
+        _hubMethodArguments[0].Returns(request);
+
+        // Act
+        var result = await _filter.Handle(_hubInvocationContext, _next);
+
+        // Assert
+        var response = result as EmptyErrorResult;
+        response.Should().NotBeNull();
+        response!.Errors.Should().HaveCount(2);
+        var error = response.Errors.First();
+        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(SignatureRequest.Nonce));
         await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
     }
 }
