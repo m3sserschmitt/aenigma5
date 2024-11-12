@@ -63,6 +63,7 @@ public class BroadcastHandlerTests : AppTestBase
         var broadcastRemote = broadcasts!.Single(item => item.PublicKey == vertex.PublicKey);
         broadcastLocal.SignedData.Should().Be(localVertex.SignedData);
         broadcastRemote.SignedData.Should().Be(vertex.SignedData);
+        _graph.Vertices.Should().OnlyContain(item => !item.IsLeaf);
     }
 
     [Fact]
@@ -83,9 +84,17 @@ public class BroadcastHandlerTests : AppTestBase
         var broadcast = result.Value!.Single();
         broadcast.PublicKey.Should().Be(vertexBroadcast.PublicKey);
         broadcast.SignedData.Should().Be(vertexBroadcast.SignedData);
-        broadcast.AdjacencyList.Address.Should().Be(vertexBroadcast.AdjacencyList.Address);
-        broadcast.AdjacencyList.Hostname.Should().Be(vertexBroadcast.AdjacencyList.Hostname);
-        broadcast.AdjacencyList.Neighbors.Should().Equal(vertexBroadcast.AdjacencyList.Neighbors);
+        broadcast.Neighborhood.Address.Should().Be(vertexBroadcast.Neighborhood.Address);
+        broadcast.Neighborhood.Hostname.Should().Be(vertexBroadcast.Neighborhood.Hostname);
+        broadcast.Neighborhood.Neighbors.Should().Equal(vertexBroadcast.Neighborhood.Neighbors);
+        var addedLeaf = _graph.Vertices.FirstOrDefault(item => item == vertex);
+        addedLeaf.Should().NotBeNull();
+        addedLeaf!.IsLeaf.Should().BeTrue();
+        addedLeaf.PublicKey.Should().BeNull();
+        addedLeaf.Neighborhood.Should().NotBeNull();
+        addedLeaf.Neighborhood.Address.Should().Be(vertex.Neighborhood.Address);
+        addedLeaf.Neighborhood.Hostname.Should().BeNull();
+        addedLeaf.Neighborhood.Neighbors.Should().Equal(vertex.Neighborhood.Neighbors);
     }
 
     [Fact]

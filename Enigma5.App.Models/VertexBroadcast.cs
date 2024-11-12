@@ -30,7 +30,7 @@ public class VertexBroadcastRequest : IValidatable
     private string? _signedData;
 
     [JsonIgnore]
-    public Neighborhood AdjacencyList { get; private set; } = new();
+    public Neighborhood Neighborhood { get; private set; } = new();
 
     public string? PublicKey { get; set; }
 
@@ -47,12 +47,12 @@ public class VertexBroadcastRequest : IValidatable
                 var decodedData = Convert.FromBase64String(value);
                 var adjacencyList = decodedData.GetStringDataFromSignature(PublicKey) ?? throw new Exception();
 
-                AdjacencyList = JsonSerializer.Deserialize<Neighborhood>(adjacencyList) ?? throw new Exception();
+                Neighborhood = JsonSerializer.Deserialize<Neighborhood>(adjacencyList) ?? throw new Exception();
                 _signedData = value;
             }
             catch (Exception)
             {
-                AdjacencyList = new();
+                Neighborhood = new();
                 _signedData = null;
             }
         }
@@ -86,7 +86,7 @@ public class VertexBroadcastRequest : IValidatable
         }
         else
         {
-            validationResults.AddRange(AdjacencyList.Validate());
+            validationResults.AddRange(Neighborhood.Validate());
         }
 
         return validationResults;
