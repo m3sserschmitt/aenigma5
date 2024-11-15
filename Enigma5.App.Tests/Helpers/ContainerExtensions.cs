@@ -61,6 +61,9 @@ public static class ContainerExtensions
     public static Vertex ResolveAdjacentVertex(this IContainer scope, string? hostname = "adjacent-hostname")
     => scope.ResolveAdjacentVertex([], hostname);
 
+    public static Vertex ResolveAdjacentLeaf(this IContainer container)
+    => container.ResolveAdjacentVertex([], null);
+
     public static Vertex ResolveNonAdjacentVertex(this IContainer scope, HashSet<string> neighbors, string? hostname = "adjacent-hostname")
     => scope.ResolveVertex(PKey.PublicKey1, PKey.PrivateKey1, PKey.Passphrase, neighbors, hostname);
 

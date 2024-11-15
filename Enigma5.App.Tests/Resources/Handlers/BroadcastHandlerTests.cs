@@ -54,7 +54,7 @@ public class BroadcastHandlerTests : AppTestBase
         // Assert
         var localVertex = _graph.LocalVertex;
         var broadcasts = result.Value;
-        broadcast.Should().NotBeNull();
+        broadcasts.Should().NotBeNull();
         localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
         broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
         localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
@@ -63,6 +63,38 @@ public class BroadcastHandlerTests : AppTestBase
         var broadcastRemote = broadcasts!.Single(item => item.PublicKey == vertex.PublicKey);
         broadcastLocal.SignedData.Should().Be(localVertex.SignedData);
         broadcastRemote.SignedData.Should().Be(vertex.SignedData);
+        _graph.Vertices.Should().OnlyContain(item => !item.IsLeaf);
+    }
+
+    [Fact]
+    public async Task ShouldAddLeaf()
+    {
+        // Arrange
+        var vertex = _container.ResolveAdjacentLeaf();
+        var vertexBroadcast = vertex.ToVertexBroadcast();
+        var request = new HandleBroadcastCommand(vertexBroadcast);
+
+        // Act
+        var result = await _handler.Handle(request);
+
+        // Assert
+        var localVertex = _graph.LocalVertex;
+        localVertex!.Neighborhood.Neighbors.Should().BeEmpty();
+        result.Value.Should().HaveCount(1);
+        var broadcast = result.Value!.Single();
+        broadcast.PublicKey.Should().Be(vertexBroadcast.PublicKey);
+        broadcast.SignedData.Should().Be(vertexBroadcast.SignedData);
+        broadcast.Neighborhood.Address.Should().Be(vertexBroadcast.Neighborhood.Address);
+        broadcast.Neighborhood.Hostname.Should().Be(vertexBroadcast.Neighborhood.Hostname);
+        broadcast.Neighborhood.Neighbors.Should().Equal(vertexBroadcast.Neighborhood.Neighbors);
+        var addedLeaf = _graph.Vertices.FirstOrDefault(item => item == vertex);
+        addedLeaf.Should().NotBeNull();
+        addedLeaf!.IsLeaf.Should().BeTrue();
+        addedLeaf.PublicKey.Should().BeNull();
+        addedLeaf.Neighborhood.Should().NotBeNull();
+        addedLeaf.Neighborhood.Address.Should().Be(vertex.Neighborhood.Address);
+        addedLeaf.Neighborhood.Hostname.Should().BeNull();
+        addedLeaf.Neighborhood.Neighbors.Should().Equal(vertex.Neighborhood.Neighbors);
     }
 
     [Fact]

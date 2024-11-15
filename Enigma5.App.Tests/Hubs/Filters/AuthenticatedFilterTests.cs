@@ -63,6 +63,6 @@ public class AuthenticatedFilterTests : FiltersTestBase<AuthenticatedFilter>
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.AUTHENTICATION_REQUIRED);
-        _next.DidNotReceiveWithAnyArgs();
+        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
     }
 }

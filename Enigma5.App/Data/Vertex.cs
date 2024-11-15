@@ -28,21 +28,16 @@ using Enigma5.Crypto;
 namespace Enigma5.App.Data;
 
 [method: JsonConstructor]
-public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData)
+public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData, bool isLeaf = false)
 {
-    [JsonIgnore]
     public DateTimeOffset LastUpdate { get; private set; } = DateTimeOffset.Now;
 
-    [JsonIgnore]
-    public bool IsLeaf { get; private set; }
+    public bool IsLeaf { get; private set; } = isLeaf;
 
-    [JsonIgnore]
     public bool PossibleLeaf => Neighborhood.Neighbors.Count == 1 && Neighborhood.Hostname is null;
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PublicKey { get; private set; } = publicKey;
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SignedData { get; private set; } = signedData;
 
     public Neighborhood Neighborhood { get; private set; } = neighborhood;
@@ -56,11 +51,8 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         }
 
         var neighborhood = new Neighborhood([.. Neighborhood.Neighbors], Neighborhood.Address, null);
-        var leaf = new Vertex(neighborhood, null, null)
-        {
-            IsLeaf = true
-        };
-        leafVertex = leaf;
+        leafVertex = new Vertex(neighborhood, null, SignedData, true);
+
         return true;
     }
 

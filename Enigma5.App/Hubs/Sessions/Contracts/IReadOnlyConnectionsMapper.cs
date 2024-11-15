@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,12 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models;
+using System;
 
-namespace Enigma5.App.Data.Extensions;
+namespace Enigma5.App.Hubs.Sessions.Contracts;
 
-public static class VertexBroadcastRequestExtensions
+public interface IReadOnlyConnectionsMapper
 {
-    public static Vertex ToVertex(this VertexBroadcastRequest vertexBroadcast)
-    => new(vertexBroadcast.Neighborhood.ToNeighborhood(), vertexBroadcast.PublicKey, vertexBroadcast.SignedData);
+    IReadOnlyDictionary<string, string> Connections { get; }
+
+    bool TryGetConnectionId(string address, out string? connectionId);
+
+    bool TryGetAddress(string connectionId, out string? address);
 }

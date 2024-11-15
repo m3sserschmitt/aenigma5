@@ -25,7 +25,6 @@ namespace Enigma5.App.Data;
 [method: JsonConstructor]
 public class Neighborhood(HashSet<string> neighbors, string address, string? hostname)
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Hostname { get; private set; } = hostname;
 
     public string Address { get; private set; } = address;

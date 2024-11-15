@@ -83,6 +83,7 @@ public partial class RoutingHub(
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
+    /*
     [Authenticated]
     [AuthorizedServiceOnly]
     public async Task Synchronize()
@@ -102,7 +103,8 @@ public partial class RoutingHub(
             await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
         }
     }
-
+    */
+    
     [Authenticated]
     public async Task<InvocationResult<List<Models.PendingMessage>>> Pull()
     {

@@ -114,6 +114,8 @@ public class AppTestBase : IAsyncLifetime
         services.AddTransient<AuthenticatedFilter>();
         services.AddTransient<OnionParsingFilter>();
         services.AddTransient<OnionRoutingFilter>();
+        services.AddTransient<ValidateModelFilter>();
+        services.AddTransient<LogFilter>();
         services.AddTransient<OnionParser>();
         services.AddTransient<DataSeeder>();
         

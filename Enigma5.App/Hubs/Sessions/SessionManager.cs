@@ -37,6 +37,12 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
 
     private readonly ConnectionsMapper _connectionsMapper = connectionsMapper;
 
+    public IReadOnlyDictionary<string, string> Pending => _pending;
+
+    public IReadOnlySet<string> Authenticated => _authenticated;
+
+    public IReadOnlyConnectionsMapper ConnectionsMapper => _connectionsMapper;
+
     private bool AddPending(string connectionId, string token)
     => _pending.TryAdd(connectionId, token);
 
@@ -64,12 +70,11 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
 
     public bool Authenticate(string connectionId, string publicKey, string signature)
     {
-        using var signatureVerifier = SealProvider.Factory.CreateVerifier(publicKey);
-        var decodedSignature = Convert.FromBase64String(signature);
-
         return ThreadSafeExecution.Execute(
             () =>
             {
+                using var signatureVerifier = SealProvider.Factory.CreateVerifier(publicKey);
+                var decodedSignature = Convert.FromBase64String(signature);
                 var token = decodedSignature.GetDataFromSignature(publicKey);
 
                 if (token is null)

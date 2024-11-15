@@ -30,6 +30,7 @@ namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub
 {
+    /*
     protected async Task<bool> RespondAsync(string method, object? arg1)
     {
         try
@@ -45,7 +46,7 @@ public partial class RoutingHub
             return false;
         }
     }
-
+    */
     protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
         try

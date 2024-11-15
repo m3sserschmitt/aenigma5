@@ -22,63 +22,66 @@ using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Enigma5.App.Tests.Hubs.Filters;
 
 [ExcludeFromCodeCoverage]
-public class OnionRoutingFilterTests : FiltersTestBase<OnionRoutingFilter>
+public class LogFilterTests : FiltersTestBase<LogFilter>
 {
     [Fact]
-    public async Task ShouldMapToConnectionId()
+    public async Task ShouldReturnSuccessResult()
     {
         // Arrange
-        _hub.Next = PKey.Address2;
-
+        var returnValue = new SuccessResult<string>("Success");
+        var valueTask = ValueTask.FromResult(returnValue);
+        _next(_hubInvocationContext).Returns(returnValue);
+        
         // Act
-        await _filter.Handle(_hubInvocationContext, _next);
+        var result = await _filter.InvokeMethodAsync(_hubInvocationContext, _next);
 
         // Assert
-        _hub.DestinationConnectionId.Should().Be("test-connection-id-2");
+        var response = result as SuccessResult<string>;
+        response.Should().NotBeNull();
+        response!.Data.Should().Be(returnValue.Data);       
         await _next.Received(1)(_hubInvocationContext);
     }
 
     [Fact]
-    public async Task ShouldNotMapToConnectionIdForNullNextAddress()
+    public async Task ShouldReturnErrorWhenExceptionThrown()
     {
         // Arrange
-        _hub.Next = null;
+        _next(_hubInvocationContext).Throws(new Exception());
 
         // Act
-        var result = await _filter.Handle(_hubInvocationContext, _next);
-
-        // Assert
-        _hub.DestinationConnectionId.Should().BeNull();
+        var result = await _filter.InvokeMethodAsync(_hubInvocationContext, _next);
         var response = result as EmptyErrorResult;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_ROUTING_FAILED);
-        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
+        response.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
+        await _next.Received(1)(_hubInvocationContext);
     }
 
     [Fact]
-    public async Task ShouldNotMapToConnectionIdWhenNotAuthenticated()
+    public async Task ShouldReturnErrorResult()
     {
         // Arrange
-        _hub.Next = PKey.Address2;
-        _sessionManager.TryGetConnectionId(Arg.Any<string>(), out Arg.Any<string?>()).Returns(args => {
-            args[1] = null;
-            return false;
-        });
-
+        var returnValue = new ErrorResult<string>("Failure", [ new("Error message") ]);
+        var valueTask = ValueTask.FromResult(returnValue);
+        _next(_hubInvocationContext).Returns(returnValue);
+        
         // Act
-        await _filter.Handle(_hubInvocationContext, _next);
+        var result = await _filter.InvokeMethodAsync(_hubInvocationContext, _next);
 
         // Assert
-        _hub.DestinationConnectionId.Should().BeNull();
+        var response = result as ErrorResult<string>;
+        response.Should().NotBeNull();
+        response!.Data.Should().Be(returnValue.Data);
+        response.Errors.Should().HaveCount(1);
+        response.Errors.Single().Message.Should().Be("Error message");
         await _next.Received(1)(_hubInvocationContext);
     }
 }
