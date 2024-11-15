@@ -19,14 +19,17 @@
 */
 
 using Enigma5.App.Common.Utils;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class ConnectionsMapper
+public class ConnectionsMapper : IReadOnlyConnectionsMapper
 {
     private readonly object _locker = new();
 
     private readonly Dictionary<string, string> _connections = [];
+
+    public IReadOnlyDictionary<string, string> Connections => _connections;
 
     public bool TryAdd(string address, string connectionId)
     => ThreadSafeExecution.Execute(() => _connections.TryAdd(address, connectionId), false, _locker);
