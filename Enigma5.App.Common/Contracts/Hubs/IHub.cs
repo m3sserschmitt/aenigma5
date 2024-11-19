@@ -29,6 +29,8 @@ public interface IEnigmaHub
 
     Task<InvocationResult<List<PendingMessage>>> Pull();
 
+    Task<InvocationResult<bool>> Cleanup();
+
     Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request);
 
     Task<InvocationResult<Signature>> SignToken(SignatureRequest request);

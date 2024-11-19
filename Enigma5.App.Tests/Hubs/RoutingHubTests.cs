@@ -23,11 +23,15 @@ using Enigma5.App.Data.Extensions;
 using Enigma5.App.Hubs;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Tests.Helpers;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto.Extensions;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -89,7 +93,74 @@ public class RoutingHubTests : AppTestBase
         result.Data!.Count.Should().Be(2);
         result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
         var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
+        pendingMessages.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task ShouldCleanup()
+    {
+        // Arrange
+        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        _hub.ClientAddress = pendingMessage!.Destination;
+
+        // Act
+        var result = await _hub.Cleanup();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+        result.Data.Should().BeTrue();
+        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
         pendingMessages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ShouldNotCleanupWhenClientAddressNull()
+    {
+        // Arrange
+        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        _hub.ClientAddress = null;
+
+        // Act
+        var result = await _hub.Cleanup();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
+        result.Data.Should().BeFalse();
+        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
+        pendingMessages.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task ShouldReturnErrorWhenRemoveCommandFails()
+    {
+        // Arrange
+        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        var mediator = Substitute.For<IMediator>();
+        var logger = Substitute.For<ILogger<RoutingHub>>();
+        mediator.Send(Arg.Any<RemoveMessagesCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<int>()));
+        var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, mediator, logger)
+        {
+            ClientAddress = PKey.Address2
+        };
+        ConfigureSignalRHub(hub);
+
+        // Act
+        var result = await hub.Cleanup();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
+        result.Data.Should().BeFalse();
+        logger.ReceivedWithAnyArgs(1).LogError("");
+        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
+        pendingMessages.Should().HaveCount(3);
     }
 
     [Fact]
@@ -108,28 +179,6 @@ public class RoutingHubTests : AppTestBase
         result.Errors.Should().HaveCount(1);
         result.Data.Should().BeNull();
         result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
-    }
-
-    [Fact]
-    public async Task ShouldNotPullPendingMessagesTwice()
-    {
-        // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
-        _hub.ClientAddress = pendingMessage!.Destination;
-
-        // Act
-        var result1 = await _hub.Pull();
-        var result2 = await _hub.Pull();
-
-        // Assert
-        result1.Should().NotBeNull();
-        result1.Success.Should().BeTrue();
-        result1.Errors.Should().BeEmpty();
-        result1.Data.Should().NotBeNull();
-        result1.Data!.Count.Should().Be(2);
-        result2.Success.Should().BeTrue();
-        result2.Data.Should().NotBeNull();
-        result2.Data.Should().BeEmpty();
     }
 
     [Fact]

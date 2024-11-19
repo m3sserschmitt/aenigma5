@@ -85,7 +85,7 @@ public class AppTestBase : IAsyncLifetime
         _sessionManager = _container.Resolve<ISessionManager>();
         _connectionMapper = _container.Resolve<ConnectionsMapper>();
         _dataSeeder = _container.Resolve<DataSeeder>();
-        ConfigureSignalRHub();
+        ConfigureSignalRHub(_hub);
         ConfigureSessionManager();
     }
 
@@ -127,12 +127,12 @@ public class AppTestBase : IAsyncLifetime
         services.SetupMediatR();
     }
 
-    private void ConfigureSignalRHub()
+    protected static void ConfigureSignalRHub(RoutingHub hub)
     {
         var hubCallerContext = Substitute.For<HubCallerContext>();
         hubCallerContext.ConnectionId.Returns("test-connection-id");
-        _hub.Context = hubCallerContext;
-        _hub.Clients = Substitute.For<IHubCallerClients>();
+        hub.Context = hubCallerContext;
+        hub.Clients = Substitute.For<IHubCallerClients>();
     }
 
     private void ConfigureSessionManager()

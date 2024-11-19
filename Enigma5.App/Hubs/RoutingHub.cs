@@ -120,7 +120,6 @@ public partial class RoutingHub(
 
         if (result.IsSuccessNotNullResultValue())
         {
-            await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
             return Ok(result.Value!);
         }
 
@@ -129,6 +128,31 @@ public partial class RoutingHub(
         Context.ConnectionId,
         result);
         return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
+    }
+
+    [Authenticated]
+    public async Task<InvocationResult<bool>> Cleanup()
+    {
+        if (ClientAddress is null)
+        {
+            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(Cleanup),
+            Context.ConnectionId);
+            return Error<bool>(InvocationErrors.INTERNAL_ERROR);
+        }
+
+        var result = await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
+
+        if(result.IsSuccessNotNullResultValue())
+        {
+            return Ok(true);
+        }
+
+        _logger.LogError($"Could cleanup pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        nameof(Pull),
+        Context.ConnectionId,
+        result);
+        return Error<bool>(InvocationErrors.INTERNAL_ERROR);
     }
 
     [ValidateModel]
