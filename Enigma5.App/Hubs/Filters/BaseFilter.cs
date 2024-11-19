@@ -18,10 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs.Filters;
 
+[ExcludeFromCodeCoverage]
 public abstract class BaseFilter<THub, TMarker> : IHubFilter
 where THub : class
 where TMarker : Attribute

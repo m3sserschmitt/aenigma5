@@ -46,6 +46,12 @@ namespace Enigma5.App.Tests.Helpers;
 [ExcludeFromCodeCoverage]
 public class AppTestBase : IAsyncLifetime
 {
+    protected static readonly string _testConnectionId1 = "test-connection-id-1";
+
+    protected static readonly string _testNonce1 = "test-nonce-1";
+
+    protected static readonly string _testConnectionId2 = "test-connection-id-2";
+
     protected readonly IContainer _container;
 
     protected readonly IMediator _mediator;
@@ -86,7 +92,7 @@ public class AppTestBase : IAsyncLifetime
         _connectionMapper = _container.Resolve<ConnectionsMapper>();
         _dataSeeder = _container.Resolve<DataSeeder>();
         ConfigureSignalRHub(_hub);
-        ConfigureSessionManager();
+        ConfigureSessionManager(_sessionManager);
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -130,21 +136,31 @@ public class AppTestBase : IAsyncLifetime
     protected static void ConfigureSignalRHub(RoutingHub hub)
     {
         var hubCallerContext = Substitute.For<HubCallerContext>();
-        hubCallerContext.ConnectionId.Returns("test-connection-id");
+        hubCallerContext.ConnectionId.Returns(_testConnectionId1);
         hub.Context = hubCallerContext;
         hub.Clients = Substitute.For<IHubCallerClients>();
+        hub.Clients.Client(_testConnectionId1).Returns(Substitute.For<ISingleClientProxy>());
+        hub.Clients.Client(_testConnectionId2).Returns(Substitute.For<ISingleClientProxy>());
     }
 
-    private void ConfigureSessionManager()
+    private static void ConfigureSessionManager(ISessionManager sessionManager)
     {
-        _sessionManager.AddPending(_hub.Context.ConnectionId).Returns("test-nonce");
-        _sessionManager.Authenticate(_hub.Context.ConnectionId, PKey.PublicKey1, Arg.Any<string>()).Returns(true);
-        _sessionManager.TryGetAddress(_hub.Context.ConnectionId, out Arg.Any<string?>()).Returns(args => {
+        sessionManager.AddPending(_testConnectionId1).Returns(_testNonce1);
+        sessionManager.Authenticate(_testConnectionId1, PKey.PublicKey1, Arg.Any<string>()).Returns(true);
+        sessionManager.TryGetAddress(_testConnectionId1, out Arg.Any<string?>()).Returns(args => {
             args[1] = PKey.Address1;
             return true;
         });
-        _sessionManager.TryGetConnectionId(PKey.Address2, out Arg.Any<string?>()).Returns(args => {
-            args[1] = "test-connection-id-2";
+        sessionManager.TryGetConnectionId(PKey.Address2, out Arg.Any<string?>()).Returns(args => {
+            args[1] = _testConnectionId2;
+            return true;
+        });
+        sessionManager.TryGetConnectionId(PKey.Address1, out Arg.Any<string?>()).Returns(args => {
+            args[1] = _testConnectionId1;
+            return true;
+        });
+        sessionManager.Remove(_testConnectionId1, out Arg.Any<string?>()).Returns(args => {
+            args[1] = PKey.Address1;
             return true;
         });
     }

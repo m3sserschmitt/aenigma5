@@ -82,28 +82,6 @@ public partial class RoutingHub(
 
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
-
-    /*
-    [Authenticated]
-    [AuthorizedServiceOnly]
-    public async Task Synchronize()
-    {
-        if (ClientAddress is null)
-        {
-            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
-            nameof(Synchronize),
-            Context.ConnectionId);
-            return;
-        }
-
-        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
-
-        if (result.IsSuccessNotNullResultValue() && await RespondAsync(nameof(Synchronize), result.Value))
-        {
-            await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
-        }
-    }
-    */
     
     [Authenticated]
     public async Task<InvocationResult<List<Models.PendingMessage>>> Pull()
@@ -241,9 +219,9 @@ public partial class RoutingHub(
     [Authenticated]
     public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
     {
-        if (DestinationConnectionId != null && Content != null)
+        if (DestinationConnectionId != null && Content != null && await RouteMessage(DestinationConnectionId, Content))
         {
-            return await RouteMessage(DestinationConnectionId, Content) ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
+            return Ok(true);
         }
         else if (Content != null)
         {
