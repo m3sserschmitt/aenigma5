@@ -29,7 +29,7 @@ public class RemoveMessagesHandler(EnigmaDbContext context)
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<int>> IRequestHandler<RemoveMessagesCommand, CommandResult<int>>.Handle(RemoveMessagesCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<int>> Handle(RemoveMessagesCommand request, CancellationToken cancellationToken)
     {
         var messages = _context.Messages.Where(item => item.Destination == request.Destination);
         _context.RemoveRange(messages);

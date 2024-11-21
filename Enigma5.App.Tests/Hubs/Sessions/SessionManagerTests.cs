@@ -106,4 +106,66 @@ public class SessionManagerTests
         sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connectionId).Should().BeTrue();
         connectionId.Should().Be("test-connection-id");
     }
+
+    [Fact]
+    public void ShouldLogOut()
+    {
+        // Arrange
+        var sessionManager = new SessionManager(new());
+        var nonce = sessionManager.AddPending("test-connection-id");
+        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
+        sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
+
+        // Act
+        var result = sessionManager.Remove("test-connection-id", out string? address);
+
+        // Assert
+        result.Should().BeTrue();
+        address.Should().Be(PKey.Address1);
+        sessionManager.Pending.Should().BeEmpty();
+        sessionManager.Authenticated.Should().BeEmpty();
+        sessionManager.ConnectionsMapper.Connections.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ShouldGetConnectionId()
+    {
+        // Arrange
+        var sessionManager = new SessionManager(new());
+        var nonce = sessionManager.AddPending("test-connection-id");
+        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
+        sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
+
+        // Act
+        var result = sessionManager.TryGetConnectionId(PKey.Address1, out string? connectionId);
+
+        // Assert
+        result.Should().BeTrue();
+        connectionId.Should().Be("test-connection-id");
+        sessionManager.Pending.Should().BeEmpty();
+        sessionManager.Authenticated.Should().Contain("test-connection-id");
+        sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connId).Should().BeTrue();
+        connId.Should().Be("test-connection-id");
+    }
+
+    [Fact]
+    public void ShouldGetAddress()
+    {
+        // Arrange
+        var sessionManager = new SessionManager(new());
+        var nonce = sessionManager.AddPending("test-connection-id");
+        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
+        sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
+
+        // Act
+        var result = sessionManager.TryGetAddress("test-connection-id", out string? address);
+
+        // Assert
+        result.Should().BeTrue();
+        address.Should().Be(PKey.Address1);
+        sessionManager.Pending.Should().BeEmpty();
+        sessionManager.Authenticated.Should().Contain("test-connection-id");
+        sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connId).Should().BeTrue();
+        connId.Should().Be("test-connection-id");
+    }
 }

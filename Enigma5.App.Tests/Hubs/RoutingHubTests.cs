@@ -91,6 +91,8 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        var oldPendingMesage = DataSeeder.DataFactory.OldPendingMesage;
+        var deliveredPendingMessage = DataSeeder.DataFactory.DeliveredPendingMesage;
         _hub.ClientAddress = pendingMessage!.Destination;
 
         // Act
@@ -102,10 +104,28 @@ public class RoutingHubTests : AppTestBase
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().NotBeNull();
-        result.Data!.Count.Should().Be(2);
-        result.Data.FirstOrDefault(item => item.Destination == pendingMessage.Destination && item.Content == pendingMessage.Content && item.DateReceived == pendingMessage.DateReceived).Should().NotBeNull();
+        result.Data!.Count.Should().Be(3);
+        result.Data.FirstOrDefault(item =>
+        item.Destination == pendingMessage.Destination
+        && item.Content == pendingMessage.Content
+        && item.DateReceived == pendingMessage.DateReceived
+        && !item.Sent
+        && item.Id == pendingMessage.Id).Should().NotBeNull();
+        result.Data.FirstOrDefault(item =>
+        item.Destination == oldPendingMesage.Destination
+        && item.Content == oldPendingMesage.Content
+        && item.DateReceived == oldPendingMesage.DateReceived
+        && !item.Sent
+        && item.Id == oldPendingMesage.Id).Should().NotBeNull();
+        result.Data.FirstOrDefault(item =>
+        item.Destination == deliveredPendingMessage.Destination
+        && item.Content == deliveredPendingMessage.Content
+        && item.DateReceived == deliveredPendingMessage.DateReceived
+        && item.Sent
+        && item.Id == deliveredPendingMessage.Id).Should().NotBeNull();
         var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
         pendingMessages.Should().HaveCount(3);
+        pendingMessages.Should().OnlyContain(item => item.Sent && item.DateSent != null);
     }
 
     [Fact]

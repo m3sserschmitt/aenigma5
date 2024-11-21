@@ -89,35 +89,55 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
 
     public static class DataFactory
     {
-        private static readonly Enigma5.App.Data.SharedData _sharedData = new ("shared-data", PKey.PublicKey1, 2)
+        private static readonly Enigma5.App.Data.SharedData _sharedData = new()
         {
-            Tag = "acde070d-8c4c-4f0d-9d8a-162843c10333"
+            Tag = "acde070d-8c4c-4f0d-9d8a-162843c10333",
+            Data = "shared-data",
+            PublicKey = PKey.PublicKey1,
+            MaxAccessCount = 2
         };
 
-        private static readonly Enigma5.App.Data.SharedData _oldSharedData = new ("old-shared-data", PKey.PublicKey1, 2)
+        private static readonly Enigma5.App.Data.SharedData _oldSharedData = new()
         {
             Tag = "acdeaddd-8c4c-4f0d-9d8a-162843c10355",
-            DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2)
+            DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2),
+            Data = "old-shared-data",
+            PublicKey = PKey.PublicKey1,
+            MaxAccessCount = 2
         };
 
-        private static readonly Enigma5.App.Data.PendingMessage _pendingMesage = new (PKey.Address2, "pending-message", false)
+        private static readonly Enigma5.App.Data.PendingMessage _pendingMesage = new()
         {
-            Id = 1
+            Id = 1,
+            Destination = PKey.Address2,
+            Content = "pending-message",
+            Sent = false
         };
 
-        private static readonly Enigma5.App.Data.PendingMessage _oldPendingMesage = new (PKey.Address2, "old-pending-message", false)
+        private static readonly Enigma5.App.Data.PendingMessage _oldPendingMesage = new()
         {
             Id = 2,
-            DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5)
+            DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5),
+            Destination = PKey.Address2,
+            Content = "old-pending-message",
+            Sent = false
         };
 
 
-        private static readonly Enigma5.App.Data.PendingMessage _deliveredPendingMesage = new (PKey.Address2, "delivered-pending-message", true)
+        private static readonly Enigma5.App.Data.PendingMessage _deliveredPendingMesage = new()
         {
-            Id = 3
+            Id = 3,
+            Destination = PKey.Address2,
+            Content = "delivered-pending-message",
+            Sent = true,
+            DateSent = DateTimeOffset.Now - TimeSpan.FromDays(3)
         };
 
-        private static readonly Enigma5.App.Data.AuthorizedService _authorizedService = new(1, PKey.Address1);
+        private static readonly Enigma5.App.Data.AuthorizedService _authorizedService = new()
+        {
+            Id = 1,
+            Address = PKey.Address1
+        };
 
         public static Enigma5.App.Data.SharedData SharedData => _sharedData.CopyBySerialization();
 
@@ -149,14 +169,4 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
         
         await _dbContext.SaveChangesAsync();
     }
-
-    public Task<Enigma5.App.Data.SharedData?> SharedData => _dbContext.SharedData.FirstOrDefaultAsync(item => item.Tag == DataFactory.SharedData.Tag);
-
-    public Task<Enigma5.App.Data.PendingMessage?> PendingMessage => _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataFactory.PendingMesage.Id);
-
-    public Task<Enigma5.App.Data.PendingMessage?> OldPendingMessage => _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataFactory.OldPendingMesage.Id);
-
-    public Task<Enigma5.App.Data.PendingMessage?> DeliveredPendingMessage => _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataFactory.DeliveredPendingMesage.Id);
-
-    public Task<Enigma5.App.Data.AuthorizedService?> AuthorizedService => _dbContext.AuthorizedServices.FirstOrDefaultAsync(item => item.Id == DataFactory.AuthorizedService.Id);
 }

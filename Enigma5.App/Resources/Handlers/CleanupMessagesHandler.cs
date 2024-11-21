@@ -34,10 +34,10 @@ public class CleanupMessagesHandler(EnigmaDbContext context)
     {
         // TODO: refactor this query
         var time = DateTimeOffset.Now - request.TimeSpan;
+        var deliveredTime = DateTime.Now - request.DeliveredTimeSpan;
         var messages = await _context.Messages.ToListAsync(cancellationToken: cancellationToken);
         _context.Messages.RemoveRange(messages.Where(item =>
-            time > item.DateReceived ||
-            (request.RemoveDelivered && item.Sent)));
+        (!item.Sent && time > item.DateReceived) || (item.Sent && item.DateSent != null && deliveredTime > item.DateSent)));
         return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
     }
 }

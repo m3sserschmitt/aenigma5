@@ -23,9 +23,9 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class CleanupMessagesCommand(TimeSpan timeSpan, bool removeDelivered) : IRequest<CommandResult<int>>
+public class CleanupMessagesCommand(TimeSpan timeSpan, TimeSpan deliveredTimeSpan) : IRequest<CommandResult<int>>
 {
     public TimeSpan TimeSpan { get; private set; } = timeSpan;
 
-    public bool RemoveDelivered { get; private set; } = removeDelivered;
+    public TimeSpan DeliveredTimeSpan {get; set; } = deliveredTimeSpan;
 }

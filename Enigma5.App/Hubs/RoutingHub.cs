@@ -98,6 +98,7 @@ public partial class RoutingHub(
 
         if (result.IsSuccessNotNullResultValue())
         {
+            await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress));
             return Ok(result.Value!);
         }
 
