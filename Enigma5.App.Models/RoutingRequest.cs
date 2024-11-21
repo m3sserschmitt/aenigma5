@@ -18,8 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Buffers.Text;
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
@@ -34,16 +35,17 @@ public class RoutingRequest: IValidatable
 
     public RoutingRequest() { }
 
-    public IEnumerable<Error> Validate()
+    public HashSet<Error> Validate()
     {
+        var errors = new HashSet<Error>();
         if(string.IsNullOrWhiteSpace(Payload))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(Payload)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Payload));
         }
-
-        if(Payload is not null && !Base64.IsValid(Payload))
+        else if(!Payload.IsValidBase64())
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(Payload)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payload));
         }
+        return errors;
     }
 }

@@ -22,11 +22,11 @@ namespace Enigma5.App.Models;
 
 public class Error
 {
-    public string? Message { get; set; }
+    public string Message { get; set; }
 
-    public IEnumerable<string> Properties { get; set; }
+    public HashSet<string> Properties { get; set; }
 
-    public Error(string message, List<string> properties)
+    public Error(string message, HashSet<string> properties)
     {
         Message = message;
         Properties = properties;
@@ -38,8 +38,29 @@ public class Error
         Properties = [];
     }
 
-    public Error()
+    public bool Equals(Error? error)
     {
-        Properties = [];
+        if(error is null)
+        {
+            return false;
+        }
+
+        return error.Message == Message;
     }
+
+    public override bool Equals(object? obj)
+    {
+        if(ReferenceEquals(this, obj))
+        {
+            return true;
+        }
+
+        return Equals(obj as Error);
+    }
+
+    public override int GetHashCode() => Message.GetHashCode();
+
+    public static bool operator==(Error e1, Error e2) => e1.Message == e2.Message;
+
+    public static bool operator!=(Error e1, Error e2) => !(e1 == e2);
 }

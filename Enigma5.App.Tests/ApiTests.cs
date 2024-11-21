@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Tests.Helpers;
 using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -28,6 +27,7 @@ using System.Text.RegularExpressions;
 using Enigma5.Crypto.Extensions;
 using Enigma5.App.Common.Extensions;
 using System.Diagnostics.CodeAnalysis;
+using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Tests;
 

@@ -19,33 +19,47 @@
 */
 
 using System.Diagnostics.CodeAnalysis;
-using Enigma5.App.Resources.Commands;
-using Enigma5.App.Resources.Handlers;
-using Enigma5.Tests.Base;
+using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
 
-namespace Enigma5.App.Tests.Resources.Handlers;
+namespace Enigma5.App.Models.Tests;
 
 [ExcludeFromCodeCoverage]
-public class CleanupSharedDataHandlerTests : HandlerTestBase<CleanupSharedDataHandler>
+public class TriggerBroadcastRequestTests
 {
     [Fact]
-    public async Task ShouldCleanupOldSharedData()
+    public void ShouldValidate()
     {
         // Arrange
-        var command = new CleanupSharedDataCommand(TimeSpan.FromDays(1));
+        var request = new TriggerBroadcastRequest
+        {
+            NewAddresses = [PKey.Address1, PKey.Address2]
+        };
 
         // Act
-        var result = await _handler.Handle(command);
+        var result = request.Validate();
 
         // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<CommandResult<int>>();
-        result.Success.Should().BeTrue();
-        result.Value.Should().Be(1);
-        (await _dbContext.SharedData.FirstOrDefaultAsync(item => item.Tag == DataSeeder.DataFactory.SharedData.Tag)).Should().NotBeNull();
-        (await _dbContext.SharedData.FirstOrDefaultAsync(item => item.Tag == DataSeeder.DataFactory.OldSharedData.Tag)).Should().BeNull();
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ShouldNotValidateForInvalidAddress()
+    {
+        // Arrange
+        var request = new TriggerBroadcastRequest
+        {
+            NewAddresses = [PKey.Address1, "invalid-address"]
+        };
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.NewAddresses));
     }
 }

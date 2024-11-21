@@ -21,7 +21,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Autofac;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 

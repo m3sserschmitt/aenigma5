@@ -21,7 +21,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Xunit;

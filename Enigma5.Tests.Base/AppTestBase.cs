@@ -41,7 +41,7 @@ using Enigma5.Structures;
 using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.Crypto.DataProviders;
 
-namespace Enigma5.App.Tests.Helpers;
+namespace Enigma5.Tests.Base;
 
 [ExcludeFromCodeCoverage]
 public class AppTestBase : IAsyncLifetime

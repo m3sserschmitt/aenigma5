@@ -27,10 +27,10 @@ using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
-using Enigma5.App.Tests.Helpers;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Crypto.Extensions;
+using Enigma5.Tests.Base;
 using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
@@ -347,10 +347,7 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var vertex = _container.ResolveAdjacentVertex();
-        var request = new VertexBroadcastRequest {
-            PublicKey = "invalid-key",
-            SignedData = vertex.SignedData
-        };
+        var request = new VertexBroadcastRequest("invalid-key", vertex.SignedData!);
 
         // Act
         var result = await _hub.Broadcast(request);
@@ -371,10 +368,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldNotBroadcastWithInvalidSignedData()
     {
         // Arrange
-        var request = new VertexBroadcastRequest {
-            PublicKey = PKey.PublicKey1,
-            SignedData = "invalid-signed-data"
-        };
+        var request = new VertexBroadcastRequest(PKey.PublicKey1, "invalid-signed-data");
 
         // Act
         var result = await _hub.Broadcast(request);

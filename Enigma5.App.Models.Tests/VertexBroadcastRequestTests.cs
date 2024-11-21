@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,6 +18,25 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models;
+using System.Diagnostics.CodeAnalysis;
+using Enigma5.Tests.Base;
+using FluentAssertions;
 
-public record class Graph(string PublicKey, string SignedData);
+namespace Enigma5.App.Models.Tests;
+
+[ExcludeFromCodeCoverage]
+public class VertexBroadcastRequestTests
+{
+    [Fact]
+    public void ShouldValidate()
+    {
+        // Arrange
+        var request = DataSeeder.ModelsFactory.VertexBroadcastRequest;
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+}

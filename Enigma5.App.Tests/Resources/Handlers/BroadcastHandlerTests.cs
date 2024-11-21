@@ -24,7 +24,7 @@ using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 using FluentAssertions;
 using Xunit;
 
