@@ -22,7 +22,7 @@ namespace Enigma5.App.Models;
 
 public class PendingMessage
 {
-    public long Id { get; set; }
+    public string? Uuid { get; set; }
     
     public string? Destination { get; set; }
 

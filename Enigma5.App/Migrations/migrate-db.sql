@@ -79,3 +79,12 @@ VALUES ('20241121071617_AddDateSentOnPendingMessage', '8.0.0');
 
 COMMIT;
 
+BEGIN TRANSACTION;
+
+ALTER TABLE "Messages" ADD "Uuid" TEXT NOT NULL DEFAULT '';
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20241122130215_AddUuidOnPendingMessages', '8.0.0');
+
+COMMIT;
+

@@ -33,7 +33,7 @@ public class GetPendingMessagesByDestinationHandler(Data.EnigmaDbContext context
     => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination)
     .Select(item => new Models.PendingMessage
     {
-        Id = item.Id,
+        Uuid = item.Uuid,
         Destination = item.Destination,
         Content = item.Content,
         DateReceived = item.DateReceived,

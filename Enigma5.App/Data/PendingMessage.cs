@@ -40,4 +40,6 @@ public class PendingMessage
     public bool Sent { get; set; } = false;
 
     public DateTimeOffset? DateSent { get; set; } = null;
+
+    public string Uuid { get; set; } = Guid.NewGuid().ToString();
 }
