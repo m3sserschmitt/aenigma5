@@ -87,11 +87,7 @@ public class Program
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
         using var envelope = SealProvider.Factory.CreateSigner(privateKey, passphrase ?? string.Empty);
         var signature = envelope.Sign(serializedNeighborhood);
-        return new VertexBroadcastRequest
-        {
-            PublicKey = publicKey,
-            SignedData = Convert.ToBase64String(signature!)
-        };
+        return new VertexBroadcastRequest(publicKey, Convert.ToBase64String(signature!));
     }
 
     public static async Task Main(string[] args)

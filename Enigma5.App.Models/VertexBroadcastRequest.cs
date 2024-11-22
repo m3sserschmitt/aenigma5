@@ -21,9 +21,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
+
 
 public class VertexBroadcastRequest : IValidatable
 {
@@ -32,12 +34,12 @@ public class VertexBroadcastRequest : IValidatable
     [JsonIgnore]
     public Neighborhood Neighborhood { get; private set; } = new();
 
-    public string? PublicKey { get; set; }
+    public string? PublicKey { get; private set; }
 
     public string? SignedData
     {
         get => _signedData;
-        set
+        private set
         {
             try
             {
@@ -58,6 +60,7 @@ public class VertexBroadcastRequest : IValidatable
         }
     }
 
+    [method: JsonConstructor]
     public VertexBroadcastRequest(string publicKey, string signedData)
     {
         PublicKey = publicKey;
@@ -66,27 +69,27 @@ public class VertexBroadcastRequest : IValidatable
 
     public VertexBroadcastRequest() { }
 
-    public IEnumerable<Error> Validate()
+    public HashSet<Error> Validate()
     {
-        var validationResults = new List<Error>();
+        var validationResults = new HashSet<Error>();
 
         if (string.IsNullOrWhiteSpace(PublicKey))
         {
-            validationResults.Add(new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(PublicKey)]));
+            validationResults.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
 
-        if (PublicKey is not null && !PublicKey.IsValidPublicKey())
+        if (!string.IsNullOrWhiteSpace(PublicKey) && !PublicKey.IsValidPublicKey())
         {
-            validationResults.Add(new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(PublicKey)]));
+            validationResults.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
 
-        if (_signedData is null)
+        if (string.IsNullOrEmpty(_signedData))
         {
-            validationResults.Add(new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(SignedData)]));
+            validationResults.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
         }
         else
         {
-            validationResults.AddRange(Neighborhood.Validate());
+            validationResults.AddErrors(Neighborhood.Validate());
         }
 
         return validationResults;

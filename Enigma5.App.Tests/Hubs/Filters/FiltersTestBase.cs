@@ -21,7 +21,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Autofac;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 
@@ -31,6 +31,8 @@ namespace Enigma5.App.Tests.Hubs.Filters;
 public class FiltersTestBase<T> : AppTestBase
 where T : notnull
 {
+    protected static readonly string _testMethodName = "test-method";
+
     protected readonly T _filter;
 
     protected readonly HubCallerContext _hubCallerContext;
@@ -50,8 +52,8 @@ where T : notnull
         _methodInfo = Substitute.For<MethodInfo>();
         _hubMethodArguments = Substitute.For<IReadOnlyList<object?>>();
         _hubInvocationContext = new HubInvocationContext(_hubCallerContext, Substitute.For<IServiceProvider>(), _hub, _methodInfo, _hubMethodArguments);
-        _methodInfo.Name.Returns("test-method");
-        _hubCallerContext.ConnectionId.Returns("test-connection-id");
+        _methodInfo.Name.Returns(_testMethodName);
+        _hubCallerContext.ConnectionId.Returns(_testConnectionId1);
         _next = Substitute.For<Func<HubInvocationContext, ValueTask<object?>>>();
     }
 }

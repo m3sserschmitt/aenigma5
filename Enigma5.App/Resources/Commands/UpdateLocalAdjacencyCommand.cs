@@ -27,7 +27,7 @@ namespace Enigma5.App.Resources.Commands;
 public class UpdateLocalAdjacencyCommand(List<string> addresses, bool add)
 : IRequest<CommandResult<VertexBroadcastRequest>>
 {
-    public List<string> Address { get; private set; } = addresses;
+    public List<string> Addresses { get; private set; } = addresses;
 
     public bool Add { get; private set; } = add;
 }

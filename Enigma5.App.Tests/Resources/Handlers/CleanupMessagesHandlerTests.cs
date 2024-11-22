@@ -21,7 +21,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -35,7 +35,26 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
     public async Task ShouldCleanupOldMessages()
     {
         // Arrange
-        var request = new CleanupMessagesCommand(TimeSpan.FromMinutes(15), false);
+        var request = new CleanupMessagesCommand(TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(5));
+
+        // Act
+        var result = await _handler.Handle(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeOfType<CommandResult<int>>();
+        result.Success.Should().BeTrue();
+        result.Value.Should().Be(2);
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().BeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ShouldCleanupOldButNotDeliveredMessages()
+    {
+        // Arrange
+        var request = new CleanupMessagesCommand(TimeSpan.FromMinutes(15), TimeSpan.FromDays(5));
 
         // Act
         var result = await _handler.Handle(request);
@@ -51,10 +70,10 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
     }
 
     [Fact]
-    public async Task ShouldCleanupDeliveredMessages()
+    public async Task ShouldCleanupDeliveredButNotOldMessages()
     {
         // Arrange
-        var request = new CleanupMessagesCommand(TimeSpan.FromMinutes(15), true);
+        var request = new CleanupMessagesCommand(TimeSpan.FromDays(15), TimeSpan.FromMinutes(5));
 
         // Act
         var result = await _handler.Handle(request);
@@ -63,9 +82,28 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
         result.Should().NotBeNull();
         result.Should().BeOfType<CommandResult<int>>();
         result.Success.Should().BeTrue();
-        result.Value.Should().Be(2);
+        result.Value.Should().Be(1);
         (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
         (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().BeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().BeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ShouldNotCleanupAnyMessage()
+    {
+        // Arrange
+        var request = new CleanupMessagesCommand(TimeSpan.FromDays(15), TimeSpan.FromDays(5));
+
+        // Act
+        var result = await _handler.Handle(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeOfType<CommandResult<int>>();
+        result.Success.Should().BeTrue();
+        result.Value.Should().Be(0);
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().NotBeNull();
     }
 }

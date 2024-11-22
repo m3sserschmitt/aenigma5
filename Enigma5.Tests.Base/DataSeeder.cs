@@ -23,18 +23,21 @@ using System.Text;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Crypto;
 using Enigma5.Crypto.DataProviders;
-using Microsoft.EntityFrameworkCore;
 
-namespace Enigma5.App.Tests.Helpers;
+namespace Enigma5.Tests.Base;
 
 [ExcludeFromCodeCoverage]
-public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
+public class DataSeeder(App.Data.EnigmaDbContext dbContext)
 {
-    private readonly Enigma5.App.Data.EnigmaDbContext _dbContext = dbContext;
+    private readonly App.Data.EnigmaDbContext _dbContext = dbContext;
 
     public static class ModelsFactory
     {
-        public static Models.SharedDataCreate CreateSharedDataCreate()
+        private static readonly App.Models.VertexBroadcastRequest _vertexBroadcastRequest = new(PKey.PublicKey1, "eyJIb3N0bmFtZSI6ImFkamFjZW50LWhvc3RuYW1lIiwiQWRkcmVzcyI6ImNiZmYyZTEyZmIxZjc1MmNiMTcxODVmMDgwZjJiNDAzMDExNjVhMTA1MTUzMWNjMDYxNGU0OTVlZTI2MjBlZjkiLCJOZWlnaGJvcnMiOlsiYmEzMWQyM2UyODIwMDNjNjc4ZGNmZWM0OGMxN2QwNDQwNjFmMzQwZDNlNmU3ZjdhMTEwOWRkMWRiMzJkMWQ5NSJdfX3Pv7iVh2pHYp/wK8Qnre/apsDbTA6NZwBjSpPzBI8tgeK8VvLi5XvR9fRJV4XO3C51YnDVSIXRzDJ6vgDE3jMmLMF38ZzA4UJ5iNSlJ9r0kcLKUYx3Aq16EEEFKPaHBqCv+Cd4csIzviOIPBqBeFi7WiFyq+/hoyV9DtBfcyYgEh79Wo3On4zXh5lGoGWwuhORDTTPKRgu54TZs1DXubpdj+4fzDYhCrEiYgl3Cw752g5fgXwb//kC/awJYop/BHFdx6EWd5wP0qlYUrig6upj1Kk3WueXbMaQRmIlWFzwHH1/IkElpbc1lcrLy2b6vK0CssgF1uP4qSrDliScuMM=");
+
+        public static App.Models.VertexBroadcastRequest VertexBroadcastRequest => _vertexBroadcastRequest.CopyBySerialization();
+
+        public static App.Models.SharedDataCreate CreateSharedDataCreate()
         {
             var data = Encoding.UTF8.GetBytes("data to be shared");
             using var signer = SealProvider.Factory.CreateSigner(PKey.PrivateKey1, PKey.Passphrase);
@@ -48,7 +51,7 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
             };
         }
 
-        public static Models.AuthenticationRequest CreateAuthenticationRequest(string nonce)
+        public static App.Models.AuthenticationRequest CreateAuthenticationRequest(string nonce)
         {
             using var signature = SealProvider.Factory.CreateSigner(PKey.PrivateKey1, PKey.Passphrase);
             var decodedNonce = Convert.FromBase64String(nonce);
@@ -60,7 +63,7 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
             };
         }
 
-        public static Models.SignatureRequest CreateSignatureRequest()
+        public static App.Models.SignatureRequest CreateSignatureRequest()
         {
             var tokenData = new byte[64];
             new Random().NextBytes(tokenData);
@@ -81,7 +84,7 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
         => SealProvider.SealOnion(data, [ PKey.PublicKey2, PKey.PublicKey3 ], [ PKey.Address1, PKey.Address2 ]);
 
 
-        public static Models.RoutingRequest CreateRoutingRequest()
+        public static App.Models.RoutingRequest CreateRoutingRequest()
         => new() {
                 Payload = CreateOnion("pending-message")
         };
@@ -89,47 +92,67 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
 
     public static class DataFactory
     {
-        private static readonly Enigma5.App.Data.SharedData _sharedData = new ("shared-data", PKey.PublicKey1, 2)
+        private static readonly App.Data.SharedData _sharedData = new()
         {
-            Tag = "acde070d-8c4c-4f0d-9d8a-162843c10333"
+            Tag = "acde070d-8c4c-4f0d-9d8a-162843c10333",
+            Data = "shared-data",
+            PublicKey = PKey.PublicKey1,
+            MaxAccessCount = 2
         };
 
-        private static readonly Enigma5.App.Data.SharedData _oldSharedData = new ("old-shared-data", PKey.PublicKey1, 2)
+        private static readonly App.Data.SharedData _oldSharedData = new()
         {
             Tag = "acdeaddd-8c4c-4f0d-9d8a-162843c10355",
-            DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2)
+            DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2),
+            Data = "old-shared-data",
+            PublicKey = PKey.PublicKey1,
+            MaxAccessCount = 2
         };
 
-        private static readonly Enigma5.App.Data.PendingMessage _pendingMesage = new (PKey.Address2, "pending-message", false)
+        private static readonly App.Data.PendingMessage _pendingMesage = new()
         {
-            Id = 1
+            Id = 1,
+            Destination = PKey.Address2,
+            Content = "pending-message",
+            Sent = false
         };
 
-        private static readonly Enigma5.App.Data.PendingMessage _oldPendingMesage = new (PKey.Address2, "old-pending-message", false)
+        private static readonly App.Data.PendingMessage _oldPendingMesage = new()
         {
             Id = 2,
-            DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5)
+            DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5),
+            Destination = PKey.Address2,
+            Content = "old-pending-message",
+            Sent = false
         };
 
 
-        private static readonly Enigma5.App.Data.PendingMessage _deliveredPendingMesage = new (PKey.Address2, "delivered-pending-message", true)
+        private static readonly App.Data.PendingMessage _deliveredPendingMesage = new()
         {
-            Id = 3
+            Id = 3,
+            Destination = PKey.Address2,
+            Content = "delivered-pending-message",
+            Sent = true,
+            DateSent = DateTimeOffset.Now - TimeSpan.FromDays(3)
         };
 
-        private static readonly Enigma5.App.Data.AuthorizedService _authorizedService = new(1, PKey.Address1);
+        private static readonly App.Data.AuthorizedService _authorizedService = new()
+        {
+            Id = 1,
+            Address = PKey.Address1
+        };
 
-        public static Enigma5.App.Data.SharedData SharedData => _sharedData.CopyBySerialization();
+        public static App.Data.SharedData SharedData => _sharedData.CopyBySerialization();
 
-        public static Enigma5.App.Data.SharedData OldSharedData => _oldSharedData.CopyBySerialization();
+        public static App.Data.SharedData OldSharedData => _oldSharedData.CopyBySerialization();
 
-        public static Enigma5.App.Data.PendingMessage PendingMesage => _pendingMesage.CopyBySerialization();
+        public static App.Data.PendingMessage PendingMesage => _pendingMesage.CopyBySerialization();
 
-        public static Enigma5.App.Data.PendingMessage OldPendingMesage => _oldPendingMesage.CopyBySerialization();
+        public static App.Data.PendingMessage OldPendingMesage => _oldPendingMesage.CopyBySerialization();
 
-        public static Enigma5.App.Data.PendingMessage DeliveredPendingMesage => _deliveredPendingMesage.CopyBySerialization();
+        public static App.Data.PendingMessage DeliveredPendingMesage => _deliveredPendingMesage.CopyBySerialization();
         
-        public static Enigma5.App.Data.AuthorizedService AuthorizedService => _authorizedService.CopyBySerialization();
+        public static App.Data.AuthorizedService AuthorizedService => _authorizedService.CopyBySerialization();
     }
 
     public async Task Seed()
@@ -149,14 +172,4 @@ public class DataSeeder(Enigma5.App.Data.EnigmaDbContext dbContext)
         
         await _dbContext.SaveChangesAsync();
     }
-
-    public Task<Enigma5.App.Data.SharedData?> SharedData => _dbContext.SharedData.FirstOrDefaultAsync(item => item.Tag == DataFactory.SharedData.Tag);
-
-    public Task<Enigma5.App.Data.PendingMessage?> PendingMessage => _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataFactory.PendingMesage.Id);
-
-    public Task<Enigma5.App.Data.PendingMessage?> OldPendingMessage => _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataFactory.OldPendingMesage.Id);
-
-    public Task<Enigma5.App.Data.PendingMessage?> DeliveredPendingMessage => _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataFactory.DeliveredPendingMesage.Id);
-
-    public Task<Enigma5.App.Data.AuthorizedService?> AuthorizedService => _dbContext.AuthorizedServices.FirstOrDefaultAsync(item => item.Id == DataFactory.AuthorizedService.Id);
 }

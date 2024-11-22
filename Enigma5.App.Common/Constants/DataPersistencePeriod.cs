@@ -24,6 +24,8 @@ public static class DataPersistencePeriod
 {
     public static readonly TimeSpan PendingMessagePersistancePeriod = new(02, 00, 00, 00);
 
+    public static readonly TimeSpan DeliveredMessagePersistancePeriod = new(01, 00, 00, 00);
+
     public static readonly TimeSpan SharedDataPersistancePeriod = new(00, 30, 00);
 
     public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(01, 00, 00);

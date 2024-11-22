@@ -18,24 +18,26 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel.DataAnnotations;
+
 namespace Enigma5.App.Data;
 
 public class PendingMessage
 {
-    public PendingMessage(string destination, string content, bool sent)
-    {
-        Destination = destination;
-        Content = content;
-        Sent = sent;    
-    }
-
+    [Key]
     public long Id { get; set; }
 
-    public string Destination { get; set; } = string.Empty;
+    [Required]
+    public string? Destination { get; set; }
 
-    public string Content { get; set; } = string.Empty;
+    [Required]
+    public string? Content { get; set; }
 
+    [Required]
     public DateTimeOffset DateReceived { get; set; } = DateTimeOffset.Now;
 
-    public bool Sent { get; set; }
+    [Required]
+    public bool Sent { get; set; } = false;
+
+    public DateTimeOffset? DateSent { get; set; } = null;
 }

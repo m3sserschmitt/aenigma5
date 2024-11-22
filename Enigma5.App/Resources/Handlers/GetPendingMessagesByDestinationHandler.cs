@@ -29,12 +29,14 @@ public class GetPendingMessagesByDestinationHandler(Data.EnigmaDbContext context
 {
     private readonly Data.EnigmaDbContext _context = context;    
 
-    async Task<CommandResult<List<Models.PendingMessage>>> IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<Models.PendingMessage>>>.Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination && !item.Sent)
+    public async Task<CommandResult<List<Models.PendingMessage>>> Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination)
     .Select(item => new Models.PendingMessage
     {
+        Id = item.Id,
         Destination = item.Destination,
         Content = item.Content,
-        DateReceived = item.DateReceived
+        DateReceived = item.DateReceived,
+        Sent = item.Sent
     }).ToListAsync(cancellationToken));
 }

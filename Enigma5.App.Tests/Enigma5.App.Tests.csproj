@@ -24,7 +24,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="NSubstitute" Version="5.1.0" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -38,6 +38,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Enigma5.Crypto/Enigma5.Crypto.csproj" />
+    <ProjectReference Include="../Enigma5.Tests.Base/Enigma5.Tests.Base.csproj" />
     <ProjectReference Include="..\Enigma5.App\Enigma5.App.csproj" />
     <ProjectReference Include="..\Enigma5.App.Common\Enigma5.App.Common.csproj" />
   </ItemGroup>

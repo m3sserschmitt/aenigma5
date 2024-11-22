@@ -28,7 +28,7 @@ public class GetSharedDataHandler(Data.EnigmaDbContext context) : IRequestHandle
 {
     private readonly Data.EnigmaDbContext _context = context;
 
-    async Task<CommandResult<Models.SharedData>> IRequestHandler<GetSharedDataQuery, CommandResult<Models.SharedData>>.Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<Models.SharedData>> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken: cancellationToken);
         return sharedData is null ? CommandResult.CreateResultSuccess<Models.SharedData>() : CommandResult.CreateResultSuccess(new Models.SharedData

@@ -23,7 +23,7 @@ using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -78,7 +78,7 @@ public class ValidateModelFilterTests : FiltersTestBase<ValidateModelFilter>
         // Assert
         var response = result as EmptyErrorResult;
         response.Should().NotBeNull();
-        response!.Errors.Should().HaveCount(2);
+        response!.Errors.Should().HaveCount(1);
         var error = response.Errors.First();
         error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);

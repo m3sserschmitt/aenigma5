@@ -105,7 +105,7 @@ public class StartupConfiguration(IConfiguration configuration)
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "pending-messages-cleanup",
             bridge => bridge.Send(
-                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistancePeriod, true)
+                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistancePeriod, DataPersistencePeriod.DeliveredMessagePersistancePeriod)
             ),
             "*/15 * * * *"
         );

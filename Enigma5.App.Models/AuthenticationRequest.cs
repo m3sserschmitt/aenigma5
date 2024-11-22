@@ -18,8 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Buffers.Text;
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
@@ -30,26 +30,29 @@ public class AuthenticationRequest: IValidatable
 
     public string? Signature { get; set; }
 
-    public IEnumerable<Error> Validate()
+    public HashSet<Error> Validate()
     {
+        var errors = new HashSet<Error>();
         if(string.IsNullOrWhiteSpace(PublicKey))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(PublicKey)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
 
         if(string.IsNullOrWhiteSpace(Signature))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(Signature)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Signature));
         }
 
-        if(PublicKey is not null && !PublicKey.IsValidPublicKey())
+        if(!string.IsNullOrWhiteSpace(PublicKey) && !PublicKey.IsValidPublicKey())
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(PublicKey)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
         }
 
-        if(Signature is not null && !Base64.IsValid(Signature))
+        if(!string.IsNullOrWhiteSpace(Signature) && !Signature.IsValidBase64())
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(Signature)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Signature));
         }
+
+        return errors;
     }
 }

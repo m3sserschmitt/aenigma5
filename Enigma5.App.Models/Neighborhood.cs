@@ -20,6 +20,7 @@
 
 using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
@@ -33,26 +34,30 @@ public class Neighborhood : IValidatable
 
     public HashSet<string>? Neighbors { get; set; }
 
-    public IEnumerable<Error> Validate()
+    public HashSet<Error> Validate()
     {
+        var errors = new HashSet<Error>();
+
         if (string.IsNullOrWhiteSpace(Address))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(Address)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Address));
         }
 
         if (Neighbors is null)
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(Neighbors)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Neighbors));
         }
 
-        if (Address is not null && !Address.IsValidAddress())
+        if (!string.IsNullOrWhiteSpace(Address) && !Address.IsValidAddress())
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(Address)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Address));
         }
 
         if (Neighbors is not null && Neighbors.Any(item => !item.IsValidAddress()))
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(Neighbors)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Neighbors));
         }
+
+        return errors;
     }
 }

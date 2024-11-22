@@ -30,23 +30,6 @@ namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub
 {
-    /*
-    protected async Task<bool> RespondAsync(string method, object? arg1)
-    {
-        try
-        {
-            await Clients.Client(Context.ConnectionId).SendAsync(method, arg1);
-            return true;
-        }
-        catch(Exception ex)
-        {
-            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
-            nameof(RespondAsync),
-            Context.ConnectionId);
-            return false;
-        }
-    }
-    */
     protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
         try

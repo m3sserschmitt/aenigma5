@@ -27,7 +27,7 @@ using Enigma5.App.Data;
 using Enigma5.Crypto.Contracts;
 using Microsoft.Extensions.Configuration;
 
-namespace Enigma5.App.Tests.Helpers;
+namespace Enigma5.Tests.Base;
 
 [ExcludeFromCodeCoverage]
 public static class ContainerBuilderExtensions

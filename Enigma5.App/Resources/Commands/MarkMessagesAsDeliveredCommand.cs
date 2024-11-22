@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,6 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models;
+using Enigma5.App.Resources.Handlers;
+using MediatR;
 
-public record class Graph(string PublicKey, string SignedData);
+namespace Enigma5.App.Resources.Commands;
+
+public class MarkMessagesAsDeliveredCommand(string destination): IRequest<CommandResult<int>>
+{
+    public string Destination { get; private set; } = destination;
+}

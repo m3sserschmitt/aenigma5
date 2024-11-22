@@ -20,7 +20,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Autofac;
-using Enigma5.App.Tests.Helpers;
+using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 

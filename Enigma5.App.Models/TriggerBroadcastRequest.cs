@@ -19,6 +19,7 @@
 */
 
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
@@ -37,11 +38,13 @@ public class TriggerBroadcastRequest : IValidatable
         NewAddresses = [];
     }
 
-    public IEnumerable<Error> Validate()
+    public HashSet<Error> Validate()
     {
+        var errors = new HashSet<Error>();
         if(NewAddresses?.Any(item => !item.IsValidAddress()) ?? false)
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(NewAddresses)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(NewAddresses));
         }
+        return errors;
     }
 }

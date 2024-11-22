@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -20,27 +20,30 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.Crypto.Extensions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<RemoveSharedDataCommand, CommandResult<int>>
+public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IRequestHandler<MarkMessagesAsDeliveredCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
+    private readonly EnigmaDbContext _dbContext = dbContext;
 
-    public async Task<CommandResult<int>> Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<int>> Handle(MarkMessagesAsDeliveredCommand request, CancellationToken cancellationToken)
     {
-        var sharedData = await _context.SharedData.FirstOrDefaultAsync(
-            item => item.Tag == request.Tag,
-            cancellationToken: cancellationToken);
-
-        if (sharedData is not null)
+        if(!request.Destination.IsValidAddress())
         {
-            _context.Remove(sharedData);
-            return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+            return CommandResult.CreateResultFailure<int>();
         }
 
-        return CommandResult.CreateResultSuccess(0);
+        var messages = _dbContext.Messages.Where(item => item.Destination == request.Destination && !item.Sent);
+        foreach(var message in messages)
+        {
+            message.Sent = true;
+            message.DateSent = DateTimeOffset.Now;
+        }
+        _dbContext.Messages.UpdateRange(messages);
+
+        return CommandResult.CreateResultSuccess(await _dbContext.SaveChangesAsync(cancellationToken));
     }
 }

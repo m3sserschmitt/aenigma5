@@ -44,15 +44,11 @@ public class NetworkGraph
 
     private readonly HashSet<Vertex> _vertices;
 
-    // private Graph _graph;
-
-    // public Graph Graph => ThreadSafeExecution.Execute(() => _graph.CopyBySerialization(), new Graph(_certificateManager.PublicKey, string.Empty), _locker);
-
     public HashSet<Vertex> Vertices => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker, _logger);
 
     public Vertex? LocalVertex => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), null, _locker, _logger);
 
-    public HashSet<string> NeighboringAddresses => ThreadSafeExecution.Execute(() => _localVertex.Neighborhood.Neighbors.CopyBySerialization(), [], _locker, _logger);
+    virtual public HashSet<string> NeighboringAddresses => ThreadSafeExecution.Execute(() => _localVertex.Neighborhood.Neighbors.CopyBySerialization(), [], _locker, _logger);
 
     public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker, _logger);
 
@@ -64,8 +60,6 @@ public class NetworkGraph
         _localVertex = CreateInitialVertex();
         _vertices = [_localVertex];
         _logger = logger;
-        // SignGraph();
-        // _graph ??= new Graph(_certificateManager.PublicKey, string.Empty);
     }
 
     public Vertex? GetVertex(string address)
@@ -96,7 +90,6 @@ public class NetworkGraph
                 && ValidateNewVertex(newVertex!))
             {
                 ReplaceLocalVertex(newVertex!);
-                // SignGraph();
 
                 return (_localVertex.CopyBySerialization(), true);
             }
@@ -116,7 +109,6 @@ public class NetworkGraph
             {
                 ReplaceLocalVertex(newVertex!);
                 CleanupGraph();
-                // SignGraph();
 
                 return (_localVertex.CopyBySerialization(), true);
             }
@@ -168,7 +160,6 @@ public class NetworkGraph
                 {
                     _vertices.Add(vertexToBeAdded);
                     updatedVertices.Add(vertex);
-                    // SignGraph();
                 }
                 else if (previous != vertex) // existent but different;
                 {
@@ -176,7 +167,6 @@ public class NetworkGraph
                     _vertices.Add(vertexToBeAdded);
                     updatedVertices.Add(vertex);
                     CleanupGraph();
-                    // SignGraph();
                 }
                 else if (previous.ShallBeBroadcasted()) // existent and it is the same;
                 {
@@ -197,23 +187,6 @@ public class NetworkGraph
         List<Vertex> task() => Update(vertex);
         return Task.Run(task, cancellationToken);
     }
-
-    /*private void SignGraph()
-    {
-        using var envelope = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-        var serializedData = JsonSerializer.Serialize(_vertices.Where(item => !item.IsLeaf));
-        var signature = envelope.Sign(Encoding.UTF8.GetBytes(serializedData));
-        var encodedSignature = signature is not null ? Convert.ToBase64String(signature) : null;
-
-        if(encodedSignature is null)
-        {
-            // TODO: Log this!!
-            return;
-        }
-
-        
-        _graph = new Graph(_certificateManager.PublicKey, encodedSignature);
-    }*/
 
     private Vertex CreateInitialVertex()
     { 
@@ -291,7 +264,6 @@ public class NetworkGraph
         _vertices.Remove(_localVertex);
         _localVertex = vertex.CopyBySerialization();
         _vertices.Add(_localVertex);
-        // SignGraph();
     }
 
     private HashSet<Vertex> GetNeighborhoodsUnion()

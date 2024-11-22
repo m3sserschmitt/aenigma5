@@ -28,7 +28,7 @@ public class GetVertexHandler(Data.NetworkGraph graph)
 {
     private readonly Data.NetworkGraph _graph = graph;
 
-    async Task<CommandResult<Models.Vertex>> IRequestHandler<GetVertexQuery, CommandResult<Models.Vertex>>.Handle(GetVertexQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<Models.Vertex>> Handle(GetVertexQuery request, CancellationToken cancellationToken)
     {
         var vertex = await _graph.GetVertexAsync(request.Address, cancellationToken);
 
