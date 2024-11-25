@@ -85,9 +85,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
 
 
         public static App.Models.RoutingRequest CreateRoutingRequest()
-        => new() {
-                Payload = CreateOnion("pending-message")
-        };
+        => new(CreateOnion("pending-message")!);
     }
 
     public static class DataFactory

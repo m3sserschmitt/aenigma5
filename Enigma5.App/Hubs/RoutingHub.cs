@@ -19,7 +19,6 @@
 */
 
 using Enigma5.App.Attributes;
-using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 using Enigma5.App.Resources.Queries;
@@ -82,7 +81,7 @@ public partial class RoutingHub(
 
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
-    
+
     [Authenticated]
     public async Task<InvocationResult<List<Models.PendingMessage>>> Pull()
     {
@@ -122,7 +121,7 @@ public partial class RoutingHub(
 
         var result = await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
 
-        if(result.IsSuccessNotNullResultValue())
+        if (result.IsSuccessNotNullResultValue())
         {
             return Ok(true);
         }
@@ -220,24 +219,13 @@ public partial class RoutingHub(
     [Authenticated]
     public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
     {
-        if (DestinationConnectionId != null && Content != null && await RouteMessage(DestinationConnectionId, Content))
+        var result = await CreatePendingMessage();
+        var success = result.IsSuccessNotNullResultValue();
+        if (DestinationConnectionId != null && Content != null)
         {
-            return Ok(true);
+            success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
         }
-        else if (Content != null)
-        {
-            _logger.LogDebug($"Onion could not be forwarded for connectionId {{{nameof(Context.ConnectionId)}}}. Saving locally...", Context.ConnectionId);
-            var encodedContent = Convert.ToBase64String(Content);
-            if (encodedContent is null)
-            {
-                _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
-                return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
-            }
-            var result = await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
-
-            return result.IsSuccessNotNullResultValue() ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
-        }
-        return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
+        return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

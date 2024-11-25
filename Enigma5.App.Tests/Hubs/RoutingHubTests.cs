@@ -497,6 +497,7 @@ public class RoutingHubTests : AppTestBase
         // Arrange
         _hub.Content = [0x01, 0x02, 0x03];
         _hub.DestinationConnectionId = _testConnectionId2;
+        _hub.Next = PKey.Address2;
 
         // Act
         var result = await _hub.RouteMessage(new());
@@ -509,6 +510,8 @@ public class RoutingHubTests : AppTestBase
         result.Data.Should().BeTrue();
         _hub.Clients.Received(1).Client(_testConnectionId2);
         await _hub.Clients.Client(_testConnectionId2).ReceivedWithAnyArgs(1).SendAsync("");
+        var pendingMessage = await _dbContext.Messages.FirstOrDefaultAsync(item => item.Destination == PKey.Address2 && item.Content == "AQID");
+        pendingMessage.Should().NotBeNull();
     }
 
     [Fact]

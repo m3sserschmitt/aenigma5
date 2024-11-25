@@ -30,10 +30,7 @@ public class RoutingRequestTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new RoutingRequest
-        {
-            Payload = "dGVzdC1zdHJpbmc="
-        };
+        var request = new RoutingRequest("dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -46,10 +43,7 @@ public class RoutingRequestTests
     public void ShouldNotValidateNullPayload()
     {
         // Arrange
-        var request = new RoutingRequest
-        {
-            Payload = null
-        };
+        var request = new RoutingRequest(null);
 
         // Act
         var result = request.Validate();
@@ -66,10 +60,7 @@ public class RoutingRequestTests
     public void ShouldNotValidateEmptyPayload()
     {
         // Arrange
-        var request = new RoutingRequest
-        {
-            Payload = "   "
-        };
+        var request = new RoutingRequest("   ");
 
         // Act
         var result = request.Validate();
@@ -86,10 +77,7 @@ public class RoutingRequestTests
     public void ShouldNotValidateInvalidBase64()
     {
         // Arrange
-        var request = new RoutingRequest
-        {
-            Payload = "invalid-base64"
-        };
+        var request = new RoutingRequest("invalid-base64");
 
         // Act
         var result = request.Validate();
