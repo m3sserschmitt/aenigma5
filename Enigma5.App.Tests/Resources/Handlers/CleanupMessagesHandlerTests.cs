@@ -45,9 +45,9 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
         result.Should().BeOfType<CommandResult<int>>();
         result.Success.Should().BeTrue();
         result.Value.Should().Be(2);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().BeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().BeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().BeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().BeNull();
     }
 
     [Fact]
@@ -64,9 +64,9 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
         result.Should().BeOfType<CommandResult<int>>();
         result.Success.Should().BeTrue();
         result.Value.Should().Be(1);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().BeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().BeNull();
     }
 
     [Fact]
@@ -83,9 +83,9 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
         result.Should().BeOfType<CommandResult<int>>();
         result.Success.Should().BeTrue();
         result.Value.Should().Be(1);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().BeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().BeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().NotBeNull();
     }
 
     [Fact]
@@ -102,8 +102,8 @@ public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandle
         result.Should().BeOfType<CommandResult<int>>();
         result.Success.Should().BeTrue();
         result.Value.Should().Be(0);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMesage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMesage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMesage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().NotBeNull();
+        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().NotBeNull();
     }
 }

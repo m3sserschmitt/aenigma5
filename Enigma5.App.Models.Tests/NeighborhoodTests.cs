@@ -19,18 +19,19 @@
 */
 
 using System.Diagnostics.CodeAnalysis;
+using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 
 namespace Enigma5.App.Models.Tests;
 
 [ExcludeFromCodeCoverage]
-public class RoutingRequestTests
+public class NeighborhoodTests
 {
     [Fact]
     public void ShouldValidate()
     {
         // Arrange
-        var request = new RoutingRequest("dGVzdC1zdHJpbmc=");
+        var request = new Neighborhood(PKey.Address1, "localhost", [PKey.Address3]);
 
         // Act
         var result = request.Validate();
@@ -40,44 +41,10 @@ public class RoutingRequestTests
     }
 
     [Fact]
-    public void ShouldNotValidateNullPayload()
+    public void ShouldNotValidateForInvalidAddress()
     {
         // Arrange
-        var request = new RoutingRequest(null);
-
-        // Act
-        var result = request.Validate();
-
-        // Assert
-        result.Should().HaveCount(1);
-        var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
-        error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
-    }
-
-    [Fact]
-    public void ShouldNotValidateEmptyPayload()
-    {
-        // Arrange
-        var request = new RoutingRequest("   ");
-
-        // Act
-        var result = request.Validate();
-
-        // Assert
-        result.Should().HaveCount(1);
-        var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
-        error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
-    }
-
-    [Fact]
-    public void ShouldNotValidateInvalidBase64()
-    {
-        // Arrange
-        var request = new RoutingRequest("invalid-base64");
+        var request = new Neighborhood("invalid-address", "localhost", [PKey.Address3]);
 
         // Act
         var result = request.Validate();
@@ -87,6 +54,57 @@ public class RoutingRequestTests
         var error = result.Single();
         error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
+        error.Properties.Should().Contain(nameof(request.Address));
+    }
+
+    [Fact]
+    public void ShouldNotValidateForNullAddress()
+    {
+        // Arrange
+        var request = new Neighborhood(null, "localhost", [PKey.Address3]);
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.Address));
+    }
+
+    [Fact]
+    public void ShouldNotValidateForInvalidNeighborAddress()
+    {
+        // Arrange
+        var request = new Neighborhood(PKey.Address1, "localhost", ["invalid-address"]);
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.Neighbors));
+    }
+
+    [Fact]
+    public void ShouldNotValidateForNullNeighborsList()
+    {
+        // Arrange
+        var request = new Neighborhood(PKey.Address1, "localhost", null);
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.Neighbors));
     }
 }

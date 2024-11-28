@@ -34,12 +34,13 @@ public static class Api
         var result = await commandRouter.Send(new GetServerInfoQuery());
         return result.CreateGetResponse();
     }
-
+    
     public static async Task<IResult> PostShare(SharedDataCreate sharedDataCreate, IMediator commandRouter)
     {
-        if (!sharedDataCreate.Valid)
+        var errors = sharedDataCreate.Validate();
+        if (errors.Count > 0)
         {
-            return Results.BadRequest();
+            return Results.BadRequest(errors);
         }
 
         var result = await commandRouter.Send(new CreateSharedDataCommand(sharedDataCreate));

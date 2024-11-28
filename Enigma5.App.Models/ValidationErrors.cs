@@ -25,4 +25,8 @@ public static class ValidationErrors
     public static readonly string NULL_REQUIRED_PROPERTIES = "One or more required properties not provided.";
 
     public static  readonly string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
+
+    public static readonly string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";
+
+    public static readonly string INVALID_VALUE_FOR_PROPERTY = "One or more properties have invalid values.";
 }

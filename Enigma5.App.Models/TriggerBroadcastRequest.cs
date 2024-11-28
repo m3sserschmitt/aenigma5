@@ -24,19 +24,9 @@ using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class TriggerBroadcastRequest : IValidatable
+public class TriggerBroadcastRequest(List<string>? newAddresses = null) : IValidatable
 {
-    public List<string>? NewAddresses { get; set; }
-
-    public TriggerBroadcastRequest(List<string> newAddresses)
-    {
-        NewAddresses = newAddresses;
-    }
-
-    public TriggerBroadcastRequest()
-    {
-        NewAddresses = [];
-    }
+    public List<string>? NewAddresses { get; set; } = newAddresses;
 
     public HashSet<Error> Validate()
     {

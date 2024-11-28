@@ -266,11 +266,7 @@ public class ConnectionVector
                 return false;
             }
 
-            var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest
-            {
-                Signature = signature.Data.SignedData,
-                PublicKey = signature.Data.PublicKey,
-            }, cancellationToken: cancellationToken);
+            var authentication = await _target.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest(signature.Data.PublicKey, signature.Data.SignedData), cancellationToken: cancellationToken);
 
             TargetAuthenticated = authentication.Success && authentication.Data;
             SourcePublicKey = signature.Data.PublicKey;

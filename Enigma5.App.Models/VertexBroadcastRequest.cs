@@ -26,7 +26,6 @@ using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-
 public class VertexBroadcastRequest : IValidatable
 {
     private string? _signedData;
@@ -61,13 +60,11 @@ public class VertexBroadcastRequest : IValidatable
     }
 
     [method: JsonConstructor]
-    public VertexBroadcastRequest(string publicKey, string signedData)
+    public VertexBroadcastRequest(string? publicKey = null, string? signedData = null)
     {
         PublicKey = publicKey;
         SignedData = signedData;
     }
-
-    public VertexBroadcastRequest() { }
 
     public HashSet<Error> Validate()
     {
@@ -77,15 +74,14 @@ public class VertexBroadcastRequest : IValidatable
         {
             validationResults.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
-
-        if (!string.IsNullOrWhiteSpace(PublicKey) && !PublicKey.IsValidPublicKey())
+        else if (!PublicKey.IsValidPublicKey())
         {
-            validationResults.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
+            validationResults.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
         }
 
         if (string.IsNullOrEmpty(_signedData))
         {
-            validationResults.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
+            validationResults.AddError(ValidationErrors.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED, nameof(SignedData));
         }
         else
         {

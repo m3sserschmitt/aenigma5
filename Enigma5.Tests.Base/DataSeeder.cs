@@ -44,11 +44,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             var signedData = signer.Sign(data);
             var encodedData = Convert.ToBase64String(signedData!);
 
-            return new() {
-                PublicKey = PKey.PublicKey1,
-                SignedData = encodedData,
-                AccessCount = 3
-            };
+            return new(PKey.PublicKey1, encodedData, 3);
         }
 
         public static App.Models.AuthenticationRequest CreateAuthenticationRequest(string nonce)
@@ -57,10 +53,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             var decodedNonce = Convert.FromBase64String(nonce);
             var data = signature.Sign(decodedNonce);
 
-            return new() {
-                PublicKey = PKey.PublicKey1,
-                Signature = Convert.ToBase64String(data!)
-            };
+            return new(PKey.PublicKey1, Convert.ToBase64String(data!));
         }
 
         public static App.Models.SignatureRequest CreateSignatureRequest()
@@ -107,7 +100,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             MaxAccessCount = 2
         };
 
-        private static readonly App.Data.PendingMessage _pendingMesage = new()
+        private static readonly App.Data.PendingMessage _pendingMessage = new()
         {
             Id = 1,
             Destination = PKey.Address2,
@@ -115,7 +108,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             Sent = false
         };
 
-        private static readonly App.Data.PendingMessage _oldPendingMesage = new()
+        private static readonly App.Data.PendingMessage _oldPendingMessage = new()
         {
             Id = 2,
             DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5),
@@ -125,7 +118,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         };
 
 
-        private static readonly App.Data.PendingMessage _deliveredPendingMesage = new()
+        private static readonly App.Data.PendingMessage _deliveredPendingMessage = new()
         {
             Id = 3,
             Destination = PKey.Address2,
@@ -144,11 +137,11 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
 
         public static App.Data.SharedData OldSharedData => _oldSharedData.CopyBySerialization();
 
-        public static App.Data.PendingMessage PendingMesage => _pendingMesage.CopyBySerialization();
+        public static App.Data.PendingMessage PendingMessage => _pendingMessage.CopyBySerialization();
 
-        public static App.Data.PendingMessage OldPendingMesage => _oldPendingMesage.CopyBySerialization();
+        public static App.Data.PendingMessage OldPendingMessage => _oldPendingMessage.CopyBySerialization();
 
-        public static App.Data.PendingMessage DeliveredPendingMesage => _deliveredPendingMesage.CopyBySerialization();
+        public static App.Data.PendingMessage DeliveredPendingMessage => _deliveredPendingMessage.CopyBySerialization();
         
         public static App.Data.AuthorizedService AuthorizedService => _authorizedService.CopyBySerialization();
     }
@@ -163,9 +156,9 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
 
         _dbContext.SharedData.Add(DataFactory.SharedData);
         _dbContext.SharedData.Add(DataFactory.OldSharedData);
-        _dbContext.Messages.Add(DataFactory.PendingMesage);
-        _dbContext.Messages.Add(DataFactory.OldPendingMesage);
-        _dbContext.Messages.Add(DataFactory.DeliveredPendingMesage);
+        _dbContext.Messages.Add(DataFactory.PendingMessage);
+        _dbContext.Messages.Add(DataFactory.OldPendingMessage);
+        _dbContext.Messages.Add(DataFactory.DeliveredPendingMessage);
         _dbContext.AuthorizedServices.Add(DataFactory.AuthorizedService);
         
         await _dbContext.SaveChangesAsync();

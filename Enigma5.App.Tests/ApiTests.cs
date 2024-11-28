@@ -28,6 +28,7 @@ using Enigma5.Crypto.Extensions;
 using Enigma5.App.Common.Extensions;
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.Tests.Base;
+using Enigma5.App.Models;
 
 namespace Enigma5.App.Tests;
 
@@ -85,10 +86,10 @@ public partial class ApiTests : AppTestBase
     {
         // Arrange
         var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
-        sharedDataCreate.PublicKey = PKey.PublicKey2;
+        var request = new SharedDataCreate(PKey.PublicKey2, sharedDataCreate.SignedData);
 
         // Act
-        var result = await Api.PostShare(sharedDataCreate, _mediator);
+        var result = await Api.PostShare(request, _mediator);
 
         // Assert
         var response = result as ProblemHttpResult;
@@ -101,15 +102,17 @@ public partial class ApiTests : AppTestBase
     {
         // Arrange
         var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
-        sharedDataCreate.SignedData = "invalid signed data";
+        var request = new SharedDataCreate(sharedDataCreate.PublicKey, "invalid signed data");
 
         // Act
-        var result = await Api.PostShare(sharedDataCreate, _mediator);
+        var result = await Api.PostShare(request, _mediator);
 
         // Assert
-        var response = result as BadRequest;
+        var response = result as BadRequest<HashSet<Error>>;
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        response.Value.Should().HaveCount(1);
+        response.Value!.Single().Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
     }
 
     [Fact]

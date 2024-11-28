@@ -24,26 +24,26 @@ using FluentAssertions;
 namespace Enigma5.App.Models.Tests;
 
 [ExcludeFromCodeCoverage]
-public class RoutingRequestTests
+public class SignatureRequestTests
 {
     [Fact]
     public void ShouldValidate()
     {
         // Arrange
-        var request = new RoutingRequest("dGVzdC1zdHJpbmc=");
+        var request = new SignatureRequest("dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
-
+        
         // Assert
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public void ShouldNotValidateNullPayload()
+    public void ShouldNotValidateForNullNonce()
     {
         // Arrange
-        var request = new RoutingRequest(null);
+        var request = new SignatureRequest(null);
 
         // Act
         var result = request.Validate();
@@ -53,31 +53,14 @@ public class RoutingRequestTests
         var error = result.Single();
         error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
+        error.Properties.Should().Contain(nameof(request.Nonce));
     }
 
     [Fact]
-    public void ShouldNotValidateEmptyPayload()
+    public void ShouldNotValidateForInvalidNonce()
     {
         // Arrange
-        var request = new RoutingRequest("   ");
-
-        // Act
-        var result = request.Validate();
-
-        // Assert
-        result.Should().HaveCount(1);
-        var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
-        error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
-    }
-
-    [Fact]
-    public void ShouldNotValidateInvalidBase64()
-    {
-        // Arrange
-        var request = new RoutingRequest("invalid-base64");
+        var request = new SignatureRequest("invalid-nonce");
 
         // Act
         var result = request.Validate();
@@ -87,6 +70,6 @@ public class RoutingRequestTests
         var error = result.Single();
         error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
+        error.Properties.Should().Contain(nameof(request.Nonce));
     }
 }

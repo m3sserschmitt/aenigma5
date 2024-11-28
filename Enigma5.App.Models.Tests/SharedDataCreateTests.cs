@@ -19,18 +19,19 @@
 */
 
 using System.Diagnostics.CodeAnalysis;
+using Enigma5.Crypto.DataProviders;
 using FluentAssertions;
 
 namespace Enigma5.App.Models.Tests;
 
 [ExcludeFromCodeCoverage]
-public class RoutingRequestTests
+public class SharedDataCreateTests
 {
     [Fact]
     public void ShouldValidate()
     {
         // Arrange
-        var request = new RoutingRequest("dGVzdC1zdHJpbmc=");
+        var request = new SharedDataCreate(PKey.PublicKey1, "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -40,10 +41,10 @@ public class RoutingRequestTests
     }
 
     [Fact]
-    public void ShouldNotValidateNullPayload()
+    public void ShouldNotValidateForNullPublicKey()
     {
         // Arrange
-        var request = new RoutingRequest(null);
+        var request = new SharedDataCreate(null, "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -53,31 +54,14 @@ public class RoutingRequestTests
         var error = result.Single();
         error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
+        error.Properties.Should().Contain(nameof(request.PublicKey));
     }
 
     [Fact]
-    public void ShouldNotValidateEmptyPayload()
+    public void ShouldNotValidateForInvalidPublicKey()
     {
         // Arrange
-        var request = new RoutingRequest("   ");
-
-        // Act
-        var result = request.Validate();
-
-        // Assert
-        result.Should().HaveCount(1);
-        var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
-        error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
-    }
-
-    [Fact]
-    public void ShouldNotValidateInvalidBase64()
-    {
-        // Arrange
-        var request = new RoutingRequest("invalid-base64");
+        var request = new SharedDataCreate("--- invalid-public-key ---", "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -87,6 +71,57 @@ public class RoutingRequestTests
         var error = result.Single();
         error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
-        error.Properties!.Single().Should().Be(nameof(request.Payload));
+        error.Properties.Should().Contain(nameof(request.PublicKey));
+    }
+
+    [Fact]
+    public void ShouldNotValidateForNullSignedData()
+    {
+        // Arrange
+        var request = new SharedDataCreate(PKey.PublicKey1, null);
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.SignedData));
+    }
+
+    [Fact]
+    public void ShouldNotValidateForInvalidSignedData()
+    {
+        // Arrange
+        var request = new SharedDataCreate(PKey.PublicKey1, "invalid-signed-data");
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.SignedData));
+    }
+
+    [Fact]
+    public void ShouldNotValidateForInvalidAccessCount()
+    {
+        // Arrange
+        var request = new SharedDataCreate(PKey.PublicKey1, "dGVzdC1zdHJpbmc=", -4);
+
+        // Act
+        var result = request.Validate();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var error = result.Single();
+        error.Message.Should().Be(ValidationErrors.INVALID_VALUE_FOR_PROPERTY);
+        error.Properties.Should().HaveCount(1);
+        error.Properties.Should().Contain(nameof(request.AccessCount));
     }
 }
