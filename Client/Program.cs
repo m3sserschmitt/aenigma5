@@ -78,12 +78,7 @@ public class Program
 
     private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
     {
-        var neighborhood = new Neighborhood()
-        {
-            Address = localAddress,
-            Hostname = null,
-            Neighbors = [serverAddress]
-        };
+        var neighborhood = new Neighborhood(localAddress, null, [serverAddress]);
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
         using var envelope = SealProvider.Factory.CreateSigner(privateKey, passphrase ?? string.Empty);
         var signature = envelope.Sign(serializedNeighborhood);
@@ -151,11 +146,7 @@ public class Program
         using var signature = SealProvider.Factory.CreateSigner(privateKey, passphrase);
         var encodedNonce = Convert.FromBase64String(tokenResult.Data!) ?? throw new Exception("Failed to base64 decode nonce.");
         var data = signature.Sign(encodedNonce) ?? throw new Exception("Nonce signature failed.");
-        var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest
-        {
-            PublicKey = publicKey,
-            Signature = Convert.ToBase64String(data)
-        });
+        var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest(publicKey, Convert.ToBase64String(data)));
         HandleServerResponse(authenticationResult, nameof(IEnigmaHub.Authenticate));
 
         Console.WriteLine($"Authenticated.");

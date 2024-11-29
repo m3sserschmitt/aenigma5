@@ -25,20 +25,12 @@ using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class RoutingRequest: IValidatable
+[method: JsonConstructor]
+public class RoutingRequest(string? payload = null, string? uuid = null) : IValidatable
 {
-    public string? Payload { get; private set; }
+    public string? Payload { get; private set; } = payload;
 
-    public string? Uuid { get; private set; }
-
-    [method: JsonConstructor]
-    public RoutingRequest(string? payload, string? uuid = null)
-    {
-        Payload = payload;
-        Uuid = uuid;
-    }
-
-    public RoutingRequest() { }
+    public string? Uuid { get; private set; } = uuid;
 
     public HashSet<Error> Validate()
     {

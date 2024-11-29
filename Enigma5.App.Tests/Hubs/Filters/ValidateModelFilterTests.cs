@@ -49,7 +49,7 @@ public class ValidateModelFilterTests : FiltersTestBase<ValidateModelFilter>
     }
 
     [Fact]
-    public async Task ShouldNotValidateForNotExistentIValidableObject()
+    public async Task ShouldNotValidateForNotExistentIValidatableObject()
     {
         // Arrange
         _hubMethodArguments[0].Throws(new IndexOutOfRangeException());

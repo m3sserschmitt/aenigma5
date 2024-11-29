@@ -24,7 +24,7 @@ public static class ErrorsListExtensions
 {
     public static void AddError(this HashSet<Error> errors, string message, string? property = null)
     {
-        if(property is not null && errors.TryGetValue(new Error(message), out Error? actualError))
+        if(property is not null && errors.TryGetValue(new Error(message), out Error? actualError) && actualError.Properties is not null)
         {
             actualError.Properties.Add(property);
         }
@@ -42,12 +42,16 @@ public static class ErrorsListExtensions
     {
         foreach(var errorToAdd in errorsToAdd)
         {
-            if(errorToAdd.Properties.Count == 0)
+            if(errorToAdd.Message is null)
+            {
+                continue;
+            }
+            if(errorToAdd.Properties?.Count == 0)
             {
                 errors.AddError(errorToAdd.Message);
                 continue;
             }
-            foreach(var property in errorToAdd.Properties)
+            foreach(var property in errorToAdd.Properties ?? [])
             {
                 errors.AddError(errorToAdd.Message, property);
             }

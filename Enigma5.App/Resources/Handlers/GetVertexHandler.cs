@@ -40,11 +40,7 @@ public class GetVertexHandler(Data.NetworkGraph graph)
         return CommandResult.CreateResultSuccess(new Models.Vertex {
             PublicKey = vertex.PublicKey,
             SignedData = vertex.SignedData,
-            Neighborhood = new() {
-                Address = vertex.Neighborhood.Address,
-                Hostname = vertex.Neighborhood.Hostname,
-                Neighbors = vertex.Neighborhood.Neighbors
-            }
+            Neighborhood = new(vertex.Neighborhood.Address, vertex.Neighborhood.Hostname, vertex.Neighborhood.Neighbors)
         });
     }
 }

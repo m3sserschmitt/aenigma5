@@ -18,22 +18,17 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
 using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class SignatureRequest: IValidatable
+[method: JsonConstructor]
+public class SignatureRequest(string? nonce = null) : IValidatable
 {
-    public string? Nonce { get; set; }
-
-    public SignatureRequest(string nonce)
-    {
-        Nonce = nonce;
-    }
-
-    public SignatureRequest() { }
+    public string? Nonce { get; set; } = nonce;
 
     public HashSet<Error> Validate()
     {

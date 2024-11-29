@@ -18,17 +18,19 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
 using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class AuthenticationRequest: IValidatable
+[method: JsonConstructor]
+public class AuthenticationRequest(string? publicKey = null, string? signature = null): IValidatable
 {
-    public string? PublicKey { get; set; }
+    public string? PublicKey { get; private set; } = publicKey;
 
-    public string? Signature { get; set; }
+    public string? Signature { get; private set; } = signature;
 
     public HashSet<Error> Validate()
     {
@@ -37,18 +39,16 @@ public class AuthenticationRequest: IValidatable
         {
             errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
+        else if(!PublicKey.IsValidPublicKey())
+        {
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
+        }
 
         if(string.IsNullOrWhiteSpace(Signature))
         {
             errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Signature));
         }
-
-        if(!string.IsNullOrWhiteSpace(PublicKey) && !PublicKey.IsValidPublicKey())
-        {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
-        }
-
-        if(!string.IsNullOrWhiteSpace(Signature) && !Signature.IsValidBase64())
+        else if(!Signature.IsValidBase64())
         {
             errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Signature));
         }

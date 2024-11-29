@@ -27,7 +27,6 @@ public class Vertex
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PublicKey { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SignedData { get; set; }
 
     public Neighborhood? Neighborhood { get; set; }

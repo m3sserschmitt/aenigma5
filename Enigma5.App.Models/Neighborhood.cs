@@ -25,14 +25,15 @@ using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class Neighborhood : IValidatable
+[method: JsonConstructor]
+public class Neighborhood(string? address = null, string? hostname = null, HashSet<string>? neighbors = null) : IValidatable
 {
-    public string? Address { get; set; }
+    public string? Address { get; private set; } = address;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Hostname { get; set; }
+    public string? Hostname { get; private set; } = hostname;
 
-    public HashSet<string>? Neighbors { get; set; }
+    public HashSet<string>? Neighbors { get; private set; } = neighbors;
 
     public HashSet<Error> Validate()
     {
@@ -42,18 +43,16 @@ public class Neighborhood : IValidatable
         {
             errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Address));
         }
+        else if (!Address.IsValidAddress())
+        {
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Address));
+        }
 
         if (Neighbors is null)
         {
             errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Neighbors));
         }
-
-        if (!string.IsNullOrWhiteSpace(Address) && !Address.IsValidAddress())
-        {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Address));
-        }
-
-        if (Neighbors is not null && Neighbors.Any(item => !item.IsValidAddress()))
+        else if (Neighbors.Any(item => !item.IsValidAddress()))
         {
             errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Neighbors));
         }

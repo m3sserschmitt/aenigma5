@@ -90,9 +90,9 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldPullPendingMessages()
     {
         // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
-        var oldPendingMesage = DataSeeder.DataFactory.OldPendingMesage;
-        var deliveredPendingMessage = DataSeeder.DataFactory.DeliveredPendingMesage;
+        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
+        var oldPendingMessage = DataSeeder.DataFactory.OldPendingMessage;
+        var deliveredPendingMessage = DataSeeder.DataFactory.DeliveredPendingMessage;
         _hub.ClientAddress = pendingMessage!.Destination;
 
         // Act
@@ -112,11 +112,11 @@ public class RoutingHubTests : AppTestBase
         && !item.Sent
         && item.Uuid == pendingMessage.Uuid).Should().NotBeNull();
         result.Data.FirstOrDefault(item =>
-        item.Destination == oldPendingMesage.Destination
-        && item.Content == oldPendingMesage.Content
-        && item.DateReceived == oldPendingMesage.DateReceived
+        item.Destination == oldPendingMessage.Destination
+        && item.Content == oldPendingMessage.Content
+        && item.DateReceived == oldPendingMessage.DateReceived
         && !item.Sent
-        && item.Uuid == oldPendingMesage.Uuid).Should().NotBeNull();
+        && item.Uuid == oldPendingMessage.Uuid).Should().NotBeNull();
         result.Data.FirstOrDefault(item =>
         item.Destination == deliveredPendingMessage.Destination
         && item.Content == deliveredPendingMessage.Content
@@ -179,7 +179,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldCleanup()
     {
         // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
         _hub.ClientAddress = pendingMessage!.Destination;
 
         // Act
@@ -198,7 +198,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldNotCleanupWhenClientAddressNull()
     {
         // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
         _hub.ClientAddress = null;
 
         // Act
@@ -218,7 +218,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldReturnErrorWhenRemoveMessagesCommandFails()
     {
         // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMesage;
+        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
         var mediator = Substitute.For<IMediator>();
         var logger = Substitute.For<ILogger<RoutingHub>>();
         mediator.Send(Arg.Any<RemoveMessagesCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<int>()));
@@ -250,10 +250,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldAuthenticate()
     {
         // Arrange
-        var request = new AuthenticationRequest {
-            PublicKey = PKey.PublicKey1,
-            Signature = "test-signature"
-        };
+        var request = new AuthenticationRequest(PKey.PublicKey1, "test-signature");
 
         // Act
         var result = await _hub.Authenticate(request);
@@ -264,17 +261,14 @@ public class RoutingHubTests : AppTestBase
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
-        _sessionManager.Received(1).Authenticate(_testConnectionId1, request.PublicKey, request.Signature);
+        _sessionManager.Received(1).Authenticate(_testConnectionId1, request.PublicKey!, request.Signature!);
     }
 
     [Fact]
     public async Task ShouldReturnErrorWhenAuthenticationFails()
     {
         // Arrange
-        var request = new AuthenticationRequest {
-            PublicKey = PKey.PublicKey1,
-            Signature = "test-signature"
-        };
+        var request = new AuthenticationRequest(PKey.PublicKey1, "test-signature");
         _sessionManager.Authenticate("", "", "").ReturnsForAnyArgs(false);
 
         // Act
@@ -578,7 +572,7 @@ public class RoutingHubTests : AppTestBase
     #region ON_DISCONNECTED
 
     [Fact]
-    public async Task ShouldLogOutWhenClientDisconneced()
+    public async Task ShouldLogOutWhenClientDisconnected()
     {
         // Arrange
         var mediator = Substitute.For<IMediator>();

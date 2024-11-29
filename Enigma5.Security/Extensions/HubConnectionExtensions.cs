@@ -51,11 +51,10 @@ public static class HubConnectionExtensions
                 return false;
             }
 
-            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest
-            {
-                PublicKey = certificateManager.PublicKey,
-                Signature = Convert.ToBase64String(data),
-            }, cancellationToken);
+            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(
+                nameof(IEnigmaHub.Authenticate),
+                new AuthenticationRequest(certificateManager.PublicKey, Convert.ToBase64String(data)),
+                cancellationToken);
 
             return authentication.Success && authentication.Data;
         }

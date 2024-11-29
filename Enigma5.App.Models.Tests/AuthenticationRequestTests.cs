@@ -31,11 +31,7 @@ public class AuthenticationRequestTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new AuthenticationRequest
-        {
-            PublicKey = PKey.PublicKey1,
-            Signature = "dGVzdC1zdHJpbmc="
-        };
+        var request = new AuthenticationRequest(PKey.PublicKey1, "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -48,11 +44,7 @@ public class AuthenticationRequestTests
     public void ShouldNotValidateForNullPublicKeyAndSignature()
     {
         // Arrange
-        var request = new AuthenticationRequest
-        {
-            PublicKey = null,
-            Signature = "    "
-        };
+        var request = new AuthenticationRequest(null, "    ");
 
         // Act
         var result = request.Validate();
@@ -70,11 +62,7 @@ public class AuthenticationRequestTests
     public void ShouldNotValidateForInvalidPublicKey()
     {
         // Arrange
-        var request = new AuthenticationRequest
-        {
-            PublicKey = "invalid-public-key",
-            Signature = "dGVzdC1zdHJpbmc="
-        };
+        var request = new AuthenticationRequest("invalid-public-key", "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -91,11 +79,7 @@ public class AuthenticationRequestTests
     public void ShouldNotValidateForInvalidSignature()
     {
         // Arrange
-        var request = new AuthenticationRequest
-        {
-            PublicKey = PKey.PublicKey1,
-            Signature = "invalid-signature"
-        };
+        var request = new AuthenticationRequest(PKey.PublicKey1, "invalid-signature");
 
         // Act
         var result = request.Validate();
