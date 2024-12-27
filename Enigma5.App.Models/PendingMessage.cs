@@ -22,9 +22,13 @@ namespace Enigma5.App.Models;
 
 public class PendingMessage
 {
+    public string? Uuid { get; set; }
+    
     public string? Destination { get; set; }
 
     public string? Content { get; set; }
 
     public DateTimeOffset DateReceived { get; set; }
+
+    public bool Sent { get; set; }
 }

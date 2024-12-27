@@ -61,3 +61,30 @@ VALUES ('20240715123110_AddAuthorizedServicesTable', '8.0.0');
 
 COMMIT;
 
+BEGIN TRANSACTION;
+
+ALTER TABLE "SharedData" ADD "PublicKey" TEXT NOT NULL DEFAULT '';
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20241108133419_AddPublicKeyToSharedData', '8.0.0');
+
+COMMIT;
+
+BEGIN TRANSACTION;
+
+ALTER TABLE "Messages" ADD "DateSent" TEXT NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20241121071617_AddDateSentOnPendingMessage', '8.0.0');
+
+COMMIT;
+
+BEGIN TRANSACTION;
+
+ALTER TABLE "Messages" ADD "Uuid" TEXT NOT NULL DEFAULT '';
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20241122130215_AddUuidOnPendingMessages', '8.0.0');
+
+COMMIT;
+

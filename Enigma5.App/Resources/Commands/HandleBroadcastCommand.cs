@@ -25,7 +25,7 @@ using MediatR;
 namespace Enigma5.App.Resources.Commands;
 
 public class HandleBroadcastCommand(VertexBroadcastRequest broadcastAdjacencyList)
-: IRequest<CommandResult<IEnumerable<VertexBroadcastRequest>>>
+: IRequest<CommandResult<List<VertexBroadcastRequest>>>
 {
     public VertexBroadcastRequest BroadcastAdjacencyList { get; private set; } = broadcastAdjacencyList;
 }

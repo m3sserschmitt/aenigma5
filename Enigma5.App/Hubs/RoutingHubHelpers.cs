@@ -23,15 +23,14 @@ using Enigma5.App.Attributes;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Handlers;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub
 {
-    protected async Task RespondAsync(string method, object? arg1)
-    => await Clients.Client(Context.ConnectionId).SendAsync(method, arg1);
-
     protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
         try
@@ -39,13 +38,16 @@ public partial class RoutingHub
             await Clients.Client(connectionId).SendAsync(method, arg1);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(SendAsync),
+            Context.ConnectionId);
             return false;
         }
     }
 
-    protected async Task<bool> RouteMessage(string connectionId, byte[] data)
+    protected async Task<bool> RouteMessage(string connectionId, byte[] data, string? uuid)
     {
         try
         {
@@ -54,11 +56,14 @@ public partial class RoutingHub
                     .SingleOrDefault()
                     ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
 
-            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest(Convert.ToBase64String(data)));
+            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest(Convert.ToBase64String(data), uuid));
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(RouteMessage),
+            Context.ConnectionId);
             return false;
         }
     }
@@ -87,6 +92,23 @@ public partial class RoutingHub
     private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcastRequest> adjacencyLists)
     {
         return (await Task.WhenAll(GenerateBroadcastTask(adjacencyLists))).All(success => success);
+    }
+
+    private async Task<CommandResult<Data.PendingMessage>> CreatePendingMessage()
+    {
+        if (Content != null)
+        {
+            _logger.LogDebug($"Saving onion for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
+            var encodedContent = Convert.ToBase64String(Content);
+            if (encodedContent is null)
+            {
+                _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
+                return CommandResult.CreateResultFailure<Data.PendingMessage>();
+            }
+            return await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
+        }
+        _logger.LogDebug($"Could not save pending message for connectionId {{{nameof(Context.ConnectionId)}}} because the content is null.", Context.ConnectionId);
+        return CommandResult.CreateResultFailure<Data.PendingMessage>();
     }
 
     private async Task<bool> SendBroadcast(VertexBroadcastRequest adjacencyLists)

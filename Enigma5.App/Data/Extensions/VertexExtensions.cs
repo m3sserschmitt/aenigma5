@@ -18,15 +18,24 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Constants;
 using Enigma5.App.Models;
 
 namespace Enigma5.App.Data.Extensions;
 
 public static class VertexExtensions
 {
-    public static VertexBroadcastRequest ToVertexBroadcast(this Vertex vertex)
-    => new(vertex.PublicKey ?? string.Empty, vertex.SignedData ?? string.Empty);
+    public static VertexBroadcastRequest ToVertexBroadcast(this Vertex? vertex)
+    => new(vertex?.PublicKey ?? string.Empty, vertex?.SignedData ?? string.Empty);
 
-    public static bool IsRemovalCandidate(this Vertex vertex, TimeSpan timeSpan)
-    => !vertex.IsLeaf || (vertex.IsLeaf && DateTimeOffset.Now - vertex.LastUpdate > timeSpan);
+    public static bool IsExpired(this Vertex? vertex, TimeSpan lifetime)
+    => vertex is not null && DateTimeOffset.Now - vertex.LastUpdate > lifetime;
+
+    public static bool IsLeafExpired(this Vertex? vertex, TimeSpan lifetime)
+    => vertex is not null && vertex.IsLeaf && vertex.IsExpired(lifetime);
+
+    public static bool IsRemovalCandidate(this Vertex? vertex, TimeSpan leafLifetime)
+    => (vertex is not null && !vertex.IsLeaf) || vertex.IsLeafExpired(leafLifetime);
+
+    public static bool ShallBeBroadcasted(this Vertex? vertex) => IsExpired(vertex, DataPersistencePeriod.VertexBroadcastMinimumPeriod);
 }

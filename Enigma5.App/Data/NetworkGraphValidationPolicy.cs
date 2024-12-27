@@ -20,7 +20,7 @@
 
 using Enigma5.Crypto;
 using System.Text.Json;
-using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Data;
 
@@ -28,7 +28,7 @@ public static partial class NetworkGraphValidationPolicy
 {
     public static bool ValidateSignature(this Vertex vertex)
     {
-        if(vertex.SignedData is null)
+        if(vertex.SignedData is null || vertex.PublicKey is null)
         {
             return false;
         }
@@ -36,7 +36,7 @@ public static partial class NetworkGraphValidationPolicy
         try
         {
             var decodedSignature = Convert.FromBase64String(vertex.SignedData);
-            var plaintext = decodedSignature.GetStringDataFromSignature();
+            var plaintext = decodedSignature.GetStringDataFromSignature(vertex.PublicKey);
 
             if(plaintext is null)
             {
@@ -50,7 +50,7 @@ public static partial class NetworkGraphValidationPolicy
                 return false;
             }
 
-            using var envelope = Envelope.Factory.CreateSignatureVerification(vertex.PublicKey!);
+            using var envelope = SealProvider.Factory.CreateVerifier(vertex.PublicKey);
 
             return envelope.Verify(decodedSignature);
         }

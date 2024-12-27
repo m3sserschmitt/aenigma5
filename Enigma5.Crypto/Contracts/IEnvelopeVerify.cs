@@ -20,7 +20,7 @@
 
 namespace Enigma5.Crypto.Contracts;
 
-public interface IEnvelopeVerify : IDisposable
+public interface IEnvelopeVerifier : IDisposable
 {
     bool Verify(byte[] ciphertext);
 }

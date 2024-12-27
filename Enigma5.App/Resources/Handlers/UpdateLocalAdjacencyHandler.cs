@@ -21,6 +21,7 @@
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
+using Enigma5.Crypto.Extensions;
 using Enigma5.Security.Contracts;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -39,11 +40,16 @@ public class UpdateLocalAdjacencyHandler(
 
     private readonly ILogger<UpdateLocalAdjacencyHandler> _logger = logger;
 
-    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
     {
+        if(request.Addresses.Any(item => !item.IsValidAddress()))
+        {
+            return CommandResult.CreateResultFailure<VertexBroadcastRequest>();
+        }
+
         var (newLocalVertex, updated) = request.Add ?
-        await _networkGraph.AddAdjacencyAsync(request.Address, cancellationToken)
-        : await _networkGraph.RemoveAdjacencyAsync(request.Address, cancellationToken);
+        await _networkGraph.AddAdjacencyAsync(request.Addresses, cancellationToken)
+        : await _networkGraph.RemoveAdjacencyAsync(request.Addresses, cancellationToken);
 
         if(!updated)
         {

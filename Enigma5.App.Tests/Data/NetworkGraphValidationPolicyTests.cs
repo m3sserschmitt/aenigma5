@@ -20,16 +20,21 @@
 
 using Enigma5.App.Data;
 using Enigma5.Crypto.DataProviders;
+using Xunit;
+using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
+using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Tests.Data;
 
+[ExcludeFromCodeCoverage]
 public class NetworkGraphValidationPolicyTests : AppTestBase
 {
     [Fact]
     public void ShouldValidateVertex()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
         // Act
         var valid = vertex.ValidatePolicy();
@@ -68,8 +73,8 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     public void ShouldNotValidateVertexWithCycle()
     {
         // Arrange
-        var address = _scope.ResolveAdjacentVertex().Neighborhood.Address;
-        var vertex = _scope.ResolveAdjacentVertex([address]);
+        var address = _container.ResolveAdjacentVertex().Neighborhood.Address;
+        var vertex = _container.ResolveAdjacentVertex([address]);
 
         // Act
         var valid = vertex.CheckCycles();
@@ -82,7 +87,7 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     public void ShouldNotValidateVertexWithModifiedNeighborhood()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
         vertex.Neighborhood.Neighbors.Add("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // Act
@@ -96,8 +101,8 @@ public class NetworkGraphValidationPolicyTests : AppTestBase
     public void ShouldNotValidateVertexWithInvalidNeighborAddress()
     {
         // Arrange
-        var invalidAddresses = new List<string> { "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffxyz" };
-        var vertex = _scope.ResolveAdjacentVertex(invalidAddresses);
+        var invalidAddresses = new HashSet<string> { "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffxyz" };
+        var vertex = _container.ResolveAdjacentVertex(invalidAddresses);
 
         // Act
         var valid = vertex.ValidateNeighborsAddresses();

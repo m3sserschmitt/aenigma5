@@ -18,15 +18,49 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
+using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
+
 namespace Enigma5.App.Models;
 
-public class SharedDataCreate
+[method: JsonConstructor]
+public class SharedDataCreate(string? publicKey = null, string? signedData = null, int accessCount = 1): IValidatable
 {
-    public string? PublicKey { get; set; }
+    public string? PublicKey { get; private set; } = publicKey;
 
-    public string? SignedData { get; set; }
+    public string? SignedData { get; private set; } = signedData;
 
-    public int AccessCount { get; set; } = 1;
+    public int AccessCount { get; private set; } = accessCount;
 
-    public bool Valid => PublicKey != null && SignedData != null;
+    public HashSet<Error> Validate()
+    {
+        var errors = new HashSet<Error>();
+
+        if(string.IsNullOrWhiteSpace(PublicKey))
+        {
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
+        }
+        else if(!PublicKey.IsValidPublicKey())
+        {
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
+        }
+
+        if(string.IsNullOrWhiteSpace(SignedData))
+        {
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(SignedData));
+        }
+        else if(!SignedData.IsValidBase64())
+        {
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
+        }
+
+        if(AccessCount < 0)
+        {
+            errors.AddError(ValidationErrors.INVALID_VALUE_FOR_PROPERTY, nameof(AccessCount));
+        }
+
+        return errors;
+    }
 }

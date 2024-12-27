@@ -18,6 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel.DataAnnotations;
+
 namespace Enigma5.App.Data;
 
-public record class AuthorizedService(int Id, string Address);
+public class AuthorizedService
+{
+    [Key]
+    public long Id { get; set; }
+
+    [Required]
+    public string? Address { get; set; }
+}

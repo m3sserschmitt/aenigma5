@@ -29,7 +29,7 @@ public class RemoveSharedDataHandler(EnigmaDbContext context) : IRequestHandler<
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<int>> IRequestHandler<RemoveSharedDataCommand, CommandResult<int>>.Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<int>> Handle(RemoveSharedDataCommand request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,

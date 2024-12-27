@@ -18,84 +18,135 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Autofac;
-using Enigma5.App.Data;
 using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
+using Enigma5.Tests.Base;
+using FluentAssertions;
+using Xunit;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
+[ExcludeFromCodeCoverage]
 public class BroadcastHandlerTests : AppTestBase
 {
     private readonly BroadcastHandler _handler;
 
     public BroadcastHandlerTests()
     {
-        _handler = _scope.Resolve<BroadcastHandler>();
+        _handler = _container.Resolve<BroadcastHandler>();
     }
 
     [Fact]
-    public async void ShouldAddNewNeighbor()
+    public async Task ShouldAddNewNeighbor()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
         var broadcast = vertex.ToVertexBroadcast();
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
-        var (localVertex, broadcasts) = await _handler.Handle(request);
+        var result = await _handler.Handle(request);
 
         // Assert
-        localVertex.Should().BeOfType<Vertex>();
+        var localVertex = _graph.LocalVertex;
+        var broadcasts = result.Value;
+        broadcasts.Should().NotBeNull();
+        localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
         broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
-        localVertex.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
+        localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts.Should().HaveCount(2);
-        var broadcastLocal = broadcasts.Single(item => item.PublicKey == localVertex.PublicKey);
-        var broadcastRemote = broadcasts.Single(item => item.PublicKey == vertex.PublicKey);
+        var broadcastLocal = broadcasts!.Single(item => item.PublicKey == localVertex.PublicKey);
+        var broadcastRemote = broadcasts!.Single(item => item.PublicKey == vertex.PublicKey);
         broadcastLocal.SignedData.Should().Be(localVertex.SignedData);
         broadcastRemote.SignedData.Should().Be(vertex.SignedData);
+        _graph.Vertices.Should().OnlyContain(item => !item.IsLeaf);
     }
 
     [Fact]
-    public async void ShouldNotAddNeighborTwice()
+    public async Task ShouldAddLeaf()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentLeaf();
+        var vertexBroadcast = vertex.ToVertexBroadcast();
+        var request = new HandleBroadcastCommand(vertexBroadcast);
+
+        // Act
+        var result = await _handler.Handle(request);
+
+        // Assert
+        var localVertex = _graph.LocalVertex;
+        localVertex!.Neighborhood.Neighbors.Should().BeEmpty();
+        result.Value.Should().HaveCount(1);
+        var broadcast = result.Value!.Single();
+        broadcast.PublicKey.Should().Be(vertexBroadcast.PublicKey);
+        broadcast.SignedData.Should().Be(vertexBroadcast.SignedData);
+        broadcast.Neighborhood.Address.Should().Be(vertexBroadcast.Neighborhood.Address);
+        broadcast.Neighborhood.Hostname.Should().Be(vertexBroadcast.Neighborhood.Hostname);
+        broadcast.Neighborhood.Neighbors.Should().Equal(vertexBroadcast.Neighborhood.Neighbors);
+        var addedLeaf = _graph.Vertices.FirstOrDefault(item => item == vertex);
+        addedLeaf.Should().NotBeNull();
+        addedLeaf!.IsLeaf.Should().BeTrue();
+        addedLeaf.PublicKey.Should().BeNull();
+        addedLeaf.Neighborhood.Should().NotBeNull();
+        addedLeaf.Neighborhood.Address.Should().Be(vertex.Neighborhood.Address);
+        addedLeaf.Neighborhood.Hostname.Should().BeNull();
+        addedLeaf.Neighborhood.Neighbors.Should().Equal(vertex.Neighborhood.Neighbors);
+    }
+
+    [Fact]
+    public async Task ShouldNotAddNeighborTwice()
+    {
+        // Arrange
+        var vertex = _container.ResolveAdjacentVertex();
         var broadcast = vertex.ToVertexBroadcast();
         var request = new HandleBroadcastCommand(broadcast);
 
         // Act
-        var (localVertex1, broadcasts1) = await _handler.Handle(request);
-        var (localVertex2, broadcasts2) = await _handler.Handle(request);
+        var result1 = await _handler.Handle(request);
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(request);
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
-        localVertex1.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
+        var broadcasts1 = result1.Value;
+        var broadcasts2 = result2.Value;
+        broadcasts1.Should().NotBeNull();
+        broadcasts2.Should().NotBeNull();
+        localVertex1!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts1.Should().HaveCount(2);
-        localVertex2.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
+        localVertex2!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts2.Should().BeEmpty();
     }
 
     [Fact]
-    public async void ShouldAddAndRemoveNeighbor()
+    public async Task ShouldAddAndRemoveNeighbor()
     {
         // Arrange
-        var adjacentVertex = _scope.ResolveAdjacentVertex();
-        var nonAdjacentVertex = _scope.ResolveNonAdjacentVertex();
+        var adjacentVertex = _container.ResolveAdjacentVertex();
+        var nonAdjacentVertex = _container.ResolveNonAdjacentVertex();
         var initialBroadcast = adjacentVertex.ToVertexBroadcast();
         var finalBroadcast = nonAdjacentVertex.ToVertexBroadcast();
         var request1 = new HandleBroadcastCommand(initialBroadcast);
         var request2 = new HandleBroadcastCommand(finalBroadcast);
     
         // Act
-        var (localVertex1, broadcasts1) = await _handler.Handle(request1);
-        var (localVertex2, broadcasts2) = await _handler.Handle(request2);
+        var result1 = await _handler.Handle(request1);
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(request2);
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
-        localVertex1.Neighborhood.Neighbors.Single().Should().Be(adjacentVertex.Neighborhood.Address);
+        var broadcasts1 = result1.Value;
+        var broadcasts2 = result2.Value;
+        broadcasts1.Should().NotBeNull();
+        broadcasts2.Should().NotBeNull();
+        localVertex1!.Neighborhood.Neighbors.Single().Should().Be(adjacentVertex.Neighborhood.Address);
         broadcasts1.Should().HaveCount(2);
-        localVertex2.Neighborhood.Neighbors.Should().BeEmpty();
+        localVertex2!.Neighborhood.Neighbors.Should().BeEmpty();
         broadcasts2.Should().HaveCount(2);
         broadcasts2.Should().Contain(item => item.PublicKey == adjacentVertex.PublicKey);
         broadcasts2.Should().Contain(item => item.PublicKey == localVertex1.PublicKey);

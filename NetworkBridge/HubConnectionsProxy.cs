@@ -21,9 +21,9 @@
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models;
-using Enigma5.App.Models.Extensions;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.Crypto;
+using Enigma5.Crypto.Extensions;
 using Enigma5.Security;
 using Enigma5.Security.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -115,7 +115,7 @@ public class HubConnectionsProxy
             {
                 await _localHubConnection.StartAsync(cancellationToken);
 
-                if (!await _localHubConnection.AuthenticateAsync(_certificateManager, false, cancellationToken))
+                if (!await _localHubConnection.AuthenticateAsync(_certificateManager, cancellationToken))
                 {
                     return false;
                 }
@@ -124,7 +124,7 @@ public class HubConnectionsProxy
                 .Where(item => item.TargetPublicKey.IsValidPublicKey())
                 .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToList();
                 var requestModel = new TriggerBroadcastRequest(newAddresses);
-                var result = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IHub.TriggerBroadcast), requestModel, cancellationToken: cancellationToken);
+                var result = await _localHubConnection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.TriggerBroadcast), requestModel, cancellationToken: cancellationToken);
 
                 if (!result.Success && result.Data)
                 {

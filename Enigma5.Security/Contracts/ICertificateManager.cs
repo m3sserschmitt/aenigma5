@@ -24,7 +24,7 @@ public interface ICertificateManager
 {
     public string PublicKey { get; }
 
-    public byte[] PrivateKey { get; }
+    public string PrivateKey { get; }
 
     public string Address { get; }
 }

@@ -22,15 +22,14 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.OpenSsl;
-using Enigma5.Crypto;
 
 namespace Enigma5.Security;
 
 public static class KeysGenerator
 {
-    public static (string PublicKey, string PrivateKey) GenerateKeys()
+    public static (string PublicKey, string PrivateKey) GenerateKeys(int keySizeBits)
     {
-        var keyPair = GenerateRsaKeyPair();
+        var keyPair = GenerateRsaKeyPair(keySizeBits);
 
         string publicKeyPem = ExportToPem(keyPair.Public);
         string privateKeyPem = ExportToPem(keyPair.Private);
@@ -38,12 +37,12 @@ public static class KeysGenerator
         return (publicKeyPem, privateKeyPem);
     }
 
-    private static AsymmetricCipherKeyPair GenerateRsaKeyPair()
+    private static AsymmetricCipherKeyPair GenerateRsaKeyPair(int keySizeBits)
     {
         var generator = new RsaKeyPairGenerator();
         var keyGenParam = new KeyGenerationParameters(
             new SecureRandom(),
-            Constants.DefaultPKeySize
+            keySizeBits
         );
         generator.Init(keyGenParam);
         return generator.GenerateKeyPair();

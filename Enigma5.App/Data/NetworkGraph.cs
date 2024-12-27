@@ -18,15 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text;
-using System.Text.Json;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
-using Enigma5.App.Models;
+using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
-using Enigma5.Crypto;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Data;
 
@@ -34,47 +32,48 @@ public class NetworkGraph
 {
     private readonly object _locker = new();
 
+    private readonly IEnvelopeSigner _signer;
+
     private readonly ICertificateManager _certificateManager;
 
     private readonly IConfiguration _configuration;
+
+    private readonly ILogger<NetworkGraph> _logger;
 
     private Vertex _localVertex;
 
     private readonly HashSet<Vertex> _vertices;
 
-    private Graph _graph;
+    public HashSet<Vertex> Vertices => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker, _logger);
 
-    public Graph Graph => ThreadSafeExecution.Execute(() => _graph.CopyBySerialization(), new Graph(_certificateManager.PublicKey, string.Empty), _locker);
+    public Vertex? LocalVertex => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), null, _locker, _logger);
 
-    public HashSet<Vertex> Vertices => ThreadSafeExecution.Execute(() => _vertices.CopyBySerialization(), [], _locker);
+    virtual public HashSet<string> NeighboringAddresses => ThreadSafeExecution.Execute(() => _localVertex.Neighborhood.Neighbors.CopyBySerialization(), [], _locker, _logger);
 
-    public Vertex LocalVertex => ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization(), CreateInitialVertex(), _locker);
+    public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker, _logger);
 
-    public bool HasAtLeastTwoVertices => ThreadSafeExecution.Execute(() => _vertices.Any(item => !IsLocalVertex(item) && !item.IsLeaf), false, _locker);
-
-    public List<string> NeighboringAddresses => [.. ThreadSafeExecution.Execute(() => _localVertex.CopyBySerialization().Neighborhood.Neighbors, [], _locker)];
-
-    public NetworkGraph(ICertificateManager certificateManager, IConfiguration configuration)
+    public NetworkGraph(IEnvelopeSigner signer, ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger)
     {
+        _signer = signer;
         _certificateManager = certificateManager;
         _configuration = configuration;
         _localVertex = CreateInitialVertex();
         _vertices = [_localVertex];
-        SignGraph();
-        _graph ??= new Graph(_certificateManager.PublicKey, string.Empty);
+        _logger = logger;
     }
 
     public Vertex? GetVertex(string address)
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if(_vertices.TryGetValue(Vertex.Factory.Create(address), out var foundVertex))
+            var v = Vertex.Factory.Create(address);
+            if (v is not null && _vertices.TryGetValue(v, out var foundVertex))
             {
                 return foundVertex.CopyBySerialization();
             }
-            
+
             return null;
-        }, null, _locker
+        }, null, _locker, _logger
     );
 
     public Task<Vertex?> GetVertexAsync(string address, CancellationToken cancellationToken = default)
@@ -87,11 +86,10 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, _certificateManager, out Vertex? newVertex)
+            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, _signer, _certificateManager, out Vertex? newVertex)
                 && ValidateNewVertex(newVertex!))
             {
                 ReplaceLocalVertex(newVertex!);
-                SignGraph();
 
                 return (_localVertex.CopyBySerialization(), true);
             }
@@ -99,25 +97,26 @@ public class NetworkGraph
             return (_localVertex.CopyBySerialization(), false);
         },
         (_localVertex.CopyBySerialization(), false),
-        _locker
+        _locker,
+        _logger
     );
 
     public (Vertex localVertex, bool updated) RemoveAdjacency(List<string> addresses)
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, _certificateManager, out Vertex? newVertex))
+            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, _signer, _certificateManager, out Vertex? newVertex))
             {
                 ReplaceLocalVertex(newVertex!);
                 CleanupGraph();
-                SignGraph();
 
                 return (_localVertex.CopyBySerialization(), true);
             }
             return (_localVertex.CopyBySerialization(), false);
         },
         (_localVertex.CopyBySerialization(), false),
-        _locker
+        _locker,
+        _logger
     );
 
     public Task<(Vertex localVertex, bool updated)> AddAdjacencyAsync(List<string> addresses, CancellationToken cancellationToken = default)
@@ -151,35 +150,35 @@ public class NetworkGraph
 
                 vertex = vertex.CopyBySerialization();
 
-                var updatedLocalVertex = UpdateLocalNeighborhood(vertex);
-                if (updatedLocalVertex)
+                if (UpdateLocalNeighborhood(vertex))
                 {
                     updatedVertices.Add(_localVertex.CopyBySerialization());
                 }
 
+                var vertexToBeAdded = vertex.TryAsLeaf(out var leaf) ? leaf! : vertex;
                 if (!_vertices.TryGetValue(vertex, out var previous)) // vertex not existent;
                 {
-                    _vertices.Add(TryConvertToLeaf(vertex));
+                    _vertices.Add(vertexToBeAdded);
                     updatedVertices.Add(vertex);
-                    SignGraph();
                 }
                 else if (previous != vertex) // existent but different;
                 {
                     _vertices.Remove(previous!);
-                    _vertices.Add(TryConvertToLeaf(vertex));
+                    _vertices.Add(vertexToBeAdded);
                     updatedVertices.Add(vertex);
                     CleanupGraph();
-                    SignGraph();
                 }
-                else // existent but and it is the same;
+                else if (previous.ShallBeBroadcasted()) // existent and it is the same;
                 {
-                    previous?.RefreshLastUpdate();
+                    updatedVertices.Add(previous);
+                    previous.RefreshLastUpdate();
                 }
 
                 return updatedVertices;
             },
             [],
-            _locker
+            _locker,
+            _logger
         );
     }
 
@@ -189,33 +188,16 @@ public class NetworkGraph
         return Task.Run(task, cancellationToken);
     }
 
-    private void SignGraph()
-    {
-        using var envelope = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-        var serializedData = JsonSerializer.Serialize(_vertices.Where(item => !item.IsLeaf));
-        var signature = envelope.Sign(Encoding.UTF8.GetBytes(serializedData));
-        var encodedSignature = signature is not null ? Convert.ToBase64String(signature) : null;
-
-        if(encodedSignature is null)
+    private Vertex CreateInitialVertex()
+    { 
+        var v = Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname());
+        if(v is null)
         {
-            // TODO: Log this!!
-            return;
+            var ex = new Exception("Initial vertex resolved to null.");
+            _logger.LogCritical(ex, "Critical error occurred while creating initial vertex.");
+            throw ex;
         }
-
-        
-        _graph = new Graph(_certificateManager.PublicKey, encodedSignature);
-    }
-
-    private Vertex CreateInitialVertex() => Vertex.Factory.CreateWithEmptyNeighborhood(_certificateManager, _configuration.GetHostname());
-
-    private Vertex TryConvertToLeaf(Vertex vertex)
-    {
-        if (HasAtLeastTwoVertices && vertex.TryAsLeaf(out var leafVertex))
-        {
-            return leafVertex!;
-        }
-
-        return vertex;
+        return v;
     }
 
     private bool ValidateNewVertex(Vertex vertex)
@@ -228,7 +210,8 @@ public class NetworkGraph
         return ThreadSafeExecution.Execute(
             () => ValidateGraphPolicy(vertex),
             false,
-            _locker
+            _locker,
+            _logger
         );
     }
 
@@ -248,7 +231,7 @@ public class NetworkGraph
 
     private bool UpdateLocalNeighborhood(Vertex source)
     {
-        if (HasAtLeastTwoVertices && source.PossibleLeaf)
+        if (source.PossibleLeaf)
         {
             return false;
         }
@@ -259,11 +242,11 @@ public class NetworkGraph
 
         if (result < 0)
         {
-            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _certificateManager, out newLocalVertex);
+            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _signer, _certificateManager, out newLocalVertex);
         }
         else if (result > 0)
         {
-            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _certificateManager, out newLocalVertex);
+            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _signer, _certificateManager, out newLocalVertex);
         }
 
         if (result == 0)
@@ -281,7 +264,6 @@ public class NetworkGraph
         _vertices.Remove(_localVertex);
         _localVertex = vertex.CopyBySerialization();
         _vertices.Add(_localVertex);
-        SignGraph();
     }
 
     private HashSet<Vertex> GetNeighborhoodsUnion()
@@ -290,20 +272,20 @@ public class NetworkGraph
 
         foreach (var vertex in _vertices.Where(item => !item.IsLeaf))
         {
-            union.UnionWith(vertex.Neighborhood.Neighbors.Select(Vertex.Factory.Create));
+            union.UnionWith(vertex.Neighborhood.Neighbors.Select(Vertex.Factory.Create).Where(item => item is not null)!);
         }
 
         return union;
     }
 
-    private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan leafsTimeSpan)
-    => !IsLocalVertex(vertex) && vertex.IsRemovalCandidate(leafsTimeSpan) && !neighborhoodsUnion.TryGetValue(vertex, out var _);
+    private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan leafsLifetime)
+    => !IsLocalVertex(vertex) && vertex.IsRemovalCandidate(leafsLifetime) && !neighborhoodsUnion.TryGetValue(vertex, out var _);
 
     private void CleanupGraph()
     {
-        var leafsTimeSpan = _configuration.GetNonActiveLeafsLifetime() ?? new TimeSpan(24, 0, 0);
+        var leafsLifetime = _configuration.GetLeafsLifetime();
         var neighborhoodsUnion = GetNeighborhoodsUnion();
-        _vertices.RemoveWhere(item => IsRemovalCandidate(item, neighborhoodsUnion, leafsTimeSpan));
+        _vertices.RemoveWhere(item => IsRemovalCandidate(item, neighborhoodsUnion, leafsLifetime));
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)

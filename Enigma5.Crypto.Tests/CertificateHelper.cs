@@ -18,15 +18,18 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Enigma5.Crypto.DataProviders;
+using FluentAssertions;
 using Xunit;
 
 namespace Enigma5.Crypto.Tests;
 
+[ExcludeFromCodeCoverage]
 public class CertificateHelperTests
 {
     [Fact]
-    public void CertificateHelper_ShouldComputeCorrectAddressFromPublicKey()
+    public void ShouldComputeCorrectAddressFromPublicKey()
     {
         // Arrange
 
@@ -34,6 +37,6 @@ public class CertificateHelperTests
         var address = CertificateHelper.GetHexAddressFromPublicKey(PKey.PublicKey1);
 
         // Assert
-        Assert.Equal(PKey.Address1, address);
+        address.Should().Be(PKey.Address1);
     }
 }

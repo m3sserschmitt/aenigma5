@@ -20,9 +20,9 @@
 
 namespace Enigma5.Crypto.Contracts;
 
-public interface IEnvelopeUnseal : IDisposable
+public interface IEnvelopeUnsealer : IDisposable
 {
     byte[]? Unseal(byte[] ciphertext);
 
-    IntPtr UnsealOnion(byte[] ciphertext, out int outLen);
+    bool UnsealOnion(string onion, ref string? next, ref byte[]? content);
 }

@@ -18,40 +18,41 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Buffers.Text;
+using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
 using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class AuthenticationRequest: IValidatable
+[method: JsonConstructor]
+public class AuthenticationRequest(string? publicKey = null, string? signature = null): IValidatable
 {
-    public string? PublicKey { get; set; }
+    public string? PublicKey { get; private set; } = publicKey;
 
-    public string? Signature { get; set; }
+    public string? Signature { get; private set; } = signature;
 
-    public bool SyncMessagesOnSuccess { get; set; }
-
-    public IEnumerable<Error> Validate()
+    public HashSet<Error> Validate()
     {
+        var errors = new HashSet<Error>();
         if(string.IsNullOrWhiteSpace(PublicKey))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(PublicKey)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
+        }
+        else if(!PublicKey.IsValidPublicKey())
+        {
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
         }
 
         if(string.IsNullOrWhiteSpace(Signature))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(Signature)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Signature));
+        }
+        else if(!Signature.IsValidBase64())
+        {
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Signature));
         }
 
-        if(PublicKey is not null && !PublicKey.IsValidPublicKey())
-        {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(PublicKey)]);
-        }
-
-        if(Signature is not null && !Base64.IsValid(Signature))
-        {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(Signature)]);
-        }
+        return errors;
     }
 }

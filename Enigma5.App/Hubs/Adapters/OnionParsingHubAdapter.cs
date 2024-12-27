@@ -24,26 +24,9 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs.Adapters;
 
-public class OnionParsingHubAdapter : IOnionParsingHub
+public class OnionParsingHubAdapter(Hub hub) : IOnionParsingHub
 {
-    private readonly IOnionParsingHub? onionParserHub;
-
-    public OnionParsingHubAdapter(Hub hub)
-    {
-        onionParserHub = hub.As<IOnionParsingHub>();
-    }
-
-    public int Size
-    {
-        get => onionParserHub?.Size ?? default;
-        set
-        {
-            if (onionParserHub != null)
-            {
-                onionParserHub.Size = value;
-            }
-        }
-    }
+    private readonly IOnionParsingHub? onionParserHub = hub.As<IOnionParsingHub>();
 
     public string? Next
     {

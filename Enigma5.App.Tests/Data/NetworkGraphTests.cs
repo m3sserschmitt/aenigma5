@@ -18,30 +18,22 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Autofac;
-using Enigma5.App.Data;
-using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
+using Xunit;
+using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
+using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Tests.Data;
 
+[ExcludeFromCodeCoverage]
 public class NetworkGraphTests : AppTestBase
 {
-    private readonly ICertificateManager _certificateManager;
-
-    private readonly NetworkGraph _graph;
-
-    public NetworkGraphTests()
-    {
-        _certificateManager = _scope.Resolve<ICertificateManager>();
-        _graph = _scope.Resolve<NetworkGraph>();
-    }
-
     [Fact]
-    public void NetworkGraph_ShouldAddNewVertex()
+    public void ShouldAddNewVertex()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
         // Act
         var vertices = _graph.Update(vertex);
@@ -55,7 +47,7 @@ public class NetworkGraphTests : AppTestBase
         var adjacentVertex = vertices.Single(item => item.Neighborhood.Address == vertex.Neighborhood.Address);
         adjacentVertex.Neighborhood.Neighbors.Should().HaveCount(1);
         adjacentVertex.Neighborhood.Neighbors.Should().Contain(_certificateManager.Address);
-        _graph.LocalVertex.Neighborhood.Neighbors.Should().HaveCount(1);
+        _graph.LocalVertex!.Neighborhood.Neighbors.Should().HaveCount(1);
         _graph.LocalVertex.Neighborhood.Neighbors.Should().Contain(vertex.Neighborhood.Address);
         _graph.Vertices.Should().HaveCount(2);
         _graph.Vertices.Should().Contain(_graph.LocalVertex);
@@ -63,12 +55,12 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldRemoveAdjacency()
+    public void ShouldRemoveAdjacency()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
-        var updatedVertex = _scope.ResolveNonAdjacentVertex();
+        var updatedVertex = _container.ResolveNonAdjacentVertex();
 
         // Act
         var vertices = _graph.Update(vertex);
@@ -85,10 +77,10 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldNotUpdateGraphTwice()
+    public void ShouldNotUpdateGraphTwice()
     {
         // Arrange
-        var vertex = _scope.ResolveAdjacentVertex();
+        var vertex = _container.ResolveAdjacentVertex();
 
         // Act
         var vertices = _graph.Update(vertex);
@@ -109,7 +101,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldAddNeighbor()
+    public void ShouldAddNeighbor()
     {
         // Arrange
 
@@ -124,7 +116,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldNotAddNeighborTwice()
+    public void ShouldNotAddNeighborTwice()
     {
         // Arrange
 
@@ -140,7 +132,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldNotAddAdjacencyWithInvalidAddress()
+    public void ShouldNotAddAdjacencyWithInvalidAddress()
     {
         // Arrange
 
@@ -152,7 +144,7 @@ public class NetworkGraphTests : AppTestBase
     }
 
     [Fact]
-    public void NetworkGraph_ShouldAddAndRemoveNeighbor()
+    public void ShouldAddAndRemoveNeighbor()
     {
         // Arrange
 

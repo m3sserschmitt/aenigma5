@@ -19,38 +19,40 @@
 */
 
 using Autofac;
-using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.Security.Contracts;
 using Enigma5.Crypto.DataProviders;
+using Xunit;
+using FluentAssertions;
+using System.Diagnostics.CodeAnalysis;
+using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
+[ExcludeFromCodeCoverage]
 public class UpdateLocalAdjacencyHandlerTests : AppTestBase
 {
-    private readonly ICertificateManager _certificateManager;
-
     private readonly UpdateLocalAdjacencyHandler _handler;
 
     public UpdateLocalAdjacencyHandlerTests()
     {
-        _certificateManager = _scope.Resolve<ICertificateManager>();
-        _handler = _scope.Resolve<UpdateLocalAdjacencyHandler>();
+        _handler = _container.Resolve<UpdateLocalAdjacencyHandler>();
     }
 
     [Fact]
-    public async void ShouldAddNewNeighbor()
+    public async Task ShouldAddNewNeighbor()
     {
         // Arrange
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
 
         // Act
-        var (localVertex, broadcast) = await _handler.Handle(request);
+        var result = await _handler.Handle(request);
 
-        localVertex.Should().BeOfType<Vertex>();
-        localVertex.PublicKey.Should().Be(_certificateManager.PublicKey);
+        var localVertex = _graph.LocalVertex;
+        var broadcast = result.Value;
+        localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
+        localVertex!.PublicKey.Should().Be(_certificateManager.PublicKey);
         localVertex.SignedData.Should().NotBeEmpty();
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
@@ -61,52 +63,57 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
     }
 
     [Fact]
-    public async void ShouldNotAddNeighborTwice()
+    public async Task ShouldNotAddNeighborTwice()
     {
         // Arrange
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], true);
 
         // Act
-        var (localVertex1, broadcast1) = await _handler.Handle(request);
-        var (localVertex2, broadcast2) = await _handler.Handle(request);
+        var result1 = await _handler.Handle(request);
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(request);
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
         localVertex1.Should().Be(localVertex2);
-        localVertex1.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
-        broadcast1.Should().NotBeNull();
-        broadcast2.Should().BeNull();
+        localVertex1!.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
+        result1.Value.Should().NotBeNull();
+        result2.Value.Should().BeNull();
     }
 
     [Fact]
-    public async void ShouldNotRemoveNonExistentNeighbor()
+    public async Task ShouldNotRemoveNonExistentNeighbor()
     {
         // Arrange
         var request = new UpdateLocalAdjacencyCommand([PKey.Address1], false);
 
         // Act
-        var (localVertex, broadcast) = await _handler.Handle(request);
+        var result = await _handler.Handle(request);
 
         // Assert
-        localVertex.PublicKey.Should().Be(_certificateManager.PublicKey);
+        var localVertex = _graph.LocalVertex;
+        localVertex!.PublicKey.Should().Be(_certificateManager.PublicKey);
         localVertex.SignedData.Should().NotBeEmpty();
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().BeEmpty();
-        broadcast.Should().BeNull();
+        result.Value.Should().BeNull();
     }
 
     [Fact]
-    public async void ShouldAddAndRemoveNeighbor()
+    public async Task ShouldAddAndRemoveNeighbor()
     {
         // Arrange
 
         // Act
-        var (localVertex1, broadcast1) = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], true));
-        var (localVertex2, broadcast2) = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], false));
+        var result1 = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], true));
+        var localVertex1 = _graph.LocalVertex;
+        var result2 = await _handler.Handle(new UpdateLocalAdjacencyCommand([PKey.Address1], false));
+        var localVertex2 = _graph.LocalVertex;
 
         // Assert
-        localVertex1.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
-        broadcast1.Should().NotBeNull();
-        localVertex2.Neighborhood.Neighbors.Should().BeEmpty();
-        broadcast2.Should().NotBeNull();
+        localVertex1!.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
+        result1.Value.Should().NotBeNull();
+        localVertex2!.Neighborhood.Neighbors.Should().BeEmpty();
+        result2.Should().NotBeNull();
     }
 }

@@ -18,10 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs.Filters;
 
+[ExcludeFromCodeCoverage]
 public abstract class BaseFilter<THub, TMarker> : IHubFilter
 where THub : class
 where TMarker : Attribute
@@ -33,7 +35,7 @@ where TMarker : Attribute
 
     protected virtual bool CheckHubType(HubInvocationContext invocationContext) => invocationContext.Hub is THub;
 
-    protected abstract ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next);
+    public abstract ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next);
 
     protected bool Check(HubInvocationContext invocationContext) =>
     CheckMarker(invocationContext) && CheckHubType(invocationContext) && CheckArguments(invocationContext);

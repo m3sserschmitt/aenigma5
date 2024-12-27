@@ -22,7 +22,6 @@ using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Hubs.Sessions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -31,20 +30,18 @@ using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
 using Enigma5.App.Data;
 using Enigma5.App.Common.Constants;
-using Enigma5.App.Models;
-using Enigma5.Crypto;
-using System.Text;
-using System.Text.Json;
 using Enigma5.Security.Contracts;
-using MediatR;
-using Enigma5.App.Resources.Queries;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
 using Hangfire;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.Crypto;
+using Enigma5.Structures;
+using System.Diagnostics.CodeAnalysis;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App;
 
+[ExcludeFromCodeCoverage]
 public class StartupConfiguration(IConfiguration configuration)
 {
     private readonly IConfiguration _configuration = configuration;
@@ -56,6 +53,7 @@ public class StartupConfiguration(IConfiguration configuration)
             options =>
                 {
                     options.AddFilter<LogFilter>();
+                    options.AddFilter<AuthenticatedFilter>();
                     options.AddFilter<AuthorizedServiceOnlyFilter>();
                     options.AddFilter<ValidateModelFilter>();
                     options.AddFilter<OnionParsingFilter>();
@@ -63,12 +61,21 @@ public class StartupConfiguration(IConfiguration configuration)
                 });
 
         services.AddSingleton<ConnectionsMapper>();
-        services.AddSingleton<SessionManager>();
+        services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
         
         services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
         services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
+        services.AddTransient(provider => {
+            var certificateManager = provider.GetRequiredService<ICertificateManager>();
+            return SealProvider.Factory.CreateUnsealer(certificateManager.PrivateKey);
+        });
+        services.AddTransient(provider => {
+            var certificateManager = provider.GetRequiredService<ICertificateManager>();
+            return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
+        });
+        services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
 
@@ -86,109 +93,11 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
-
-            endpoints.MapGet(Endpoints.InfoEndpoint, (ICertificateManager certificateManager, NetworkGraph networkGraph) =>
-            {
-                //TODO: refactor to use handler
-                var serializedGraph = JsonSerializer.Serialize(networkGraph.Graph);
-                var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
-
-                return Results.Ok(new ServerInfo
-                {
-                    PublicKey = certificateManager.PublicKey,
-                    Address = certificateManager.Address,
-                    GraphVersion = graphVersion
-                });
-            });
-
-            endpoints.MapGet(Endpoints.GraphEndpoint, (NetworkGraph networkGraph) =>
-            {
-                //TODO: refactor to use handler
-                return Results.Ok(networkGraph.Graph);
-            });
-
-            endpoints.MapGet(Endpoints.VerticesEndpoint, (NetworkGraph networkGraph) =>
-            {
-                //TODO: refactor to use handler
-                return Results.Ok(networkGraph.Vertices);
-            });
-
-            endpoints.MapPost(Endpoints.ShareEndpoint, async (SharedDataCreate sharedDataCreate, IMediator commandRouter, IConfiguration configuration) =>
-            {
-                //TODO: refactor to use handler
-                if (!sharedDataCreate.Valid)
-                {
-                    return Results.BadRequest();
-                }
-
-                using var signatureVerification = Envelope.Factory.CreateSignatureVerification(sharedDataCreate.PublicKey!);
-
-                if (signatureVerification is null)
-                {
-                    return Results.StatusCode(500);
-                }
-
-                var decodedSignature = Convert.FromBase64String(sharedDataCreate.SignedData!);
-
-                if (decodedSignature is null
-                || decodedSignature.Length == 0
-                || !signatureVerification.Verify(decodedSignature))
-                {
-                    return Results.BadRequest();
-                }
-
-                var result = await commandRouter.Send(
-                    new CreateShareDataCommand(
-                        sharedDataCreate.SignedData!,
-                        sharedDataCreate.AccessCount
-                    )
-                );
-
-                if (!result.IsSuccessNotNullResulValue())
-                {
-                    return Results.StatusCode(500);
-                }
-
-                var resourceUrl = $"{(configuration.GetHostname() ?? "").Trim('/')}/{Endpoints.ShareEndpoint}?Tag={result.Value?.Tag}";
-
-                return Results.Ok(new
-                {
-                    result.Value?.Tag,
-                    ResourceUrl = resourceUrl,
-                    ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistancePeriod
-                }
-                );
-            });
-
-            endpoints.MapGet(Endpoints.ShareEndpoint, async (string tag, IMediator commandRouter) =>
-            {
-                var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
-
-                if (!sharedData.IsSuccessNotNullResulValue())
-                {
-                    return Results.NotFound();
-                }
-
-                var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag));
-
-                if(result.IsSuccessNotNullResulValue() && result.Value!.AccessCount > result.Value.MaxAccessCount)
-                {
-                    await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag));
-                }
-                
-                return Results.Ok(new { sharedData.Value.Tag, sharedData.Value.Data });
-            });
-
-            endpoints.MapGet(Endpoints.VertexEndpoint, async (string address, IMediator commandRouter) => {
-                var vertex = await commandRouter.Send(new GetVertexQuery(address));
-
-                if(vertex is null)
-                {
-                    return Results.NotFound();
-                }
-
-                return Results.Ok(vertex);
-            });
+            endpoints.MapGet(Endpoints.InfoEndpoint, Api.GetInfo);
+            endpoints.MapPost(Endpoints.ShareEndpoint, Api.PostShare);
+            endpoints.MapGet(Endpoints.ShareEndpoint, Api.GetShare);
+            endpoints.MapGet(Endpoints.VerticesEndpoint, Api.GetVertices);
+            endpoints.MapGet(Endpoints.VertexEndpoint, Api.GetVertex);
         });
 
         serviceProvider.UseAsHangfireActivator();
@@ -196,7 +105,7 @@ public class StartupConfiguration(IConfiguration configuration)
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "pending-messages-cleanup",
             bridge => bridge.Send(
-                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistancePeriod, true)
+                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistancePeriod, DataPersistencePeriod.DeliveredMessagePersistancePeriod)
             ),
             "*/15 * * * *"
         );

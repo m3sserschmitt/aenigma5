@@ -28,7 +28,7 @@ public class CertificateManager : ICertificateManager
 {
     private readonly IKeysReader _keysProvider;
 
-    private readonly SingleThreadExecutor<byte[]> _kernelQueryExecutor = new();
+    private readonly SingleThreadExecutor<string> _kernelQueryExecutor = new();
 
     private readonly object _locker = new();
 
@@ -46,7 +46,7 @@ public class CertificateManager : ICertificateManager
 
     public string PublicKey { get => ThreadSafeExecution.Execute(() => _keysProvider.PublicKey, string.Empty, _locker); }
 
-    public byte[] PrivateKey { get => ReadKeyFromKernel(); }
+    public string PrivateKey { get => ReadKeyFromKernel(); }
 
     public string Address { get => ThreadSafeExecution.Execute(() => CertificateHelper.GetHexAddressFromPublicKey(PublicKey), string.Empty, _locker); }
 
@@ -59,18 +59,13 @@ public class CertificateManager : ICertificateManager
 
     private Action CacheKeyIntoKernelAction => () =>
     {
-        var privateKeyBytes = _keysProvider.PrivateKey;
-
-        if (KernelKey.Create(KERNEL_KEY_NAME, privateKeyBytes, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING) < 0)
+        if (KernelKey.Create(KERNEL_KEY_NAME, _keysProvider.PrivateKey, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING) < 0)
         {
-            Array.Clear(privateKeyBytes);
             throw new Exception(PRIVATE_KEY_CACHING_ERROR);
         }
-
-        Array.Clear(privateKeyBytes);
     };
 
-    private static Func<byte[]> ReadKeyFromKernelAction => () =>
+    private static Func<string> ReadKeyFromKernelAction => () =>
     {
         var privateKeyId = KernelKey.SearchKey(KERNEL_KEY_NAME, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING);
 
@@ -92,7 +87,7 @@ public class CertificateManager : ICertificateManager
         }
     }
 
-    private byte[] ReadKeyFromKernel()
+    private string ReadKeyFromKernel()
     {
         var result = _kernelQueryExecutor.Execute(ReadKeyFromKernelAction);
 

@@ -20,6 +20,7 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Queries;
+using Enigma5.Crypto.Extensions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,8 @@ public class CheckAuthorizedServiceHandler(EnigmaDbContext context)
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<bool>> IRequestHandler<CheckAuthorizedServiceQuery, CommandResult<bool>>.Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken));
+    public async Task<CommandResult<bool>> Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken = default)
+    => !request.Address.IsValidAddress() ?
+    CommandResult.CreateResultFailure<bool>() :
+    CommandResult.CreateResultSuccess(await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken));
 }

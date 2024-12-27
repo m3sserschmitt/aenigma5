@@ -18,32 +18,29 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Buffers.Text;
+using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class SignatureRequest: IValidatable
+[method: JsonConstructor]
+public class SignatureRequest(string? nonce = null) : IValidatable
 {
-    public string? Nonce { get; set; }
+    public string? Nonce { get; set; } = nonce;
 
-    public SignatureRequest(string nonce)
+    public HashSet<Error> Validate()
     {
-        Nonce = nonce;
-    }
-
-    public SignatureRequest() { }
-
-    public IEnumerable<Error> Validate()
-    {
+        var errors = new HashSet<Error>();
         if(string.IsNullOrWhiteSpace(Nonce))
         {
-            yield return new Error(ValidationErrors.NULL_REQUIRED_PROPERTIES, [nameof(Nonce)]);
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Nonce));
         }
-
-        if(Nonce is not null && !Base64.IsValid(Nonce))
+        else if(!Nonce.IsValidBase64())
         {
-            yield return new Error(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, [nameof(Nonce)]);
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Nonce));
         }
+        return errors;
     }
 }

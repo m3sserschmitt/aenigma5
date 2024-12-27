@@ -19,12 +19,10 @@
 */
 
 using Enigma5.App.Attributes;
-using Enigma5.App.Hubs.Sessions;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Models;
-using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
@@ -33,21 +31,24 @@ using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Resources.Handlers;
+using Enigma5.Crypto;
+using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub(
-    SessionManager sessionManager,
+    ISessionManager sessionManager,
     ICertificateManager certificateManager,
     NetworkGraph networkGraph,
     IMediator commandRouter,
     ILogger<RoutingHub> logger) :
     Hub,
-    IHub,
+    IEnigmaHub,
     IOnionParsingHub,
-    IOnionRoutingHub
+    IOnionRoutingHub,
+    IIdentityHub
 {
-    private readonly SessionManager _sessionManager = sessionManager;
+    private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
@@ -59,11 +60,11 @@ public partial class RoutingHub(
 
     public string? DestinationConnectionId { get; set; }
 
-    public int Size { get; set; }
-
     public string? Next { get; set; }
 
     public byte[]? Content { get; set; }
+
+    public string? ClientAddress { get; set; }
 
     public Task<InvocationResult<string>> GenerateToken()
     {
@@ -81,58 +82,75 @@ public partial class RoutingHub(
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
-    public async Task Synchronize()
+    [Authenticated]
+    public async Task<InvocationResult<List<Models.PendingMessage>>> Pull()
     {
-        if (_sessionManager.TryGetAddress(Context.ConnectionId, out string? address))
+        if (ClientAddress is null)
         {
-            var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address!));
-
-            if (result.IsSuccessNotNullResulValue())
-            {
-                try
-                {
-                    var pendingMessages = result.Value?.Select(item => new Models.PendingMessage
-                    {
-                        Destination = item.Destination,
-                        Content = item.Content,
-                        DateReceived = item.DateReceived
-                    });
-                    await RespondAsync(nameof(Synchronize), pendingMessages);
-                }
-                catch
-                {
-                    return;
-                }
-
-                await _commandRouter.Send(new RemoveMessagesCommand(address!));
-            }
+            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(Pull),
+            Context.ConnectionId);
+            return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
         }
+
+        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
+
+        if (result.IsSuccessNotNullResultValue())
+        {
+            await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress));
+            return Ok(result.Value!);
+        }
+
+        _logger.LogError($"Could not retrieve pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        nameof(Pull),
+        Context.ConnectionId,
+        result);
+        return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
+    }
+
+    [Authenticated]
+    public async Task<InvocationResult<bool>> Cleanup()
+    {
+        if (ClientAddress is null)
+        {
+            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            nameof(Cleanup),
+            Context.ConnectionId);
+            return Error<bool>(InvocationErrors.INTERNAL_ERROR);
+        }
+
+        var result = await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
+
+        if (result.IsSuccessNotNullResultValue())
+        {
+            return Ok(true);
+        }
+
+        _logger.LogError($"Could cleanup pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        nameof(Pull),
+        Context.ConnectionId,
+        result);
+        return Error<bool>(InvocationErrors.INTERNAL_ERROR);
     }
 
     [ValidateModel]
-    public async Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request)
+    public Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request)
     {
         var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!);
 
         if (!authenticated)
         {
             _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
-        }
-
-        if (request.SyncMessagesOnSuccess)
-        {
-            await Synchronize();
+            return ErrorAsync<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
         _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
-        return Ok(true);
+        return OkAsync(true);
     }
 
     [ValidateModel]
     public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
     {
-
         var decodedNonce = Convert.FromBase64String(request.Nonce!);
         if (decodedNonce is null)
         {
@@ -140,8 +158,8 @@ public partial class RoutingHub(
             return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
-        using var signature = Envelope.Factory.CreateSignature(_certificateManager.PrivateKey, string.Empty);
-        var data = signature.Sign(decodedNonce);
+        var signer = SealProvider.Factory.CreateSigner(_certificateManager.PrivateKey);
+        var data = signer.Sign(decodedNonce);
 
         if (data == null)
         {
@@ -165,7 +183,7 @@ public partial class RoutingHub(
     {
         var result = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
-        if (result.IsSuccessNotNullResulValue())
+        if (result.IsSuccessNotNullResultValue())
         {
             return await SendBroadcast(result.Value!)
             ? Ok(true)
@@ -176,6 +194,7 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
+    [Authenticated]
     [AuthorizedServiceOnly]
     public async Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request)
     {
@@ -197,26 +216,16 @@ public partial class RoutingHub(
     [ValidateModel]
     [OnionParsing]
     [OnionRouting]
+    [Authenticated]
     public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
     {
+        var result = await CreatePendingMessage();
+        var success = result.IsSuccessNotNullResultValue();
         if (DestinationConnectionId != null && Content != null)
         {
-            return await RouteMessage(DestinationConnectionId, Content) ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
+            success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
         }
-        else if (Content != null)
-        {
-            _logger.LogDebug($"Onion could not be forwarded for connectionId {{{nameof(Context.ConnectionId)}}}. Saving locally...", Context.ConnectionId);
-            var encodedContent = Convert.ToBase64String(Content);
-            if (encodedContent is null)
-            {
-                _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
-                return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
-            }
-            var result = await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
-
-            return result.IsSuccessNotNullResulValue() ? Ok(true) : Error(false, InvocationErrors.ONION_ROUTING_FAILED);
-        }
-        return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
+        return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

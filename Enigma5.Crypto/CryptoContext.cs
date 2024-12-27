@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.Crypto.Extensions;
+
 namespace Enigma5.Crypto;
 
 internal sealed class CryptoContext : IDisposable
@@ -28,11 +30,6 @@ internal sealed class CryptoContext : IDisposable
 
     private CryptoContext(IntPtr handle)
     {
-        if (handle == IntPtr.Zero)
-        {
-            throw new Exception("Encryption context is null.");
-        }
-
         this.handle = handle;
     }
 
@@ -46,6 +43,8 @@ internal sealed class CryptoContext : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    public bool IsNull => handle == IntPtr.Zero;
 
     private void Dispose(bool disposing)
     {
@@ -69,52 +68,16 @@ internal sealed class CryptoContext : IDisposable
 
     internal static class Factory
     {
-        public static CryptoContext CreateAsymmetricEncryptionContext(string key)
-        {
-            return new CryptoContext(Native.CreateAsymmetricEncryptionContext(key));
-        }
+        public static CryptoContext CreateAsymmetricEncryptionContext(string publicKey)
+        => new(publicKey.IsValidPublicKey() ? Native.CreateAsymmetricEncryptionContext(publicKey) : IntPtr.Zero);
 
-        public static CryptoContext CreateAsymmetricDecryptionContext(byte[] key, string passphrase)
-        {
-            var nativeBuffer = KeyUtil.CopyKeyToNativeBuffer(key);
-            var ctx = new CryptoContext(Native.CreateAsymmetricDecryptionContext(nativeBuffer, passphrase));
-            KeyUtil.FreeKeyNativeBuffer(nativeBuffer, key);
+        public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, string passphrase)
+        => new(privateKey.IsValidPrivateKey() ? Native.CreateAsymmetricDecryptionContext(privateKey, passphrase) : IntPtr.Zero);
 
-            return ctx;
-        }
+        public static CryptoContext CreateSignatureContext(string privateKey, string passphrase)
+        => new(privateKey.IsValidPrivateKey() ? Native.CreateSignatureContext(privateKey, passphrase) : IntPtr.Zero);
 
-        public static CryptoContext CreateAsymmetricEncryptionContextFromFile(string path)
-        {
-            return new CryptoContext(Native.CreateAsymmetricEncryptionContextFromFile(path));
-        }
-
-        public static CryptoContext CreateAsymmetricDecryptionContextFromFile(string path, string passphrase)
-        {
-            return new CryptoContext(Native.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
-        }
-
-        public static CryptoContext CreateSignatureContext(byte[] key, string passphrase)
-        {
-            var nativeBuffer = KeyUtil.CopyKeyToNativeBuffer(key);
-            var ctx = new CryptoContext(Native.CreateSignatureContext(nativeBuffer, passphrase));
-            KeyUtil.FreeKeyNativeBuffer(nativeBuffer, key);
-
-            return ctx;
-        }
-
-        public static CryptoContext CreateSignatureContextFromFile(string path, string passphrase)
-        {
-            return new CryptoContext(Native.CreateSignatureContextFromFile(path, passphrase));
-        }
-
-        public static CryptoContext CreateSignatureVerificationContext(string key)
-        {
-            return new CryptoContext(Native.CreateVerificationContext(key));
-        }
-
-        public static CryptoContext CreateSignatureVerificationContextFromFile(string path)
-        {
-            return new CryptoContext(Native.CreateVerificationContextFromFile(path));
-        }
+        public static CryptoContext CreateSignatureVerificationContext(string publicKey)
+        => new(publicKey.IsValidPublicKey() ? Native.CreateVerificationContext(publicKey) : IntPtr.Zero);
     }
 }

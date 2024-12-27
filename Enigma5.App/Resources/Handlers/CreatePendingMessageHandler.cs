@@ -20,6 +20,7 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.Crypto.Extensions;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
@@ -28,9 +29,18 @@ public class CreatePendingMessageHandler(EnigmaDbContext context) : IRequestHand
 {
     private readonly EnigmaDbContext _context = context;
 
-    async Task<CommandResult<PendingMessage>> IRequestHandler<CreatePendingMessageCommand, CommandResult<PendingMessage>>.Handle(CreatePendingMessageCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<PendingMessage>> Handle(CreatePendingMessageCommand request, CancellationToken cancellationToken)
     {
-        var pendingMessage = new PendingMessage(request.Destination, request.Content, false);
+        if(!request.Destination.IsValidAddress() || !request.Content.IsValidBase64())
+        {
+            return CommandResult.CreateResultFailure<PendingMessage>();
+        }
+
+        var pendingMessage = new PendingMessage
+        {
+            Destination = request.Destination,
+            Content = request.Content
+        };
         await _context.AddAsync(pendingMessage, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return CommandResult.CreateResultSuccess(pendingMessage);

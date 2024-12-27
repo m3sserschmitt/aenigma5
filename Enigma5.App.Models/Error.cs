@@ -18,28 +18,40 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
+
 namespace Enigma5.App.Models;
 
-public class Error
+[method: JsonConstructor]
+public class Error(string? message = null, HashSet<string>? properties = null)
 {
-    public string? Message { get; set; }
+    public string? Message { get; private set; } = message;
 
-    public IEnumerable<string> Properties { get; set; }
+    public HashSet<string>? Properties { get; private set; } = properties;
 
-    public Error(string message, List<string> properties)
+    public bool Equals(Error? error)
     {
-        Message = message;
-        Properties = properties;
+        if(error is null)
+        {
+            return false;
+        }
+
+        return error.Message == Message;
     }
 
-    public Error(string message)
+    public override bool Equals(object? obj)
     {
-        Message = message;
-        Properties = [];
+        if(ReferenceEquals(this, obj))
+        {
+            return true;
+        }
+
+        return Equals(obj as Error);
     }
 
-    public Error()
-    {
-        Properties = [];
-    }
+    public override int GetHashCode() => Message is null ? 0 : Message.GetHashCode();
+
+    public static bool operator==(Error e1, Error e2) => e1.Message == e2.Message;
+
+    public static bool operator!=(Error e1, Error e2) => !(e1 == e2);
 }

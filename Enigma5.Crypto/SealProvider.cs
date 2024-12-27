@@ -19,16 +19,16 @@
 */
 
 using Enigma5.Crypto.Contracts;
-using System.Runtime.InteropServices;
+using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.Crypto;
 
-internal sealed class SealProvider :
+public sealed class SealProvider :
     IDisposable,
-    IEnvelopeSeal,
-    IEnvelopeUnseal,
-    IEnvelopeSign,
-    IEnvelopeVerify
+    IEnvelopeSealer,
+    IEnvelopeUnsealer,
+    IEnvelopeSigner,
+    IEnvelopeVerifier
 {
     private readonly CryptoContext _ctx;
 
@@ -46,48 +46,92 @@ internal sealed class SealProvider :
 
     private byte[]? Execute(byte[] input, NativeExecutor executor)
     {
-        IntPtr outputPtr = executor(_ctx, input, (uint)input.Length, out int outputSize);
+        if(_ctx.IsNull || input.Length == 0)
+        {
+            return null;
+        }
+
+        var outputPtr = executor(_ctx, input, (uint)input.Length, out int outputSize);
 
         if (outputPtr == IntPtr.Zero || outputSize < 0)
         {
             return null;
         }
 
-        var output = new byte[outputSize];
-
-        Marshal.Copy(outputPtr, output, 0, outputSize);
-
-        return output;
+        return KeyUtil.CopyKeyFromNativeBuffer(outputPtr, outputSize);
     }
 
-    public byte[]? Seal(byte[] plaintext)
-    => Execute(plaintext, Native.EncryptData);
+    public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.EncryptData);
 
-    public byte[]? Unseal(byte[] ciphertext)
-    => Execute(ciphertext, Native.DecryptData);
+    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.DecryptData);
 
-    public IntPtr UnsealOnion(byte[] ciphertext, out int outLen)
-    => Native.UnsealOnion(_ctx, ciphertext, out outLen);
-
-    public static IntPtr SealOnion(
-        byte[] plaintext,
-        string[] keys,
-        string[] addresses,
-        out int outLen)
+    public bool UnsealOnion(string onion, ref string? next, ref byte[]? content)
     {
-        if (keys.Length != addresses.Length)
+        if(_ctx.IsNull || string.IsNullOrWhiteSpace(onion))
         {
-            throw new ArgumentException("Number of keys should equal the number of addresses.");
+            return false;
         }
 
-        return Native.SealOnion(plaintext, (uint)plaintext.Length, keys, addresses, (uint)keys.Length, out outLen);
+        try
+        {
+            var decodedOnion = Convert.FromBase64String(onion);
+
+            if(decodedOnion is null)
+            {
+                return false;
+            }
+
+            var data = Native.UnsealOnion(_ctx, decodedOnion, out var outLen);
+
+            if (data == IntPtr.Zero || outLen < Constants.AddressSize)
+            {
+                return false;
+            }
+
+            var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
+            next = null;
+            if(nextBytes is not null)
+            {
+                next = HashProvider.ToHex(nextBytes);
+            }
+            content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
+
+            return next is not null && content is not null;
+        }
+        catch(Exception)
+        {
+            return false;
+        }
     }
 
-    public byte[]? Sign(byte[] plaintext)
-    => Execute(plaintext, Native.SignData);
+    public static int GetPKeySize(string publicKey) => publicKey.IsValidPublicKey() ? Native.GetPKeySize(publicKey) : -1;
 
-    public bool Verify(byte[] ciphertext)
-    => Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
+    public static string? SealOnion(
+        byte[] plaintext,
+        List<string> keys,
+        List<string> addresses)
+    {
+        if (keys.Count != addresses.Count || keys.Any(item => !item.IsValidPublicKey()) || addresses.Any(item => !item.IsValidAddress()) || plaintext.Length == 0)
+        {
+            return null;
+        }
+
+        var data = Native.SealOnion(plaintext, (uint)plaintext.Length, [.. keys], [.. addresses], (uint)keys.Count, out var outLen);
+
+        if (data == IntPtr.Zero || outLen < 0)
+        {
+            return null;
+        }
+
+        var managedBuffer = KeyUtil.CopyKeyFromNativeBuffer(data, outLen);
+        KeyUtil.FreeKeyNativeBuffer(data, outLen);
+        
+        return managedBuffer is not null ? Convert.ToBase64String(managedBuffer) : null;
+    }
+
+    public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.SignData) : null;
+
+    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
 
     public void Dispose()
     {
@@ -97,7 +141,22 @@ internal sealed class SealProvider :
 
     public static class Factory
     {
-        public static SealProvider Create(CryptoContext ctx) => new(ctx);
-    }
+        public static IEnvelopeSigner CreateSigner(string key, string passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateSignatureContext(key, passphrase));
 
+        public static IEnvelopeSigner CreateSigner(string key)
+        => CreateSigner(key, string.Empty);
+
+        public static IEnvelopeVerifier CreateVerifier(string key)
+        => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key));
+
+        public static IEnvelopeUnsealer CreateUnsealer(string key, string passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase));
+
+        public static IEnvelopeUnsealer CreateUnsealer(string key)
+        => CreateUnsealer(key, string.Empty);
+
+        public static IEnvelopeSealer CreateSealer(string key)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));
+    }
 }
