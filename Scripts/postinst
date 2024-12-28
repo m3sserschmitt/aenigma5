@@ -58,5 +58,5 @@ echo -n "Starting $SERVICE_NAME service ..."
 sudo systemctl start "$SERVICE_NAME"
 sudo systemctl status "$SERVICE_NAME"
 
-echo -e "$APP_NAME service has been configured. Please make sure to run \e[31maenigma-genkeys\e[0m command to complete the setup."
+echo -e "$APP_NAME service has been configured. Please make sure to run \e[31msudo aenigma-genkeys\e[0m and \e[31msudo aenigma-configure\e[0m commands to complete the setup."
 echo "Done."

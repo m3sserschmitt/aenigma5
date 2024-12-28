@@ -5,11 +5,12 @@ set -e
 APP_NAME="aenigma"
 ARCH="amd64"
 EXECUTABLE_NAME="Enigma5.App"
-PUBLISH_DIR="bin/Release/net8.0/linux-x64/publish"
 POSTINST_SCRIPT="../Scripts/postinst"
 POSTRM_SCRIPT="../Scripts/postrm"
 GENKEYS_NAME="aenigma-genkeys"
+CONFIG_NAME="aenigma-configure"
 AENIGMA_GENKEYS_SCRIPT="../Scripts/$GENKEYS_NAME.sh"
+AENIGMA_CONFIG_SCRIPT="../Scripts/$CONFIG_NAME.sh"
 
 # Function to display usage/help message
 show_help() {
@@ -40,11 +41,7 @@ fi
 
 PKG_DIR="${APP_NAME}_${VERSION}-1_$ARCH"
 
-# Step 1: Publish the .NET app
-./db-migrate.sh
-dotnet publish -c Release -r linux-x64 --self-contained true
-
-# Step 2: Cleanup old package directory structure, then create a new one
+# Step 1: Cleanup old package directory structure, then create a new one
 if [ -d "$PKG_DIR" ]; then
     echo "Cleaning up existing package directory: $PKG_DIR"
     rm -rf "$PKG_DIR"
@@ -57,19 +54,24 @@ mkdir -pv $PKG_DIR/usr/local/bin
 mkdir -pv $PKG_DIR/usr/local/etc/$APP_NAME
 mkdir -pv $PKG_DIR/var/log/$APP_NAME
 
+# Step 2: Publish the .NET app
+dotnet publish -c Release -r linux-x64 --self-contained true -o $PKG_DIR/usr/local/$APP_NAME
+
 # Step 3: Copy application files to /usr/local/APP_NAME
-cp -rv $PUBLISH_DIR/* $PKG_DIR/usr/local/$APP_NAME/
-cp -v *.sqlite $PKG_DIR/usr/local/$APP_NAME/
-cp -v "$POSTINST_SCRIPT" $PKG_DIR/DEBIAN/postinst
-cp -v "$POSTRM_SCRIPT" $PKG_DIR/DEBIAN/postrm
-cp -v "$AENIGMA_GENKEYS_SCRIPT" $PKG_DIR/usr/local/$APP_NAME/
+cp -v $POSTINST_SCRIPT $PKG_DIR/DEBIAN/postinst
+cp -v $POSTRM_SCRIPT $PKG_DIR/DEBIAN/postrm
+cp -v $AENIGMA_GENKEYS_SCRIPT $PKG_DIR/usr/local/$APP_NAME/
+cp -v $AENIGMA_CONFIG_SCRIPT $PKG_DIR/usr/local/$APP_NAME/
+rm -v $PKG_DIR/usr/local/$APP_NAME/appsettings.*.json
+rm -v $PKG_DIR/usr/local/$APP_NAME/appsettings.json
 chmod -v +x $PKG_DIR/DEBIAN/postinst
 chmod -v +x $PKG_DIR/DEBIAN/postrm
 chmod -v +x $PKG_DIR/usr/local/$APP_NAME/$GENKEYS_NAME.sh
+chmod -v +x $PKG_DIR/usr/local/$APP_NAME/$CONFIG_NAME.sh
 
-# Step 4: Create a symbolic link in /usr/local/bin pointing to the executable
-ln -sv /usr/local/$APP_NAME/$EXECUTABLE_NAME $PKG_DIR/usr/local/bin/$APP_NAME
+# Step 4: Create a symbolic link in /usr/local/bin pointing to the scripts
 ln -sv /usr/local/$APP_NAME/$GENKEYS_NAME.sh $PKG_DIR/usr/local/bin/$GENKEYS_NAME
+ln -sv /usr/local/$APP_NAME/$CONFIG_NAME.sh $PKG_DIR/usr/local/bin/$CONFIG_NAME
 
 # Step 5: Create control file
 echo "Creating DEBIAN/control file" 

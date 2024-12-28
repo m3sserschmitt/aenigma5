@@ -22,11 +22,11 @@ namespace Enigma5.App.Common.Constants;
 
 public static class DataPersistencePeriod
 {
-    public static readonly TimeSpan PendingMessagePersistancePeriod = new(02, 00, 00, 00);
+    public static readonly TimeSpan PendingMessagePersistencePeriod = new(02, 00, 00, 00);
 
-    public static readonly TimeSpan DeliveredMessagePersistancePeriod = new(01, 00, 00, 00);
+    public static readonly TimeSpan DeliveredMessagePersistencePeriod = new(01, 00, 00, 00);
 
-    public static readonly TimeSpan SharedDataPersistancePeriod = new(00, 30, 00);
+    public static readonly TimeSpan SharedDataPersistencePeriod = new(00, 30, 00);
 
     public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(01, 00, 00);
 

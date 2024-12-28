@@ -38,6 +38,8 @@ using Enigma5.Crypto;
 using Enigma5.Structures;
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs.Sessions.Contracts;
+using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App;
 
@@ -64,14 +66,16 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
-        
+
         services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
         services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
-        services.AddTransient(provider => {
+        services.AddTransient(provider =>
+        {
             var certificateManager = provider.GetRequiredService<ICertificateManager>();
             return SealProvider.Factory.CreateUnsealer(certificateManager.PrivateKey);
         });
-        services.AddTransient(provider => {
+        services.AddTransient(provider =>
+        {
             var certificateManager = provider.GetRequiredService<ICertificateManager>();
             return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
         });
@@ -105,16 +109,29 @@ public class StartupConfiguration(IConfiguration configuration)
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "pending-messages-cleanup",
             bridge => bridge.Send(
-                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistancePeriod, DataPersistencePeriod.DeliveredMessagePersistancePeriod)
+                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistencePeriod, DataPersistencePeriod.DeliveredMessagePersistencePeriod)
             ),
             "*/15 * * * *"
         );
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "shared-data-cleanup",
             bridge => bridge.Send(
-                new CleanupSharedDataCommand(DataPersistencePeriod.SharedDataPersistancePeriod)
+                new CleanupSharedDataCommand(DataPersistencePeriod.SharedDataPersistencePeriod)
             ),
             "*/5 * * * *"
         );
+
+        using var scope = app.ApplicationServices.CreateScope();
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<EnigmaDbContext>();
+            context.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<StartupConfiguration>>();
+            logger.LogError(ex, "An error occurred while creating the database.");
+            throw;
+        }
     }
 }
