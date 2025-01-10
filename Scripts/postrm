@@ -33,6 +33,6 @@ case "$1" in
 
   purge)
     sudo rm "$SERVICE_FILE"
-    sudo deluser --force --remove-home "$SERVICE_USER"
+    sudo deluser --system --remove-all-files "$SERVICE_USER"
     ;;
 esac
