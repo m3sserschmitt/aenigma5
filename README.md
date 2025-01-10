@@ -50,7 +50,7 @@ Depending on your environment, you might want to change the default configuratio
 - `PrivateKeyPath`: if `UseAzureVaultForKeys` is true, this represents the name of the key vault secret containing the key. Otherwise, it represents the path on your local system where your private key is stored.
 - `PublicKeyPath`: same as `PrivateKeyPath`
 - `PassphrasePath`: name of the Azure Key Vault Secret containing the private key protection passphrase, when `UseAzureVaultForPassphrase` is true. Otherwise, it can be null.
-- `Hostname`: The hostname to be published into the public ledger once you connect to the other instances of Aenigma. This will control how other nodes will connect to your instance. If null, nobody will be able to connect to you.
+- `Hostname`: The hostname to be published into the public ledger once you connect to the other instances of Aenigma. This will control how other nodes will connect to your instance. If null, nobody will be able to connect to you. Example: http(s)://your-domain.com
 - `Serilog`: this section controls how Serilog will collect and store app logs. Please consult the official documentation [here](https://serilog.net/) for more details.
 
 **Important Note**: The Azure setup was tested only for Azure Virtual Machines with Managed Identities.
