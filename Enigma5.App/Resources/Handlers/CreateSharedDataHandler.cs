@@ -1,6 +1,6 @@
 /*
     Aenigma - Federal messaging system
-    Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
     This file is part of Aenigma project.
 
@@ -72,7 +72,7 @@ public class CreateSharedDataHandler(
         {
             Tag = sharedData.Tag,
             ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.ShareEndpoint}?Tag={sharedData.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistancePeriod,
+            ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistencePeriod,
             Data = sharedData.Data,
             PublicKey = sharedData.PublicKey
         });

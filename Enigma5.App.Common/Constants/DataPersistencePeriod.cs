@@ -1,6 +1,6 @@
 ﻿/*
     Aenigma - Federal messaging system
-    Copyright (C) 2024  Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
     This file is part of Aenigma project.
 
@@ -22,11 +22,11 @@ namespace Enigma5.App.Common.Constants;
 
 public static class DataPersistencePeriod
 {
-    public static readonly TimeSpan PendingMessagePersistancePeriod = new(02, 00, 00, 00);
+    public static readonly TimeSpan PendingMessagePersistencePeriod = new(02, 00, 00, 00);
 
-    public static readonly TimeSpan DeliveredMessagePersistancePeriod = new(01, 00, 00, 00);
+    public static readonly TimeSpan DeliveredMessagePersistencePeriod = new(01, 00, 00, 00);
 
-    public static readonly TimeSpan SharedDataPersistancePeriod = new(00, 30, 00);
+    public static readonly TimeSpan SharedDataPersistencePeriod = new(00, 30, 00);
 
     public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(01, 00, 00);
 

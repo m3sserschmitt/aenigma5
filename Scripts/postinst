@@ -1,5 +1,23 @@
 #!/bin/bash
 
+# Aenigma - Federal messaging system
+# Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
 set -e
 
 APP_NAME="aenigma"
@@ -58,5 +76,5 @@ echo -n "Starting $SERVICE_NAME service ..."
 sudo systemctl start "$SERVICE_NAME"
 sudo systemctl status "$SERVICE_NAME"
 
-echo -e "$APP_NAME service has been configured. Please make sure to run \e[31maenigma-genkeys\e[0m command to complete the setup."
+echo -e "$APP_NAME service has been configured. Please make sure to run \e[31msudo aenigma-genkeys\e[0m and \e[31msudo aenigma-configure\e[0m commands to complete the setup."
 echo "Done."
