@@ -42,7 +42,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
     public Neighborhood Neighborhood { get; private set; } = neighborhood;
 
-    public bool TryAsLeaf(out Vertex? leafVertex)
+    public bool TryAsLeaf(out Vertex? leafVertex, bool addSignedData)
     {
         if (!PossibleLeaf)
         {
@@ -50,8 +50,8 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             return false;
         }
 
-        var neighborhood = new Neighborhood([.. Neighborhood.Neighbors], Neighborhood.Address, null);
-        leafVertex = new Vertex(neighborhood, null, SignedData, true);
+        var neighborhood = new Neighborhood(Neighborhood.Neighbors, Neighborhood.Address, null);
+        leafVertex = new Vertex(neighborhood, null, addSignedData ? SignedData : null, true);
 
         return true;
     }

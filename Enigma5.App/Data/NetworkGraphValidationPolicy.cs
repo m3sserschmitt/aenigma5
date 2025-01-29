@@ -26,6 +26,11 @@ namespace Enigma5.App.Data;
 
 public static partial class NetworkGraphValidationPolicy
 {
+    private static readonly JsonSerializerOptions _neighborhoodDeserializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public static bool ValidateSignature(this Vertex vertex)
     {
         if(vertex.SignedData is null || vertex.PublicKey is null)
@@ -43,7 +48,7 @@ public static partial class NetworkGraphValidationPolicy
                 return false;
             }
 
-            var expectedNeighborhood = JsonSerializer.Deserialize<Neighborhood>(plaintext);
+            var expectedNeighborhood = JsonSerializer.Deserialize<Neighborhood>(plaintext, _neighborhoodDeserializerOptions);
 
             if(vertex.Neighborhood != expectedNeighborhood)
             {

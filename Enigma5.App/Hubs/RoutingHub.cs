@@ -149,6 +149,7 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
+    [AuthorizedServiceOnly]
     public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
     {
         var decodedNonce = Convert.FromBase64String(request.Nonce!);
@@ -178,6 +179,7 @@ public partial class RoutingHub(
         return OkAsync<Signature>(new(encodedData, _certificateManager.PublicKey));
     }
 
+    [Authenticated]
     [ValidateModel]
     public async Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest broadcastAdjacencyList)
     {
@@ -219,13 +221,39 @@ public partial class RoutingHub(
     [Authenticated]
     public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
     {
-        var result = await CreatePendingMessage();
-        var success = result.IsSuccessNotNullResultValue();
-        if (DestinationConnectionId != null && Content != null)
+        bool success = false;
+        var vertex = await _commandRouter.Send(new GetVertexQuery(Next!));
+        var notLeaf = vertex.IsSuccessNotNullResultValue() && vertex.Value!.PublicKey is not null;
+        if(notLeaf && DestinationConnectionId != null && Content != null)
         {
-            success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
+            success = await RouteMessage(DestinationConnectionId, Content, null);
+            if(!success)
+            {
+                success = (await CreatePendingMessage()).IsSuccessNotNullResultValue();
+            }
+        }
+        else if(Content is not null)
+        {
+            var result = await CreatePendingMessage();
+            success = result.IsSuccessNotNullResultValue();
+            if (DestinationConnectionId != null)
+            {
+                success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
+            }
         }
         return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
+    }
+
+    [OnionParsing]
+    [OnionRouting]
+    [ValidateModel]
+    [Authenticated]
+    public async Task<InvocationResult<bool>> RouteMessages(RoutingRequestBulk request)
+    {
+        var tasks = request.Payloads!.Select(item => RouteMessage(new RoutingRequest(item)));
+        var results = await Task.WhenAll(tasks);
+        var success = results.All(item => item.Success);
+        return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_PARTIALLY_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

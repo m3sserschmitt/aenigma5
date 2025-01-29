@@ -155,7 +155,9 @@ public class NetworkGraph
                     updatedVertices.Add(_localVertex.CopyBySerialization());
                 }
 
-                var vertexToBeAdded = vertex.TryAsLeaf(out var leaf) ? leaf! : vertex;
+                var addSignedData = vertex.Neighborhood.Neighbors.Contains(_localVertex.Neighborhood.Address);
+                var vertexToBeAdded = vertex.TryAsLeaf(out var leaf, addSignedData) ? leaf! : vertex;
+                
                 if (!_vertices.TryGetValue(vertex, out var previous)) // vertex not existent;
                 {
                     _vertices.Add(vertexToBeAdded);

@@ -38,6 +38,8 @@ public class InvocationErrors
 
     public static readonly string ONION_ROUTING_FAILED = "Failed to route or store message.";
 
+    public static readonly string ONION_ROUTING_PARTIALLY_FAILED = "Failed to route or store some messages.";
+
     public static readonly string NOT_AUTHORIZED = "Could not authorize.";
 
     public static readonly string AUTHENTICATION_REQUIRED = "Authentication required";
