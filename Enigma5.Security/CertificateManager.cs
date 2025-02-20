@@ -44,7 +44,14 @@ public class CertificateManager : ICertificateManager
 
     private const KernelKeyring THREAD_KEYRING = KernelKeyring.ThreadKeyring;
 
-    public string PublicKey { get => ThreadSafeExecution.Execute(() => _keysProvider.PublicKey, string.Empty, _locker); }
+    private string? _publicKeyCache = null;
+
+    public string PublicKey {
+        get => ThreadSafeExecution.Execute(() => {
+            _publicKeyCache ??= _keysProvider.PublicKey;
+            return _publicKeyCache;
+        }, string.Empty, _locker);
+    }
 
     public string PrivateKey { get => ReadKeyFromKernel(); }
 
