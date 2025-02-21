@@ -1,3 +1,4 @@
 [submodule "Libaenigma7"]
 	path = Libaenigma7
 	url = https://github.com/m3sserschmitt/libaenigma7.git
+	branch = main
