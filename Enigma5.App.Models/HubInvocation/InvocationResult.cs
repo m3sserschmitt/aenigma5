@@ -41,5 +41,5 @@ public class InvocationResult<T>
 
     public virtual bool Success { get; set; }
 
-    public IEnumerable<Error> Errors { get; set; }
+    public HashSet<Error> Errors { get; set; }
 }

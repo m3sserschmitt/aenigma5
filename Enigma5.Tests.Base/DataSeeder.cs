@@ -62,7 +62,8 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             new Random().NextBytes(tokenData);
             var token = Convert.ToBase64String(tokenData);
 
-            return new() {
+            return new()
+            {
                 Nonce = token
             };
         }
@@ -74,11 +75,11 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         }
 
         public static string? CreateOnion(byte[] data)
-        => SealProvider.SealOnion(data, [ PKey.PublicKey2, PKey.PublicKey3 ], [ PKey.Address1, PKey.Address2 ]);
+        => SealProvider.SealOnion(data, [PKey.PublicKey2, PKey.PublicKey3], [PKey.Address1, PKey.Address2]);
 
 
         public static App.Models.RoutingRequest CreateRoutingRequest()
-        => new(CreateOnion("pending-message")!);
+        => new([CreateOnion("pending-message")!]);
     }
 
     public static class DataFactory
@@ -142,7 +143,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         public static App.Data.PendingMessage OldPendingMessage => _oldPendingMessage.CopyBySerialization();
 
         public static App.Data.PendingMessage DeliveredPendingMessage => _deliveredPendingMessage.CopyBySerialization();
-        
+
         public static App.Data.AuthorizedService AuthorizedService => _authorizedService.CopyBySerialization();
     }
 
@@ -160,7 +161,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         _dbContext.Messages.Add(DataFactory.OldPendingMessage);
         _dbContext.Messages.Add(DataFactory.DeliveredPendingMessage);
         _dbContext.AuthorizedServices.Add(DataFactory.AuthorizedService);
-        
+
         await _dbContext.SaveChangesAsync();
     }
 }

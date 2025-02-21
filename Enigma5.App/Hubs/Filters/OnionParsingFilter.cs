@@ -27,6 +27,7 @@ using Enigma5.Structures;
 using Enigma5.App.Models;
 using Microsoft.Extensions.Logging;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.App.Models.Extensions;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -45,20 +46,37 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
         var request = invocationContext.MethodInvocationArgument<RoutingRequest>(0);
         if (request != null)
         {
-            if (_parser.Parse(request.Payload!))
+            object? successResult = null;
+            var errors = new HashSet<Error>();
+            foreach (var item in request.Payloads!)
             {
-                _ = new OnionParsingHubAdapter(invocationContext.Hub)
+                if (_parser.Parse(item!))
                 {
-                    Content = _parser.Content,
-                    Next = _parser.NextAddress
-                };
-
-                _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
-                return await next(invocationContext);
+                    _ = new OnionParsingHubAdapter(invocationContext.Hub)
+                    {
+                        Content = _parser.Content,
+                        Next = _parser.NextAddress
+                    };
+                    dynamic? nextResult = await next(invocationContext);
+                    var nextErrors = nextResult?.Errors as HashSet<Error>;
+                    if (nextErrors is not null)
+                    {
+                        errors.AddErrors(nextErrors);
+                    }
+                    successResult ??= (nextResult?.Success ?? false) ? nextResult : null;
+                    _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
+                }
+                else
+                {
+                    _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
+                    errors.AddError(InvocationErrors.ONION_PARSING_FAILED);
+                }
             }
-
-            _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
-            return EmptyErrorResult.Create(InvocationErrors.ONION_PARSING_FAILED);
+            if(errors.Count == 0 && successResult is null)
+            {
+                errors.AddError(InvocationErrors.INTERNAL_ERROR);
+            }
+            return errors.Count > 0 ? new EmptyErrorResult(errors) : successResult;
         }
 
         _logger.LogDebug($"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} method: {{@{nameof(invocationContext.HubMethodArguments)}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);

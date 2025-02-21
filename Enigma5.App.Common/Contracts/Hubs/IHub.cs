@@ -40,6 +40,4 @@ public interface IEnigmaHub
     Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request);
 
     Task<InvocationResult<bool>> RouteMessage(RoutingRequest request);
-
-    Task<InvocationResult<bool>> RouteMessages(RoutingRequestBulk request);
 }

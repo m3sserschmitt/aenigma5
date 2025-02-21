@@ -26,22 +26,22 @@ using Enigma5.Crypto.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class RoutingRequest(string? payload = null, string? uuid = null) : IValidatable
+public class RoutingRequest(List<string?>? payloads = null, string? uuid = null) : IValidatable
 {
-    public string? Payload { get; private set; } = payload;
+    public List<string?>? Payloads { get; private set; } = payloads;
 
     public string? Uuid { get; private set; } = uuid;
 
     public HashSet<Error> Validate()
     {
         var errors = new HashSet<Error>();
-        if(string.IsNullOrWhiteSpace(Payload))
+        if(Payloads is null || Payloads.Count == 0)
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Payload));
+            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Payloads));
         }
-        else if(!Payload.IsValidBase64())
+        else if(!Payloads.All(item => item.IsValidBase64()))
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payload));
+            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
         }
         return errors;
     }

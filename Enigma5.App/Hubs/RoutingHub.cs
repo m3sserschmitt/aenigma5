@@ -244,18 +244,6 @@ public partial class RoutingHub(
         return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
 
-    [OnionParsing]
-    [OnionRouting]
-    [ValidateModel]
-    [Authenticated]
-    public async Task<InvocationResult<bool>> RouteMessages(RoutingRequestBulk request)
-    {
-        var tasks = request.Payloads!.Select(item => RouteMessage(new RoutingRequest(item)));
-        var results = await Task.WhenAll(tasks);
-        var success = results.All(item => item.Success);
-        return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_PARTIALLY_FAILED);
-    }
-
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected.", Context.ConnectionId);

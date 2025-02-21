@@ -124,7 +124,13 @@ public class Program
 
         connection.On<RoutingRequest>(nameof(IEnigmaHub.RouteMessage), message =>
         {
-            HandleMessage(message.Payload!, privateKey, passphrase);
+            foreach (var payload in message.Payloads ?? [])
+            {
+                if (payload is not null)
+                {
+                    HandleMessage(payload, privateKey, passphrase);
+                }
+            }
         });
 
         connection.On<List<PendingMessage>>("Synchronize", messages =>
@@ -174,7 +180,7 @@ public class Program
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
 
             var onion = SealProvider.SealOnion(Encoding.UTF8.GetBytes(message), [destinationPublicKey, serverPublicKey], [PKey.Address1, PKey.Address2]);
-            await connection.InvokeAsync(nameof(IEnigmaHub.RouteMessage), new RoutingRequest(onion!));
+            await connection.InvokeAsync(nameof(IEnigmaHub.RouteMessage), new RoutingRequest([onion!, onion]));
 
             Console.ReadLine();
         }

@@ -56,7 +56,7 @@ public partial class RoutingHub
                     .SingleOrDefault()
                     ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
 
-            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest(Convert.ToBase64String(data), uuid));
+            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest([Convert.ToBase64String(data)], uuid));
             return true;
         }
         catch (Exception ex)

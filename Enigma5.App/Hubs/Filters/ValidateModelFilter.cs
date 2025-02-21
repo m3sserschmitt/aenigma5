@@ -51,7 +51,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
             return EmptyErrorResult.Create(InvocationErrors.INVALID_INVOCATION_DATA);
         }
 
-        var errors = data.Validate().ToList();
+        var errors = data.Validate();
 
         if (errors.Count != 0)
         {
