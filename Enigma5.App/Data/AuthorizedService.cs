@@ -22,7 +22,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Enigma5.App.Data;
 
-public class AuthorizedService
+public class AuthorizedService: Entity
 {
     [Key]
     public long Id { get; set; }

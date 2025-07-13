@@ -32,10 +32,8 @@ public class CleanupSharedDataHandler(EnigmaDbContext context)
 
     public async Task<CommandResult<int>> Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken = default)
     {
-        // TODO: refactor this query
-        var time = DateTimeOffset.Now - request.TimeSpan;
-        var sharedData = await _context.SharedData.ToListAsync(cancellationToken: cancellationToken);
-        _context.RemoveRange(sharedData.Where(item => time > item.DateCreated));
+        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        _context.RemoveRange(_context.SharedData.Where(item => time > item.Timestamp));
         return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
     }
 }

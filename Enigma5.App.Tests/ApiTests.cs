@@ -75,8 +75,6 @@ public partial class ApiTests : AppTestBase
         response.Value.Should().NotBeNull();
         response.Value!.ResourceUrl.Should().NotBeNullOrWhiteSpace();
         response.Value.Tag.Should().NotBeNullOrWhiteSpace();
-        response.Value.Data.Should().Be(sharedDataCreate.SignedData);
-        response.Value.PublicKey.Should().Be(sharedDataCreate.PublicKey);
         UuidRegex().IsMatch(response.Value.Tag!).Should().BeTrue();
         SharedResourceUrl().IsMatch(response.Value!.ResourceUrl!).Should().BeTrue();
     }

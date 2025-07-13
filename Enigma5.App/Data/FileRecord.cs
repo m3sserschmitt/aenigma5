@@ -23,7 +23,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Enigma5.App.Data;
 
-public class FileRecord
+public class FileRecord: Entity
 {
     [Key]
     public string Tag { get; set; } = Guid.NewGuid().ToString();
@@ -36,10 +36,4 @@ public class FileRecord
 
     [Required]
     public int MaxAccessCount { get; set; } = 1;
-
-    [Required]
-    public DateTimeOffset DateCreated { get; set; } = DateTimeOffset.Now;
-
-    [Required]
-    public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 }

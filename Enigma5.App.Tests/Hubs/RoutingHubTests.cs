@@ -108,19 +108,19 @@ public class RoutingHubTests : AppTestBase
         result.Data.FirstOrDefault(item =>
         item.Destination == pendingMessage.Destination
         && item.Content == pendingMessage.Content
-        && item.DateReceived == pendingMessage.DateReceived
+        && item.DateReceived == pendingMessage.DateCreated
         && !item.Sent
         && item.Uuid == pendingMessage.Uuid).Should().NotBeNull();
         result.Data.FirstOrDefault(item =>
         item.Destination == oldPendingMessage.Destination
         && item.Content == oldPendingMessage.Content
-        && item.DateReceived == oldPendingMessage.DateReceived
+        && item.DateReceived == oldPendingMessage.DateCreated
         && !item.Sent
         && item.Uuid == oldPendingMessage.Uuid).Should().NotBeNull();
         result.Data.FirstOrDefault(item =>
         item.Destination == deliveredPendingMessage.Destination
         && item.Content == deliveredPendingMessage.Content
-        && item.DateReceived == deliveredPendingMessage.DateReceived
+        && item.DateReceived == deliveredPendingMessage.DateCreated
         && item.Sent
         && item.Uuid == deliveredPendingMessage.Uuid).Should().NotBeNull();
         var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();

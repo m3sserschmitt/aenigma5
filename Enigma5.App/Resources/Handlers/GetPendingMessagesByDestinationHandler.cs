@@ -36,7 +36,7 @@ public class GetPendingMessagesByDestinationHandler(Data.EnigmaDbContext context
         Uuid = item.Uuid,
         Destination = item.Destination,
         Content = item.Content,
-        DateReceived = item.DateReceived,
+        DateReceived = item.DateCreated,
         Sent = item.Sent
     }).ToListAsync(cancellationToken));
 }

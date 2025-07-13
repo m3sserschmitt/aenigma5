@@ -96,6 +96,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         {
             Tag = "acdeaddd-8c4c-4f0d-9d8a-162843c10355",
             DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2),
+            Timestamp = (DateTimeOffset.UtcNow - TimeSpan.FromDays(2)).ToUnixTimeSeconds(),
             Data = "old-shared-data",
             PublicKey = PKey.PublicKey1,
             MaxAccessCount = 2
@@ -112,7 +113,8 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         private static readonly App.Data.PendingMessage _oldPendingMessage = new()
         {
             Id = 2,
-            DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5),
+            DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(5),
+            Timestamp = (DateTimeOffset.UtcNow - TimeSpan.FromDays(5)).ToUnixTimeSeconds(),
             Destination = PKey.Address2,
             Content = "old-pending-message",
             Sent = false
@@ -125,7 +127,8 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             Destination = PKey.Address2,
             Content = "delivered-pending-message",
             Sent = true,
-            DateSent = DateTimeOffset.Now - TimeSpan.FromDays(3)
+            DateSent = DateTimeOffset.Now - TimeSpan.FromDays(3),
+            SentTimestamp = (DateTimeOffset.UtcNow - TimeSpan.FromDays(3)).ToUnixTimeSeconds()
         };
 
         private static readonly App.Data.AuthorizedService _authorizedService = new()

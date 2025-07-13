@@ -37,10 +37,11 @@ public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IReques
         }
 
         var messages = _dbContext.Messages.Where(item => item.Destination == request.Destination && !item.Sent);
-        foreach(var message in messages)
+        foreach (var message in messages)
         {
             message.Sent = true;
             message.DateSent = DateTimeOffset.Now;
+            message.SentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
         _dbContext.Messages.UpdateRange(messages);
 
