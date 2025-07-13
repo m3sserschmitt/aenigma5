@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,27 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json.Serialization;
+using Enigma5.App.Resources.Handlers;
+using MediatR;
 
-namespace Enigma5.App.Models;
+namespace Enigma5.App.Resources.Commands;
 
-public class SharedData
+public class CleanupFilesCommand(TimeSpan timeSpan): IRequest<CommandResult<int>>
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Tag { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ResourceUrl { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Data { get; set; }
-
-    [JsonIgnore]
-    public byte[]? BinData { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PublicKey { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTimeOffset? ValidUntil { get; set; }
+    public TimeSpan TimeSpan { get; private set; } = timeSpan;
 }

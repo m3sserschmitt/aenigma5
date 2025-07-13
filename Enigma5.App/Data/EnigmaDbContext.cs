@@ -29,4 +29,6 @@ public class EnigmaDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SharedData> SharedData { get; set; }
 
     public DbSet<AuthorizedService> AuthorizedServices { get; set; }
+
+    public DbSet<FileRecord> Files { get; set; }
 }

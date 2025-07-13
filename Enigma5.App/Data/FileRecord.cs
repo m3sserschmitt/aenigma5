@@ -1,4 +1,5 @@
-﻿/*
+
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,19 +19,27 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Common.Constants;
+using System.ComponentModel.DataAnnotations;
 
-public static class Endpoints
+namespace Enigma5.App.Data;
+
+public class FileRecord
 {
-    public const string OnionRoutingEndpoint = "OnionRouting";
+    [Key]
+    public string Tag { get; set; } = Guid.NewGuid().ToString();
 
-    public const string InfoEndpoint = "Info";
+    [Required]
+    public byte[]? Data { get; set; }
 
-    public const string VerticesEndpoint = "Vertices";
+    [Required]
+    public int AccessCount { get; set; } = 0;
 
-    public const string ShareEndpoint = "Share";
+    [Required]
+    public int MaxAccessCount { get; set; } = 1;
 
-    public const string VertexEndpoint = "Vertex";
+    [Required]
+    public DateTimeOffset DateCreated { get; set; } = DateTimeOffset.Now;
 
-    public const string FileEndpoint = "File";
+    [Required]
+    public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 }

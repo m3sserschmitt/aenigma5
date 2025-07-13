@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,27 +18,21 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json.Serialization;
+using Enigma5.App.Data;
+using Enigma5.App.Resources.Commands;
+using MediatR;
 
-namespace Enigma5.App.Models;
+namespace Enigma5.App.Resources.Handlers;
 
-public class SharedData
+public class CleanupFilesHandler(EnigmaDbContext context)
+: IRequestHandler<CleanupFilesCommand, CommandResult<int>>
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Tag { get; set; }
+    private readonly EnigmaDbContext _context = context;
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ResourceUrl { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Data { get; set; }
-
-    [JsonIgnore]
-    public byte[]? BinData { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PublicKey { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTimeOffset? ValidUntil { get; set; }
+    public async Task<CommandResult<int>> Handle(CleanupFilesCommand request, CancellationToken cancellationToken)
+    {
+        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        _context.RemoveRange(_context.Files.Where(item => time > item.Timestamp));
+        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+    }
 }

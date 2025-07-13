@@ -40,6 +40,8 @@ using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs.Sessions.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Enigma5.App;
 
@@ -86,6 +88,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
+        services.AddAntiforgery();
 
         services.BuildServiceProvider();
     }
@@ -93,15 +96,27 @@ public class StartupConfiguration(IConfiguration configuration)
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
     {
         app.UseRouting();
-
+        app.UseAntiforgery();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
             endpoints.MapGet(Endpoints.InfoEndpoint, Api.GetInfo);
-            endpoints.MapPost(Endpoints.ShareEndpoint, Api.PostShare);
+            endpoints.MapPost(Endpoints.ShareEndpoint, Api.PostShare)
+                .WithMetadata(new RequestSizeLimitAttribute(DataSize.MaxSharedDataSize));
             endpoints.MapGet(Endpoints.ShareEndpoint, Api.GetShare);
             endpoints.MapGet(Endpoints.VerticesEndpoint, Api.GetVertices);
             endpoints.MapGet(Endpoints.VertexEndpoint, Api.GetVertex);
+            endpoints.MapPost(Endpoints.FileEndpoint, Api.PostFile)
+                .Accepts<IFormFile>("multipart/form-data")
+                .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
+                .WithMetadata(new RequestSizeLimitAttribute(DataSize.MaxSharedFileSize))
+                .WithMetadata(new RequestFormLimitsAttribute
+                    {
+                        MultipartBodyLengthLimit = DataSize.MaxSharedFileSize
+                    }
+                )
+                .DisableAntiforgery();
+            endpoints.MapGet(Endpoints.FileEndpoint, Api.GetFile);
         });
 
         serviceProvider.UseAsHangfireActivator();
@@ -117,6 +132,13 @@ public class StartupConfiguration(IConfiguration configuration)
             "shared-data-cleanup",
             bridge => bridge.Send(
                 new CleanupSharedDataCommand(DataPersistencePeriod.SharedDataPersistencePeriod)
+            ),
+            "*/5 * * * *"
+        );
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            "shared-data-cleanup",
+            bridge => bridge.Send(
+                new CleanupFilesCommand(DataPersistencePeriod.SharedDataPersistencePeriod)
             ),
             "*/5 * * * *"
         );
