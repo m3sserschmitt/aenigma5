@@ -93,7 +93,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.BuildServiceProvider();
     }
 
-    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
+    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IConfiguration configuration)
     {
         app.UseRouting();
         app.UseAntiforgery();
@@ -104,6 +104,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPost(Endpoints.ShareEndpoint, Api.PostShare)
                 .WithMetadata(new RequestSizeLimitAttribute(DataSize.MaxSharedDataSize));
             endpoints.MapGet(Endpoints.ShareEndpoint, Api.GetShare);
+            endpoints.MapPut(Endpoints.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
             endpoints.MapGet(Endpoints.VerticesEndpoint, Api.GetVertices);
             endpoints.MapGet(Endpoints.VertexEndpoint, Api.GetVertex);
             endpoints.MapPost(Endpoints.FileEndpoint, Api.PostFile)
@@ -111,34 +112,35 @@ public class StartupConfiguration(IConfiguration configuration)
                 .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
                 .WithMetadata(new RequestSizeLimitAttribute(DataSize.MaxSharedFileSize))
                 .WithMetadata(new RequestFormLimitsAttribute
-                    {
-                        MultipartBodyLengthLimit = DataSize.MaxSharedFileSize
-                    }
+                {
+                    MultipartBodyLengthLimit = DataSize.MaxSharedFileSize
+                }
                 )
                 .DisableAntiforgery();
             endpoints.MapGet(Endpoints.FileEndpoint, Api.GetFile);
+            endpoints.MapPut(Endpoints.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
         });
 
         serviceProvider.UseAsHangfireActivator();
 
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "pending-messages-cleanup",
+            "messages-cleanup",
             bridge => bridge.Send(
-                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistencePeriod, DataPersistencePeriod.DeliveredMessagePersistencePeriod)
-            ),
-            "*/15 * * * *"
-        );
-        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "shared-data-cleanup",
-            bridge => bridge.Send(
-                new CleanupSharedDataCommand(DataPersistencePeriod.SharedDataPersistencePeriod)
+                new CleanupMessagesCommand(configuration.GetMessageRetentionPeriod(), configuration.GetSentMessageRetentionPeriod())
             ),
             "*/5 * * * *"
         );
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
             "shared-data-cleanup",
             bridge => bridge.Send(
-                new CleanupFilesCommand(DataPersistencePeriod.SharedDataPersistencePeriod)
+                new CleanupSharedDataCommand(configuration.GetSharedDataRetentionPeriod())
+            ),
+            "*/5 * * * *"
+        );
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            "files-cleanup",
+            bridge => bridge.Send(
+                new CleanupFilesCommand(configuration.GetFilesRetentionPeriod())
             ),
             "*/5 * * * *"
         );

@@ -33,11 +33,13 @@ public class CommandResult<T>
     public static CommandResult<V> CreateResultFailure<V>(V? value) => new(value, false);
 }
 
-public class CommandResult: CommandResult<object>
+public class CommandResult : CommandResult<object>
 {
-    public CommandResult(): base() { }
-    
-    protected CommandResult(bool success): base(success) { }
+    public CommandResult() : base() { }
+
+    protected CommandResult(bool success) : base(success) { }
 
     public static CommandResult CreateResultFailure() => new(false);
+
+    public static CommandResult CreateResultSuccess() => new(true);
 }

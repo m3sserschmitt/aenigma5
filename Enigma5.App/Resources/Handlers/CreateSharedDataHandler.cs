@@ -72,7 +72,7 @@ public class CreateSharedDataHandler(
         {
             Tag = sharedData.Tag,
             ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.ShareEndpoint}?Tag={sharedData.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistencePeriod,
+            ValidUntil = DateTimeOffset.Now + _configuration.GetSharedDataRetentionPeriod()
         });
     }
 }

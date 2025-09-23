@@ -30,6 +30,7 @@ namespace Enigma5.App.Data;
 [method: JsonConstructor]
 public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData, bool isLeaf = false)
 {
+    [JsonIgnore]
     public DateTimeOffset LastUpdate { get; private set; } = DateTimeOffset.Now;
 
     public bool IsLeaf { get; private set; } = isLeaf;

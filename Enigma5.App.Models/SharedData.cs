@@ -34,7 +34,7 @@ public class SharedData
     public string? Data { get; set; }
 
     [JsonIgnore]
-    public byte[]? BinData { get; set; }
+    public FileStream? File { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PublicKey { get; set; }

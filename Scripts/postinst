@@ -28,6 +28,8 @@ APP_EXEC="$APP_INSTALL_DIR/Enigma5.App"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 LOG_DIR="/var/log/$APP_NAME"
 KEYS_DIR="/usr/local/etc/$APP_NAME"
+UPLOADS_DIR="/srv/$APP_NAME/uploads"
+DATABASE_DIR="/var/lib/$APP_NAME/db"
 
 # Step 1: Create a dedicated user for the service if it doesn't exist
 if ! id "$SERVICE_USER" &>/dev/null; then
@@ -42,6 +44,12 @@ sudo chown "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
 echo "Done."
 echo -n "Setting ownership of $APP_INSTALL_DIR directory to user '$SERVICE_USER'... "
 sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
+echo "Done."
+echo -n "Setting ownership of $DATABASE_DIR directory to user '$SERVICE_USER'... "
+sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
+echo "Done."
+echo -n "Setting ownership of $UPLOADS_DIR directory to user '$SERVICE_USER'... "
+sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
 echo "Done."
 
 # Step 3: Create the systemd service file

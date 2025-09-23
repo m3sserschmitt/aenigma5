@@ -18,41 +18,34 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Resources.Queries;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetFileHandler(Data.EnigmaDbContext context) : IRequestHandler<GetFileQuery, CommandResult<Models.SharedData>>
+public class GetFileHandler(IConfiguration configuration) : IRequestHandler<GetFileQuery, CommandResult<Models.SharedData>>
 {
-    private readonly Data.EnigmaDbContext _context = context;
+    private readonly IConfiguration _configuration = configuration;
 
-    public async Task<CommandResult<Models.SharedData>> Handle(GetFileQuery request, CancellationToken cancellationToken)
+    public Task<CommandResult<Models.SharedData>> Handle(GetFileQuery request, CancellationToken cancellationToken)
     {
-        var file = await _context.Files.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken: cancellationToken);
-
-        if (file is null)
+        var webContentDirectory = _configuration.GetWebContentDirectory();
+        if (string.IsNullOrEmpty(webContentDirectory) || !Directory.Exists(webContentDirectory))
         {
-            return CommandResult.CreateResultSuccess<Models.SharedData>();
+            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedData>());
+        }
+        var fullPath = Path.Combine(webContentDirectory, request.Tag);
+        if (!File.Exists(fullPath))
+        {
+            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedData>());
         }
 
-        file.AccessCount++;
-        if (file.AccessCount >= file.MaxAccessCount)
+        return Task.FromResult(CommandResult.CreateResultSuccess(new Models.SharedData
         {
-            _context.Files.Remove(file);
-        }
-        else
-        {
-            _context.Files.Update(file);
-        }
-
-        await _context.SaveChangesAsync(cancellationToken);
-        
-        return CommandResult.CreateResultSuccess(new Models.SharedData
-        {
-            Tag = file.Tag,
-            BinData = file.Data
-        });
+            Tag = request.Tag,
+            File = new FileStream(fullPath, FileMode.Open, FileAccess.Read)
+        }));
     }
 }

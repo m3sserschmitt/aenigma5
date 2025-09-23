@@ -71,6 +71,8 @@ mkdir -pv $PKG_DIR/usr/local/$APP_NAME
 mkdir -pv $PKG_DIR/usr/local/bin
 mkdir -pv $PKG_DIR/usr/local/etc/$APP_NAME
 mkdir -pv $PKG_DIR/var/log/$APP_NAME
+mkdir -pv $PKG_DIR/srv/$APP_NAME/uploads
+mkdir -pv $PKG_DIR/var/lib/$APP_NAME/db
 
 # Step 2: Publish the .NET app
 dotnet publish -c Release -r linux-x64 --self-contained true -o $PKG_DIR/usr/local/$APP_NAME
@@ -80,7 +82,7 @@ cp -v $POSTINST_SCRIPT $PKG_DIR/DEBIAN/postinst
 cp -v $POSTRM_SCRIPT $PKG_DIR/DEBIAN/postrm
 cp -v $AENIGMA_GENKEYS_SCRIPT $PKG_DIR/usr/local/$APP_NAME/
 cp -v $AENIGMA_CONFIG_SCRIPT $PKG_DIR/usr/local/$APP_NAME/
-rm -v $PKG_DIR/usr/local/$APP_NAME/appsettings.*.json
+rm -v $PKG_DIR/usr/local/$APP_NAME/appsettings.Development.json
 rm -v $PKG_DIR/usr/local/$APP_NAME/appsettings.json
 chmod -v +x $PKG_DIR/DEBIAN/postinst
 chmod -v +x $PKG_DIR/DEBIAN/postrm

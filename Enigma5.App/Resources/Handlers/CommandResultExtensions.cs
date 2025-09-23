@@ -32,4 +32,7 @@ public static class CommandResultExtensions
 
     public static IResult CreatePostResponse<T>(this CommandResult<T>? result)
     => result.IsSuccessNotNullResultValue() ? Results.Ok(result!.Value) : Results.Problem(statusCode: 500);
+
+    public static IResult CreatePutResponse<T>(this CommandResult<T>? result)
+    => result.IsSuccessResult() ? Results.Ok() : Results.Problem(statusCode: 500);
 }

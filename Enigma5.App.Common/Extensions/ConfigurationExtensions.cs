@@ -40,6 +40,21 @@ public static class ConfigurationExtensions
     public static string? GetPublicKeyPath(this IConfiguration configuration)
     => configuration.GetValue<string?>("PublicKeyPath", null);
 
+    public static string? GetWebContentDirectory(this IConfiguration configuration)
+    => configuration.GetValue<string?>("WebContentDirectory");
+
+    public static TimeSpan GetMessageRetentionPeriod(this IConfiguration condiguration)
+    => condiguration.GetTimeSpan("MessageRetentionPeriod", new(0));
+
+    public static TimeSpan GetSentMessageRetentionPeriod(this IConfiguration condiguration)
+    => condiguration.GetTimeSpan("SentMessageRetentionPeriod", new(0));
+
+    public static TimeSpan GetSharedDataRetentionPeriod(this IConfiguration condiguration)
+    => condiguration.GetTimeSpan("SharedDataRetentionPeriod", new(0));
+
+    public static TimeSpan GetFilesRetentionPeriod(this IConfiguration configuration)
+    => configuration.GetTimeSpan("FilesRetentionPeriod", new(0));
+
     public static string? GetPassphraseKeyPath(this IConfiguration configuration)
     => configuration.GetValue<string?>("PassphrasePath", null);
 
@@ -65,7 +80,7 @@ public static class ConfigurationExtensions
     }
 
     public static TimeSpan GetLeafsLifetime(this IConfiguration configuration)
-    => GetTimeSpan(configuration, "LeafsLifetime", DataPersistencePeriod.LeafsLifetimeDefault);
+    => configuration.GetTimeSpan("LeafsLifetime", DataPersistencePeriod.LeafsLifetimeDefault);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetValue<string?>("AzureVaultUrl", null);

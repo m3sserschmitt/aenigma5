@@ -60,20 +60,20 @@ public static class Api
         }
 
         var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
+        return sharedData.IsSuccessNotNullResultValue() ? sharedData.CreateGetResponse() : Results.NotFound();
+    }
 
-        if (!sharedData.IsSuccessNotNullResultValue())
+    public static async Task<IResult> IncrementSharedDataAccessCount(
+        [FromQuery] string? tag,
+        [FromServices] IMediator commandRouter)
+    {
+        if (tag is null)
         {
-            return Results.NotFound();
+            return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag!));
-
-        if (result.IsSuccessNotNullResultValue() && result.Value!.AccessCount >= result.Value.MaxAccessCount)
-        {
-            await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag!));
-        }
-
-        return sharedData.CreateGetResponse();
+        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(tag));
+        return result.CreatePutResponse();
     }
 
     public static async Task<IResult> GetVertex(
@@ -118,14 +118,27 @@ public static class Api
 
         var result = await commandRouter.Send(new GetFileQuery(tag));
 
-        if (!result.IsSuccessNotNullResultValue() || result.Value?.BinData is null)
+        if (!result.IsSuccessNotNullResultValue() || result.Value?.File is null)
         {
             return Results.NotFound();
         }
 
         return Results.File(
-            fileContents: result.Value!.BinData,
+            fileStream: result.Value!.File,
             fileDownloadName: result.Value.Tag
         );
+    }
+
+    public static async Task<IResult> IncrementFileAccessCount(
+        [FromQuery] string? tag,
+        [FromServices] IMediator commandRouter)
+    {
+        if (tag is null)
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await commandRouter.Send(new IncrementFileAccessCountCommand(tag));
+        return result.CreatePutResponse();
     }
 }

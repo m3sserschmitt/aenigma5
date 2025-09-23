@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,23 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Common.Constants;
+using Enigma5.App.Resources.Handlers;
+using MediatR;
 
-public static class Endpoints
+namespace Enigma5.App.Resources.Commands;
+
+public class IncrementFileAccessCountCommand(string tag)
+: IRequest<CommandResult>
 {
-    public const string OnionRoutingEndpoint = "OnionRouting";
-
-    public const string InfoEndpoint = "Info";
-
-    public const string VerticesEndpoint = "Vertices";
-
-    public const string ShareEndpoint = "Share";
-
-    public const string VertexEndpoint = "Vertex";
-
-    public const string FileEndpoint = "File";
-
-    public const string IncrementSharedDataAccessCountEndpoint = "IncrementSharedDataAccessCount";
-
-    public const string IncrementFileAccessCountEndpoint = "IncrementFileAccessCount";
+    public string Tag { get; private set; } = tag;
 }

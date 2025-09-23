@@ -36,25 +36,36 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
 
     public async Task<CommandResult<Models.SharedData>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
     {
-        await using var ms = new MemoryStream();
-        await request.File.CopyToAsync(ms, cancellationToken);
+        var webContentDirectory = _configuration.GetWebContentDirectory();
+        if (webContentDirectory == null || request.File == null || request.File.Length == 0)
+        {
+            return CommandResult.CreateResultFailure<Models.SharedData>();
+        }
+
+        if (!string.IsNullOrEmpty(webContentDirectory) && !Directory.Exists(webContentDirectory))
+        {
+            Directory.CreateDirectory(webContentDirectory);
+        }
 
         var record = new FileRecord
         {
-            Data = ms.ToArray(),
+            Data = [0],
             MaxAccessCount = request.MaxAccessCount
         };
 
         _context.Files.Add(record);
         await _context.SaveChangesAsync(cancellationToken);
 
-        var hostname = _configuration.GetHostname();
+        string fullPath = Path.Combine(webContentDirectory, record.Tag);
+        using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+        await request.File.CopyToAsync(stream, cancellationToken);
 
+        var hostname = _configuration.GetHostname();
         return CommandResult.CreateResultSuccess(new Models.SharedData
         {
             Tag = record.Tag,
             ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.FileEndpoint}?Tag={record.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistencePeriod,
+            ValidUntil = DateTimeOffset.Now + _configuration.GetFilesRetentionPeriod(),
         });
     }
 }
