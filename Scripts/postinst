@@ -39,7 +39,7 @@ if ! id "$SERVICE_USER" &>/dev/null; then
     echo "Done."
 fi
 
-if [ ! -d $CONFIG_FILE ]; then
+if [ ! -f "$FILE_PATH" ]; then
     echo -n "Copying default configuration file to $CONFIG_FILE... "
     sudo mkdir -p $CONFIGS_DIR
     sudo cp $APP_INSTALL_DIR/appsettings.Production.json $CONFIG_FILE
