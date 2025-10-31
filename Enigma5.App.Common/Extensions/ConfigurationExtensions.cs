@@ -90,4 +90,7 @@ public static class ConfigurationExtensions
 
     public static bool UseAzureVaultForPassphrase(this IConfiguration configuration)
     => configuration.GetValue("UseAzureVaultForPassphrase", false);
+
+    public static string? GetOnionService(this IConfiguration configuration)
+    => configuration.GetValue<string?>("OnionService", null);
 }

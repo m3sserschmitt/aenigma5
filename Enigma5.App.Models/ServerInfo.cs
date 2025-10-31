@@ -27,4 +27,6 @@ public class ServerInfo
     public string? Address { get; set; }
 
     public string? GraphVersion { get; set; }
+
+    public string? OnionService { get; set; }
 }

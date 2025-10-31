@@ -20,22 +20,27 @@
 
 using System.Text;
 using System.Text.Json;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class GetServerInfoHandler(
     NetworkGraph graph,
+    IConfiguration configuration,
     ICertificateManager certificateManager) : IRequestHandler<GetServerInfoQuery, CommandResult<ServerInfo>>
 {
     private readonly NetworkGraph _graph = graph;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
+
+    private readonly IConfiguration _configuration = configuration;
 
     public Task<CommandResult<ServerInfo>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
     {
@@ -47,7 +52,8 @@ public class GetServerInfoHandler(
             {
                 PublicKey = _certificateManager.PublicKey,
                 Address = _certificateManager.Address,
-                GraphVersion = graphVersion
+                GraphVersion = graphVersion,
+                OnionService = _configuration.GetOnionService()
             }));
     }
 }
