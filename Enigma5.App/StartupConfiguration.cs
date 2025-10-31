@@ -29,7 +29,6 @@ using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
 using Enigma5.App.Data;
-using Enigma5.App.Common.Constants;
 using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
@@ -99,26 +98,26 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseAntiforgery();
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
-            endpoints.MapGet(Endpoints.InfoEndpoint, Api.GetInfo);
-            endpoints.MapPost(Endpoints.ShareEndpoint, Api.PostShare)
-                .WithMetadata(new RequestSizeLimitAttribute(DataSize.MaxSharedDataSize));
-            endpoints.MapGet(Endpoints.ShareEndpoint, Api.GetShare);
-            endpoints.MapPut(Endpoints.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
-            endpoints.MapGet(Endpoints.VerticesEndpoint, Api.GetVertices);
-            endpoints.MapGet(Endpoints.VertexEndpoint, Api.GetVertex);
-            endpoints.MapPost(Endpoints.FileEndpoint, Api.PostFile)
+            endpoints.MapHub<RoutingHub>(Common.Constants.OnionRoutingEndpoint);
+            endpoints.MapGet(Common.Constants.InfoEndpoint, Api.GetInfo);
+            endpoints.MapPost(Common.Constants.ShareEndpoint, Api.PostShare)
+                .WithMetadata(new RequestSizeLimitAttribute(Common.Constants.MaxSharedDataSize));
+            endpoints.MapGet(Common.Constants.ShareEndpoint, Api.GetShare);
+            endpoints.MapPut(Common.Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
+            endpoints.MapGet(Common.Constants.VerticesEndpoint, Api.GetVertices);
+            endpoints.MapGet(Common.Constants.VertexEndpoint, Api.GetVertex);
+            endpoints.MapPost(Common.Constants.FileEndpoint, Api.PostFile)
                 .Accepts<IFormFile>("multipart/form-data")
                 .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
-                .WithMetadata(new RequestSizeLimitAttribute(DataSize.MaxSharedFileSize))
+                .WithMetadata(new RequestSizeLimitAttribute(Common.Constants.MaxSharedFileSize))
                 .WithMetadata(new RequestFormLimitsAttribute
                 {
-                    MultipartBodyLengthLimit = DataSize.MaxSharedFileSize
+                    MultipartBodyLengthLimit = Common.Constants.MaxSharedFileSize
                 }
                 )
                 .DisableAntiforgery();
-            endpoints.MapGet(Endpoints.FileEndpoint, Api.GetFile);
-            endpoints.MapPut(Endpoints.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
+            endpoints.MapGet(Common.Constants.FileEndpoint, Api.GetFile);
+            endpoints.MapPut(Common.Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
         });
 
         serviceProvider.UseAsHangfireActivator();

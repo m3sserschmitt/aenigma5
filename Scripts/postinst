@@ -27,14 +27,22 @@ APP_INSTALL_DIR="/usr/local/$APP_NAME"
 APP_EXEC="$APP_INSTALL_DIR/Enigma5.App"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 LOG_DIR="/var/log/$APP_NAME"
-KEYS_DIR="/usr/local/etc/$APP_NAME"
+CONFIGS_DIR="/usr/local/etc/$APP_NAME"
+CONFIG_FILE="$CONFIGS_DIR/appsettings.Production.json"
 UPLOADS_DIR="/srv/$APP_NAME/uploads"
 DATABASE_DIR="/var/lib/$APP_NAME/db"
 
-# Step 1: Create a dedicated user for the service if it doesn't exist
+# Step 1: Create a dedicated user for the service if it doesn't exist and setup default config file
 if ! id "$SERVICE_USER" &>/dev/null; then
     echo -n "Creating user '$SERVICE_USER' for the service... "
     sudo useradd -r -s /bin/false "$SERVICE_USER"
+    echo "Done."
+fi
+
+if [ ! -d $CONFIG_FILE ]; then
+    echo -n "Copying default configuration file to $CONFIG_FILE... "
+    sudo mkdir -p $CONFIGS_DIR
+    sudo cp $APP_INSTALL_DIR/appsettings.Production.json $CONFIG_FILE
     echo "Done."
 fi
 
@@ -50,6 +58,9 @@ sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
 echo "Done."
 echo -n "Setting ownership of $UPLOADS_DIR directory to user '$SERVICE_USER'... "
 sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
+echo "Done."
+echo -n "Setting ownership of $CONFIGS_DIR directory to user '$SERVICE_USER'... "
+sudo chown -R "$SERVICE_USER":"$SERVICE_USER" $CONFIGS_DIR
 echo "Done."
 
 # Step 3: Create the systemd service file

@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Crypto;
@@ -71,7 +70,7 @@ public class CreateSharedDataHandler(
         return CommandResult.CreateResultSuccess(new Models.SharedData
         {
             Tag = sharedData.Tag,
-            ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.ShareEndpoint}?Tag={sharedData.Tag}" : null,
+            ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.ShareEndpoint}?Tag={sharedData.Tag}" : null,
             ValidUntil = DateTimeOffset.Now + _configuration.GetSharedDataRetentionPeriod()
         });
     }

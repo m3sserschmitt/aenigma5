@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,10 +18,17 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Common.Constants;
+namespace Enigma5.App.Common;
 
-public static class Endpoints
+public static class Constants
 {
+    public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(01, 00, 00);
+
+    public static readonly TimeSpan LeafsLifetimeDefault = new(03, 00, 00, 00);
+    public static readonly int MaxSharedFileSize = 100 * 1024 * 1024;
+
+    public static readonly int MaxSharedDataSize = 1 * 1024 * 1024;
+
     public const string OnionRoutingEndpoint = "OnionRouting";
 
     public const string InfoEndpoint = "Info";
@@ -37,4 +44,6 @@ public static class Endpoints
     public const string IncrementSharedDataAccessCountEndpoint = "IncrementSharedDataAccessCount";
 
     public const string IncrementFileAccessCountEndpoint = "IncrementFileAccessCount";
+
+    public const string ProductionConfigurationFileName = "/usr/local/etc/appsettings.Production.json";
 }

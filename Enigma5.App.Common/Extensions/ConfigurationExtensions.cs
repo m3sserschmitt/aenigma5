@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
 using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Common.Extensions;
@@ -80,7 +79,7 @@ public static class ConfigurationExtensions
     }
 
     public static TimeSpan GetLeafsLifetime(this IConfiguration configuration)
-    => configuration.GetTimeSpan("LeafsLifetime", DataPersistencePeriod.LeafsLifetimeDefault);
+    => configuration.GetTimeSpan("LeafsLifetime", Constants.LeafsLifetimeDefault);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetValue<string?>("AzureVaultUrl", null);

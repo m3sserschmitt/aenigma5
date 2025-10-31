@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
@@ -64,7 +63,7 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
         return CommandResult.CreateResultSuccess(new Models.SharedData
         {
             Tag = record.Tag,
-            ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.FileEndpoint}?Tag={record.Tag}" : null,
+            ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.FileEndpoint}?Tag={record.Tag}" : null,
             ValidUntil = DateTimeOffset.Now + _configuration.GetFilesRetentionPeriod(),
         });
     }

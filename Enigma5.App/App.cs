@@ -21,6 +21,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
@@ -36,6 +37,14 @@ public class App
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration
+        ((hostingContext, config) =>
+        {
+            if(hostingContext.HostingEnvironment.IsProduction())
+            {
+                config.AddJsonFile(Common.Constants.ProductionConfigurationFileName, optional: false, reloadOnChange: true);
+            }
+        })
         .UseSerilog((context, config) =>
         {
             config.ReadFrom.Configuration(context.Configuration);
