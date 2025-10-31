@@ -45,5 +45,5 @@ public static class Constants
 
     public const string IncrementFileAccessCountEndpoint = "IncrementFileAccessCount";
 
-    public const string ProductionConfigurationFileName = "/usr/local/etc/appsettings.Production.json";
+    public const string ProductionConfigurationFileName = "/usr/local/etc/aenigma/appsettings.Production.json";
 }
