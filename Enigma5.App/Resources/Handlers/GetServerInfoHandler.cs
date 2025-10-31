@@ -53,7 +53,8 @@ public class GetServerInfoHandler(
                 PublicKey = _certificateManager.PublicKey,
                 Address = _certificateManager.Address,
                 GraphVersion = graphVersion,
-                OnionService = _configuration.GetOnionService()
+                OnionService = _configuration.GetOnionService(),
+                Hostname = _configuration.GetHostname()
             }));
     }
 }
