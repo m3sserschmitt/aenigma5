@@ -51,7 +51,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             return false;
         }
 
-        var neighborhood = new Neighborhood(Neighborhood.Neighbors, Neighborhood.Address, null);
+        var neighborhood = new Neighborhood(Neighborhood.Neighbors, Neighborhood.Address, null, null);
         leafVertex = new Vertex(neighborhood, null, addSignedData ? SignedData : null, true);
 
         return true;
@@ -65,11 +65,12 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         string publicKey,
         IEnvelopeSigner signer,
         HashSet<string> neighbors,
-        string? hostname = null)
+        string? hostname = null,
+        string? onionService = null)
         {
             try
             {
-                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname);
+                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname, onionService);
                 var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
                 var signature = signer.Sign(serializedNeighborhood);
 
@@ -81,18 +82,19 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             }
         }
 
-        public static Vertex? Create(IEnvelopeSigner signer, ICertificateManager certificateManager, HashSet<string> neighbors, string? hostname = null)
+        public static Vertex? Create(IEnvelopeSigner signer, ICertificateManager certificateManager, HashSet<string> neighbors, string? hostname = null, string? onionService = null)
         => Create(
             certificateManager.PublicKey,
             signer,
             neighbors,
-            hostname);
+            hostname,
+            onionService);
 
-        public static Vertex? CreateWithEmptyNeighborhood(IEnvelopeSigner signer, ICertificateManager certificateManager, string? hostname = null)
-        => Create(signer, certificateManager, [], hostname);
+        public static Vertex? CreateWithEmptyNeighborhood(IEnvelopeSigner signer, ICertificateManager certificateManager, string? hostname = null, string? onionService = null)
+        => Create(signer, certificateManager, [], hostname, onionService);
 
         public static Vertex? Create(string address)
-        => new(new([], address, null), string.Empty, null);
+        => new(new([], address, null, null), string.Empty, null);
 
         public static class Prototype
         {
@@ -104,7 +106,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
                 if (previousCount != newNeighborsSet.Count)
                 {
-                    newVertex = Create(signer, certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname);
+                    newVertex = Create(signer, certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname, vertex.Neighborhood.OnionService);
                     return true;
                 }
 
@@ -126,7 +128,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
                 if (previousCount != newNeighborsSet.Count)
                 {
-                    newVertex = Create(signer, certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname);
+                    newVertex = Create(signer, certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname, vertex.Neighborhood.OnionService);
                     return true;
                 }
 

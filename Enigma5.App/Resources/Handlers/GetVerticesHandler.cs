@@ -32,7 +32,7 @@ public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVe
         var vertices = _graph.NonLeafVertices.Select(item => new Models.Vertex {
             PublicKey = item.PublicKey,
             SignedData = item.SignedData,
-            Neighborhood = new(item.Neighborhood.Address, item.Neighborhood.Hostname, item.Neighborhood.Neighbors)
+            Neighborhood = new(item.Neighborhood.Address, item.Neighborhood.Hostname, item.Neighborhood.OnionService, item.Neighborhood.Neighbors)
         }).ToList();
         return Task.FromResult(CommandResult.CreateResultSuccess(vertices));
     }

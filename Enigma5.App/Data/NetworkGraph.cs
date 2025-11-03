@@ -192,7 +192,7 @@ public class NetworkGraph
 
     private Vertex CreateInitialVertex()
     { 
-        var v = Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname());
+        var v = Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname(), _configuration.GetOnionService());
         if(v is null)
         {
             var ex = new Exception("Initial vertex resolved to null.");

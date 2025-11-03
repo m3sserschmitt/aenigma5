@@ -31,7 +31,7 @@ public class NeighborhoodTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new Neighborhood(PKey.Address1, "localhost", [PKey.Address3]);
+        var request = new Neighborhood(PKey.Address1, "localhost", "abc.onion", [PKey.Address3]);
 
         // Act
         var result = request.Validate();
@@ -44,7 +44,7 @@ public class NeighborhoodTests
     public void ShouldNotValidateForInvalidAddress()
     {
         // Arrange
-        var request = new Neighborhood("invalid-address", "localhost", [PKey.Address3]);
+        var request = new Neighborhood("invalid-address", "localhost", "abc.onion", [PKey.Address3]);
 
         // Act
         var result = request.Validate();
@@ -61,7 +61,7 @@ public class NeighborhoodTests
     public void ShouldNotValidateForNullAddress()
     {
         // Arrange
-        var request = new Neighborhood(null, "localhost", [PKey.Address3]);
+        var request = new Neighborhood(null, "localhost", "abc.onion", [PKey.Address3]);
 
         // Act
         var result = request.Validate();
@@ -78,7 +78,7 @@ public class NeighborhoodTests
     public void ShouldNotValidateForInvalidNeighborAddress()
     {
         // Arrange
-        var request = new Neighborhood(PKey.Address1, "localhost", ["invalid-address"]);
+        var request = new Neighborhood(PKey.Address1, "localhost", "abc.onion", ["invalid-address"]);
 
         // Act
         var result = request.Validate();
@@ -95,7 +95,7 @@ public class NeighborhoodTests
     public void ShouldNotValidateForNullNeighborsList()
     {
         // Arrange
-        var request = new Neighborhood(PKey.Address1, "localhost", null);
+        var request = new Neighborhood(PKey.Address1, "localhost", "abc.onion", null);
 
         // Act
         var result = request.Validate();

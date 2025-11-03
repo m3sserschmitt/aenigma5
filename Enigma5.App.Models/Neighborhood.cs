@@ -26,12 +26,15 @@ using Enigma5.Crypto.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class Neighborhood(string? address = null, string? hostname = null, HashSet<string>? neighbors = null) : IValidatable
+public class Neighborhood(string? address = null, string? hostname = null, string? onionService = null, HashSet<string>? neighbors = null) : IValidatable
 {
     public string? Address { get; private set; } = address;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Hostname { get; private set; } = hostname;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OnionService { get; private set; } = onionService;
 
     public HashSet<string>? Neighbors { get; private set; } = neighbors;
 

@@ -26,7 +26,6 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Enigma5.App.Models;
 using Enigma5.Crypto;
 using System.Net.Http.Json;
-using Enigma5.App.Common.Constants;
 using Enigma5.App.Models.HubInvocation;
 using System.Text.Json;
 
@@ -78,7 +77,7 @@ public class Program
 
     private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
     {
-        var neighborhood = new Neighborhood(localAddress, null, [serverAddress]);
+        var neighborhood = new Neighborhood(localAddress, null, null, [serverAddress]);
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
         using var envelope = SealProvider.Factory.CreateSigner(privateKey, passphrase ?? string.Empty);
         var signature = envelope.Sign(serializedNeighborhood);
@@ -93,8 +92,8 @@ public class Program
         string passphrase = PKey.Passphrase;
 
         string server = $"http://{args[1]}".Trim();
-        string onionRoutingEndpoint = $"{server}/{Endpoints.OnionRoutingEndpoint}";
-        string serverInfoEndpoint = $"{server}/{Endpoints.InfoEndpoint}";
+        string onionRoutingEndpoint = $"{server}/{Enigma5.App.Common.Constants.OnionRoutingEndpoint}";
+        string serverInfoEndpoint = $"{server}/{Enigma5.App.Common.Constants.InfoEndpoint}";
 
         if (args[0] == "1")
         {
