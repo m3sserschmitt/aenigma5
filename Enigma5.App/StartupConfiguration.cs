@@ -21,10 +21,7 @@
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Hubs.Sessions;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
@@ -33,14 +30,12 @@ using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
 using Hangfire;
-using Enigma5.Crypto;
 using Enigma5.Structures;
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs.Sessions.Contracts;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 
 namespace Enigma5.App;
 
@@ -52,52 +47,41 @@ public class StartupConfiguration(IConfiguration configuration)
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddSignalR()
-        .AddHubOptions<RoutingHub>(
-            options =>
-                {
-                    options.AddFilter<LogFilter>();
-                    options.AddFilter<AuthenticatedFilter>();
-                    options.AddFilter<AuthorizedServiceOnlyFilter>();
-                    options.AddFilter<ValidateModelFilter>();
-                    options.AddFilter<OnionParsingFilter>();
-                    options.AddFilter<OnionRoutingFilter>();
-                });
-
+        .AddHubOptions<RoutingHub>(options =>
+        {
+            options.AddFilter<LogFilter>();
+            options.AddFilter<AuthenticatedFilter>();
+            options.AddFilter<AuthorizedServiceOnlyFilter>();
+            options.AddFilter<ValidateModelFilter>();
+            options.AddFilter<OnionParsingFilter>();
+            options.AddFilter<OnionRoutingFilter>();
+        });
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
-
-        services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
-        services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
-        services.AddTransient(provider =>
-        {
-            var certificateManager = provider.GetRequiredService<ICertificateManager>();
-            return SealProvider.Factory.CreateUnsealer(certificateManager.PrivateKey);
-        });
-        services.AddTransient(provider =>
-        {
-            var certificateManager = provider.GetRequiredService<ICertificateManager>();
-            return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
-        });
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
-
+        services.SetupSigner();
+        services.SetupUnsealer();
+        services.AddRazorComponents().AddInteractiveServerComponents();
+        services.SetupKeyReader(_configuration);
+        services.SetupPassphraseReader(_configuration);
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
         services.AddAntiforgery();
-
-        services.BuildServiceProvider();
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IConfiguration configuration)
     {
         app.UseRouting();
         app.UseAntiforgery();
+        app.UseStaticFiles();
         app.UseEndpoints(endpoints =>
         {
+            endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
             endpoints.MapHub<RoutingHub>(Common.Constants.OnionRoutingEndpoint);
             endpoints.MapGet(Common.Constants.InfoEndpoint, Api.GetInfo);
             endpoints.MapPost(Common.Constants.ShareEndpoint, Api.PostShare)
@@ -113,9 +97,7 @@ public class StartupConfiguration(IConfiguration configuration)
                 .WithMetadata(new RequestFormLimitsAttribute
                 {
                     MultipartBodyLengthLimit = Common.Constants.MaxSharedFileSize
-                }
-                )
-                .DisableAntiforgery();
+                }).DisableAntiforgery();
             endpoints.MapGet(Common.Constants.FileEndpoint, Api.GetFile);
             endpoints.MapPut(Common.Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
         });
@@ -156,5 +138,7 @@ public class StartupConfiguration(IConfiguration configuration)
             logger.LogError(ex, "An error occurred while creating the database.");
             throw;
         }
+
+        scope.ServiceProvider.GetRequiredService<IMediator>().Send(new SetMasterPassphraseCommand(null));
     }
 }

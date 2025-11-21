@@ -18,37 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Crypto.Contracts;
+namespace Enigma5.App.Common.Enums;
 
-namespace Enigma5.Structures;
-
-public class OnionParser(Func<IEnvelopeUnsealer> unsealerProvider)
+public enum KeySource
 {
-    private readonly Func<IEnvelopeUnsealer> _unsealerProvider = unsealerProvider;
-
-    public string? NextAddress { get; private set; }
-
-    public byte[]? Content { get; private set; }
-
-    public bool Parse(string onion)
-    {
-        try
-        {
-            string? next = null;
-            byte[]? content = null;
-            using var unsealer = _unsealerProvider();
-            if(unsealer.UnsealOnion(onion, ref next, ref content))
-            {
-                NextAddress = next;
-                Content = content;
-                return true;
-            }
-
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    File, Azure
 }

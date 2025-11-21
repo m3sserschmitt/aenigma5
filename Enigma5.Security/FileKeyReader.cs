@@ -18,16 +18,33 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.Crypto;
+using Microsoft.Extensions.Configuration;
 
-public sealed class Constants
+namespace Enigma5.Security;
+
+public class FileKeyReader(IConfiguration configuration): KeyReader(configuration)
 {
-    static Constants()
+    private const string PRIVATE_KEY_FILE_NOT_FOUND_ERROR_MESSAGE = "Private Key file not found.";
+
+    private const string PUBLIC_KEY_NOT_FOUND_ERROR_MESSAGE = "Public Key file not found.";
+
+    public override string ReadPublicKey()
     {
-        KernelKeyMaxSize = (int)Native.GetKernelKeyMaxSize();
+        if(!File.Exists(PublicKeyPath))
+        {
+            throw new Exception(PUBLIC_KEY_NOT_FOUND_ERROR_MESSAGE);
+        }
+
+        return File.ReadAllText(PublicKeyPath);
     }
 
-    public static readonly int AddressSize = 32;
+    public override string ReadPrivateKey()
+    {
+        if(!File.Exists(PrivateKeyPath))
+        {
+            throw new Exception(PRIVATE_KEY_FILE_NOT_FOUND_ERROR_MESSAGE);
+        }
 
-    public static int KernelKeyMaxSize { get; private set; }
+        return File.ReadAllText(PrivateKeyPath);
+    }
 }

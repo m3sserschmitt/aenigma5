@@ -71,10 +71,10 @@ internal sealed class CryptoContext : IDisposable
         public static CryptoContext CreateAsymmetricEncryptionContext(string publicKey)
         => new(publicKey.IsValidPublicKey() ? Native.CreateAsymmetricEncryptionContext(publicKey) : IntPtr.Zero);
 
-        public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, string passphrase)
+        public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, byte[]? passphrase)
         => new(privateKey.IsValidPrivateKey() ? Native.CreateAsymmetricDecryptionContext(privateKey, passphrase) : IntPtr.Zero);
 
-        public static CryptoContext CreateSignatureContext(string privateKey, string passphrase)
+        public static CryptoContext CreateSignatureContext(string privateKey, byte[]? passphrase)
         => new(privateKey.IsValidPrivateKey() ? Native.CreateSignatureContext(privateKey, passphrase) : IntPtr.Zero);
 
         public static CryptoContext CreateSignatureVerificationContext(string publicKey)

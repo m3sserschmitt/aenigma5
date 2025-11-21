@@ -18,19 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.Crypto;
+using Enigma5.Security.Contracts;
 
-public enum KernelKeyring
+namespace Enigma5.Security;
+
+public class DummyPassphraseProvider : IPassphraseProvider
 {
-    ThreadKeyring = -1,
-
-    ProcessKeyRing = -2,
-
-    SessionKeyring = -3,
-
-    UserKeyring = -4,
-
-    UserSessionKeyring = -5,
-
-    GroupKeyring = -6
+    public char[] ProvidePassphrase()
+    {
+        return [];
+    }
 }

@@ -30,6 +30,8 @@ public sealed class SealProvider :
     IEnvelopeSigner,
     IEnvelopeVerifier
 {
+    public const int AddressSize = 32;
+
     private readonly CryptoContext _ctx;
 
     private SealProvider(CryptoContext ctx)
@@ -61,9 +63,9 @@ public sealed class SealProvider :
         return KeyUtil.CopyKeyFromNativeBuffer(outputPtr, outputSize);
     }
 
-    public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.EncryptData);
+    public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.Run);
 
-    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.DecryptData);
+    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.Run);
 
     public bool UnsealOnion(string onion, ref string? next, ref byte[]? content)
     {
@@ -83,18 +85,18 @@ public sealed class SealProvider :
 
             var data = Native.UnsealOnion(_ctx, decodedOnion, out var outLen);
 
-            if (data == IntPtr.Zero || outLen < Constants.AddressSize)
+            if (data == IntPtr.Zero || outLen < AddressSize)
             {
                 return false;
             }
 
-            var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
+            var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, AddressSize);
             next = null;
             if(nextBytes is not null)
             {
                 next = HashProvider.ToHex(nextBytes);
             }
-            content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
+            content = KeyUtil.CopyKeyFromNativeBuffer(data + AddressSize, outLen - AddressSize);
 
             return next is not null && content is not null;
         }
@@ -129,9 +131,13 @@ public sealed class SealProvider :
         return managedBuffer is not null ? Convert.ToBase64String(managedBuffer) : null;
     }
 
-    public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.SignData) : null;
+    public static bool SetMasterPassphraseName(string name) => Native.SetMasterPassphraseName(name);
 
-    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
+    public static int CreateMasterPassphrase(byte[] passphrase) => Native.CreateMasterPassphrase(passphrase);
+
+    public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.Run) : null;
+
+    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.RunVerification(_ctx, ciphertext, (uint)ciphertext.Length);
 
     public void Dispose()
     {
@@ -141,20 +147,20 @@ public sealed class SealProvider :
 
     public static class Factory
     {
-        public static IEnvelopeSigner CreateSigner(string key, string passphrase)
+        public static IEnvelopeSigner CreateSigner(string key, byte[]? passphrase)
         => new SealProvider(CryptoContext.Factory.CreateSignatureContext(key, passphrase));
 
         public static IEnvelopeSigner CreateSigner(string key)
-        => CreateSigner(key, string.Empty);
+        => CreateSigner(key, null);
 
         public static IEnvelopeVerifier CreateVerifier(string key)
         => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key));
 
-        public static IEnvelopeUnsealer CreateUnsealer(string key, string passphrase)
+        public static IEnvelopeUnsealer CreateUnsealer(string key, byte[]? passphrase)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase));
 
         public static IEnvelopeUnsealer CreateUnsealer(string key)
-        => CreateUnsealer(key, string.Empty);
+        => CreateUnsealer(key, null);
 
         public static IEnvelopeSealer CreateSealer(string key)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));

@@ -18,91 +18,71 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text;
 using Enigma5.App.Common.Utils;
 using Enigma5.Crypto;
+using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
 
 namespace Enigma5.Security;
 
-public class CertificateManager : ICertificateManager
+public sealed class CertificateManager(IPassphraseProvider passphraseProvider, IKeyReader keysProvider) : ICertificateManager, IDisposable
 {
-    private readonly IKeysReader _keysProvider;
+    private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = new();
 
-    private readonly SingleThreadExecutor<string> _kernelQueryExecutor = new();
+    private readonly IKeyReader _keysProvider = keysProvider;
 
-    private readonly object _locker = new();
-
-    private const string PRIVATE_KEY_READING_ERROR_MESSAGE = "Could not read Private Key from Kernel.";
-
-    private const string PRIVATE_KEY_CACHING_ERROR = "Could not cache Private Key into Kernel.";
-
-    private const string KERNEL_KEY_NAME = "ENIGMA_PRIVATE_KEY";
+    private readonly IPassphraseProvider _passphraseProvider = passphraseProvider;
 
     private const string KERNEL_KEY_DESCRIPTION = "enigma5key: Key used for cryptographic operations.";
 
-    private const string KERNEL_KEY_NOT_FOUND_ERROR_MESSAGE = "Key not found into Kernel.";
+    private readonly object _locker = new();
 
-    private const KernelKeyring THREAD_KEYRING = KernelKeyring.ThreadKeyring;
+    private string? _publicKey = null;
 
-    private string? _publicKeyCache = null;
+    public string PublicKey => ThreadSafeExecution.Execute(() => _publicKey ??= _keysProvider.ReadPublicKey(), string.Empty, _locker);
 
-    public string PublicKey {
-        get => ThreadSafeExecution.Execute(() => {
-            _publicKeyCache ??= _keysProvider.PublicKey;
-            return _publicKeyCache;
-        }, string.Empty, _locker);
+    public string PrivateKey => ThreadSafeExecution.Execute(() => _keysProvider.ReadPrivateKey(), string.Empty, _locker);
+
+    public string Address { get => CertificateHelper.GetHexAddressFromPublicKey(PublicKey); }
+
+    static CertificateManager()
+    {
+        SealProvider.SetMasterPassphraseName(KERNEL_KEY_DESCRIPTION);
     }
 
-    public string PrivateKey { get => ReadKeyFromKernel(); }
-
-    public string Address { get => ThreadSafeExecution.Execute(() => CertificateHelper.GetHexAddressFromPublicKey(PublicKey), string.Empty, _locker); }
-
-    public CertificateManager(IKeysReader keysProvider)
+    public bool GenerateKeys(char[] passphrase)
     {
-        _keysProvider = keysProvider;
-        _kernelQueryExecutor.StartLooper();
-        ReadPrivateKeyFromFile();
+        if (!File.Exists(_keysProvider.PrivateKeyPath))
+        {
+            return KeysGenerator.Generate(_keysProvider.PrivateKeyPath, passphrase) &&
+            KeysGenerator.ExportPublicKey(_keysProvider.PrivateKeyPath, _keysProvider.PublicKeyPath, passphrase);
+        }
+        else if (!File.Exists(_keysProvider.PublicKeyPath))
+        {
+            return KeysGenerator.ExportPublicKey(_keysProvider.PrivateKeyPath, _keysProvider.PublicKeyPath, passphrase);
+        }
+        return true;
     }
 
-    private Action CacheKeyIntoKernelAction => () =>
+    public bool SetMasterPassphrase(byte[] passphrase) =>
+    _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0).GetAwaiter().GetResult();
+
+    public bool Setup(char[]? passphrase)
     {
-        if (KernelKey.Create(KERNEL_KEY_NAME, _keysProvider.PrivateKey, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING) < 0)
-        {
-            throw new Exception(PRIVATE_KEY_CACHING_ERROR);
-        }
-    };
-
-    private static Func<string> ReadKeyFromKernelAction => () =>
-    {
-        var privateKeyId = KernelKey.SearchKey(KERNEL_KEY_NAME, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING);
-
-        if (privateKeyId < 0)
-        {
-            throw new Exception(KERNEL_KEY_NOT_FOUND_ERROR_MESSAGE);
-        }
-
-        return KernelKey.ReadKey(privateKeyId) ?? throw new Exception(PRIVATE_KEY_READING_ERROR_MESSAGE);
-    };
-
-    private void ReadPrivateKeyFromFile()
-    {
-        var exception = _kernelQueryExecutor.Execute(CacheKeyIntoKernelAction);
-
-        if (exception is not null)
-        {
-            throw exception;
-        }
+        var passphraseChars = passphrase ?? _passphraseProvider.ProvidePassphrase();
+        var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
+        var ok = GenerateKeys(passphraseChars) && SetMasterPassphrase(passphraseBytes);
+        Array.Clear(passphraseBytes);
+        Array.Clear(passphraseChars);
+        return ok;
     }
 
-    private string ReadKeyFromKernel()
-    {
-        var result = _kernelQueryExecutor.Execute(ReadKeyFromKernelAction);
+    public void Dispose() { _simpleSingleThreadRunner.Dispose(); }
 
-        if (result.Exception is not null)
-        {
-            throw result.Exception;
-        }
+    public IEnvelopeUnsealer CreateUnsealer()
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealer(PrivateKey)).GetAwaiter().GetResult();
 
-        return result.Value!;
-    }
+    public IEnvelopeSigner CreateSigner()
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSigner(PrivateKey)).GetAwaiter().GetResult();
 }

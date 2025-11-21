@@ -28,6 +28,7 @@ namespace Enigma5.App.Models;
 [method: JsonConstructor]
 public class Neighborhood(string? address = null, string? hostname = null, string? onionService = null, HashSet<string>? neighbors = null) : IValidatable
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Address { get; private set; } = address;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -36,6 +37,7 @@ public class Neighborhood(string? address = null, string? hostname = null, strin
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OnionService { get; private set; } = onionService;
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public HashSet<string>? Neighbors { get; private set; } = neighbors;
 
     public HashSet<Error> Validate()

@@ -21,7 +21,6 @@
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.Crypto;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Enigma5.Security.Extensions;
@@ -43,7 +42,7 @@ public static class HubConnectionExtensions
                 return false;
             }
 
-            using var signature = SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
+            using var signature = certificateManager.CreateSigner();
             var data = signature.Sign(Convert.FromBase64String(nonce.Data));
 
             if (data is null)

@@ -24,7 +24,6 @@ using Enigma5.App.Resources.Commands;
 using Enigma5.Crypto.Extensions;
 using Enigma5.Security.Contracts;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Resources.Handlers;
 

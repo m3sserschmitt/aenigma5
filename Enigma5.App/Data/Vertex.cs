@@ -93,8 +93,8 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         public static Vertex? CreateWithEmptyNeighborhood(IEnvelopeSigner signer, ICertificateManager certificateManager, string? hostname = null, string? onionService = null)
         => Create(signer, certificateManager, [], hostname, onionService);
 
-        public static Vertex? Create(string address)
-        => new(new([], address, null, null), string.Empty, null);
+        public static Vertex Create(string address)
+        => new(new([], address, null, null), null, null);
 
         public static class Prototype
         {

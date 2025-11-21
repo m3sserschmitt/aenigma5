@@ -159,7 +159,7 @@ public partial class RoutingHub(
             return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
-        var signer = SealProvider.Factory.CreateSigner(_certificateManager.PrivateKey);
+        var signer = _certificateManager.CreateSigner();
         var data = signer.Sign(decodedNonce);
 
         if (data == null)

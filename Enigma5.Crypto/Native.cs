@@ -24,9 +24,9 @@ using System.Runtime.InteropServices.Marshalling;
 
 namespace Enigma5.Crypto;
 
-internal static unsafe partial class Native
+internal static partial class Native
 {
-    private static readonly List<string> Libs = ["libaenigma", "libaenigma-kernelkeys"];
+    private static readonly List<string> Libs = ["libaenigma"];
 
     static Native()
     {
@@ -44,19 +44,26 @@ internal static unsafe partial class Native
     }
 
     [LibraryImport("libaenigma")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool SetMasterPassphraseName([MarshalAs(UnmanagedType.LPStr)]string name);
+
+    [LibraryImport("libaenigma")]
+    internal static partial int CreateMasterPassphrase([In] byte[] passphrase);
+
+    [LibraryImport("libaenigma")]
     internal static partial int GetPKeySize([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
-    [LibraryImport("libaenigma-kernelkeys")]
-    internal static partial uint GetKernelKeyMaxSize();
+    [LibraryImport("libaenigma")]
+    internal static partial int GetAddressSize();
 
     [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateAsymmetricEncryptionContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [MarshalAs(UnmanagedType.LPStr)] string passphrase);
+    internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [MarshalAs(UnmanagedType.LPStr)] string passphrase);
+    internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
 
     [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateVerificationContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
@@ -65,33 +72,15 @@ internal static unsafe partial class Native
     internal static partial void FreeContext(IntPtr ctx);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr EncryptData(IntPtr ctx, [In] byte[] plaintext, uint plaintextLen, out int ciphertextLen);
-
-    [LibraryImport("libaenigma")]
-    internal static partial IntPtr DecryptData(IntPtr ctx, [In] byte[] ciphertext, uint ciphertextLen, out int plaintextLen);
-
-    [LibraryImport("libaenigma")]
-    internal static partial IntPtr SignData(IntPtr ctx, [In] byte[] plaintext, uint plaintextLen, out int signatureLen);
+    internal static partial IntPtr Run(IntPtr ctx, [In] byte[] inData, uint inLen, out int outLen);
 
     [LibraryImport("libaenigma")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static partial bool VerifySignature(IntPtr ctx, [In] byte[] ciphertext, uint ciphertextLen);
+    internal static partial bool RunVerification(IntPtr ctx, [In] byte[] ciphertext, uint ciphertextLen);
 
     [LibraryImport("libaenigma")]
     internal static partial IntPtr UnsealOnion(IntPtr ctx, [In] byte[] onion, out int outLen);
 
     [LibraryImport("libaenigma", StringMarshallingCustomType = typeof(Utf8StringMarshaller))]
     internal static partial IntPtr SealOnion([In] byte[] plaintext, uint plaintextLen, [In] string[] keys, [In] string[] addresses, uint count, out int outLen);
-
-    [LibraryImport("libaenigma-kernelkeys")]
-    internal static partial int CreateKey([MarshalAs(UnmanagedType.LPStr)] string keyName, [MarshalAs(UnmanagedType.LPStr)] string keyMaterial, uint keyMaterialSize, [MarshalAs(UnmanagedType.LPStr)] string description, KernelKeyring ringId);
-
-    [LibraryImport("libaenigma-kernelkeys")]
-    internal static partial int SearchKey([MarshalAs(UnmanagedType.LPStr)] string keyName, [MarshalAs(UnmanagedType.LPStr)] string description, KernelKeyring ringId);
-
-    [LibraryImport("libaenigma-kernelkeys")]
-    internal static partial int ReadKey(int keyId, [Out] byte[] keyMaterial);
-
-    [LibraryImport("libaenigma-kernelkeys")]
-    internal static partial int RemoveKey(int keyId);
 }

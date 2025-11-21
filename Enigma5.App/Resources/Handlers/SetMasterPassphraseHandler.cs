@@ -18,25 +18,20 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Enigma5.App.Resources.Commands;
+using Enigma5.Security.Contracts;
+using MediatR;
 
-namespace Enigma5.App.Extensions;
+namespace Enigma5.App.Resources.Handlers;
 
-[ExcludeFromCodeCoverage]
-public static class DbContextExtensions
+public class SetMasterPassphraseHandler(ICertificateManager certificateManager, NetworkGraph networkGraph)
+: IRequestHandler<SetMasterPassphraseCommand, CommandResult<bool>>
 {
-    public static IServiceCollection SetupDbContext(this IServiceCollection services, IConfiguration configuration)
-    {
-        var connectionString = configuration.GetConnectionString("DbConnectionString");
-        services.AddDbContext<EnigmaDbContext>(options =>
-        {
-            options.UseSqlite(connectionString!);
-        });
-        
-        return services;
-    }
+    private readonly ICertificateManager _certificateManager = certificateManager;
+
+    private readonly NetworkGraph _networkGraph = networkGraph;
+
+    public Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
+    => Task.FromResult(CommandResult.CreateResultSuccess(_certificateManager.Setup(request.Passphrase) && _networkGraph.CreateInitialVertex()));
 }

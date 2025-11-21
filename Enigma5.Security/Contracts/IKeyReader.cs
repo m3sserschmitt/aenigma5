@@ -20,9 +20,13 @@
 
 namespace Enigma5.Security.Contracts;
 
-public interface IKeysReader
+public interface IKeyReader
 {
-    public string PrivateKey { get; }
+    public string PublicKeyPath { get; }
 
-    public string PublicKey { get; }
+    public string PrivateKeyPath { get; }
+    
+    public string ReadPublicKey();
+
+    public string ReadPrivateKey();
 }

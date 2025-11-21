@@ -23,7 +23,6 @@ using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Enigma5.App;

@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Enums;
 using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Common.Extensions;
@@ -78,17 +79,27 @@ public static class ConfigurationExtensions
         return timeSpan;
     }
 
+    private static T GetEnum<T>(this IConfiguration configuration, string key, T defaultValue) where T : struct, Enum
+    {
+        var value = configuration.GetValue<string?>(key, null);
+        if (value is null || !Enum.TryParse(value, ignoreCase: true, out T result))
+        {
+            return defaultValue;
+        }
+        return result;
+    }
+
     public static TimeSpan GetLeafsLifetime(this IConfiguration configuration)
     => configuration.GetTimeSpan("LeafsLifetime", Constants.LeafsLifetimeDefault);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetValue<string?>("AzureVaultUrl", null);
 
-    public static bool UseAzureVaultForKeys(this IConfiguration configuration)
-    => configuration.GetValue("UseAzureVaultForKeys", false);
+    public static KeySource GetKeySource(this IConfiguration configuration)
+    => configuration.GetEnum("KeySource", KeySource.File);
 
-    public static bool UseAzureVaultForPassphrase(this IConfiguration configuration)
-    => configuration.GetValue("UseAzureVaultForPassphrase", false);
+    public static PassphraseSource GetPassphraseSource(this IConfiguration configuration)
+    => configuration.GetEnum("PassphraseSource", PassphraseSource.Dashboard);
 
     public static string? GetOnionService(this IConfiguration configuration)
     => configuration.GetValue<string?>("OnionService", null);

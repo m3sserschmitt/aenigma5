@@ -18,9 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
-using Enigma5.App.Common.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
@@ -28,14 +26,8 @@ namespace Enigma5.Security;
 public class AzureKeysReader(
     IConfiguration configuration,
     AzureClient azureClient,
-    ILogger<AzureKeysReader> logger) : IKeysReader
+    ILogger<AzureKeysReader> logger) : KeyReader(configuration)
 {
-    private static readonly string PUBLIC_KEY_SECRET_NAME_NOT_PROVIDED = "Public key secret name not provided.";
-
-    private static readonly string PRIVATE_KEY_SECRET_NAME_NOT_PROVIDED = "Private key secret name not provided.";
-
-    private readonly IConfiguration _configuration = configuration;
-
     private readonly ILogger<AzureKeysReader> _logger = logger;
 
     private readonly AzureClient _azureClient = azureClient;
@@ -44,12 +36,11 @@ public class AzureKeysReader(
 
     public string PublicKey => ReadPublicKey();
 
-    private string ReadPublicKey()
+    public override string ReadPublicKey()
     {
         try
         {
-            var publicKeyPath = _configuration.GetPublicKeyPath() ?? throw new Exception(PUBLIC_KEY_SECRET_NAME_NOT_PROVIDED);
-            return _azureClient.GetSecret(publicKeyPath);
+            return _azureClient.GetSecret(PublicKeyPath);
         }
         catch (Exception ex)
         {
@@ -58,12 +49,11 @@ public class AzureKeysReader(
         }
     }
 
-    private string ReadPrivateKey()
+    public override string ReadPrivateKey()
     {
         try
         {
-            var publicKeyPath = _configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_SECRET_NAME_NOT_PROVIDED);
-            return _azureClient.GetSecret(publicKeyPath);
+            return _azureClient.GetSecret(PrivateKeyPath);
         }
         catch (Exception ex)
         {

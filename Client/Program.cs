@@ -37,8 +37,8 @@ public class Program
     {
         Console.WriteLine($"Message received");
 
-        using var unsealer = SealProvider.Factory.CreateUnsealer(privateKey, passphrase);
-        var onionParser = new OnionParser(unsealer);
+        using var unsealer = SealProvider.Factory.CreateUnsealer(privateKey, Encoding.UTF8.GetBytes(passphrase));
+        var onionParser = new OnionParser(() => unsealer);
 
         if (onionParser.Parse(message))
         {
@@ -79,7 +79,7 @@ public class Program
     {
         var neighborhood = new Neighborhood(localAddress, null, null, [serverAddress]);
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
-        using var envelope = SealProvider.Factory.CreateSigner(privateKey, passphrase ?? string.Empty);
+        using var envelope = SealProvider.Factory.CreateSigner(privateKey, Encoding.UTF8.GetBytes(passphrase) ?? []);
         var signature = envelope.Sign(serializedNeighborhood);
         return new VertexBroadcastRequest(publicKey, Convert.ToBase64String(signature!));
     }
@@ -148,7 +148,7 @@ public class Program
         var tokenResult = await connection.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken));
         HandleServerResponse(tokenResult, nameof(IEnigmaHub.GenerateToken));
 
-        using var signature = SealProvider.Factory.CreateSigner(privateKey, passphrase);
+        using var signature = SealProvider.Factory.CreateSigner(privateKey, Encoding.UTF8.GetBytes(passphrase));
         var encodedNonce = Convert.FromBase64String(tokenResult.Data!) ?? throw new Exception("Failed to base64 decode nonce.");
         var data = signature.Sign(encodedNonce) ?? throw new Exception("Nonce signature failed.");
         var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest(publicKey, Convert.ToBase64String(data)));

@@ -20,7 +20,6 @@
 
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs.Filters;
 

@@ -18,13 +18,25 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.Crypto.Contracts;
+
 namespace Enigma5.Security.Contracts;
 
 public interface ICertificateManager
 {
-    public string PublicKey { get; }
+    string PublicKey { get; }
 
-    public string PrivateKey { get; }
+    string PrivateKey { get; }
 
-    public string Address { get; }
+    string Address { get; }
+
+    bool GenerateKeys(char[] passphrase);
+
+    bool SetMasterPassphrase(byte[] passphrase);
+
+    bool Setup(char[]? passphrase);
+
+    IEnvelopeUnsealer CreateUnsealer();
+
+    IEnvelopeSigner CreateSigner();
 }

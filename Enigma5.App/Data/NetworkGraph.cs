@@ -23,8 +23,6 @@ using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Data;
 
@@ -32,7 +30,7 @@ public class NetworkGraph
 {
     private readonly object _locker = new();
 
-    private readonly IEnvelopeSigner _signer;
+    private readonly Func<IEnvelopeSigner> _signerProvider;
 
     private readonly ICertificateManager _certificateManager;
 
@@ -52,12 +50,12 @@ public class NetworkGraph
 
     public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker, _logger);
 
-    public NetworkGraph(IEnvelopeSigner signer, ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger)
+    public NetworkGraph(Func<IEnvelopeSigner> signerProvider, ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger)
     {
-        _signer = signer;
+        _signerProvider = signerProvider;
         _certificateManager = certificateManager;
         _configuration = configuration;
-        _localVertex = CreateInitialVertex();
+        _localVertex = Vertex.Factory.Create(certificateManager.Address);
         _vertices = [_localVertex];
         _logger = logger;
     }
@@ -86,7 +84,8 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, _signer, _certificateManager, out Vertex? newVertex)
+            using var signer = _signerProvider();
+            if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, signer, _certificateManager, out Vertex? newVertex)
                 && ValidateNewVertex(newVertex!))
             {
                 ReplaceLocalVertex(newVertex!);
@@ -105,7 +104,8 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, _signer, _certificateManager, out Vertex? newVertex))
+            using var signer = _signerProvider();
+            if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, signer, _certificateManager, out Vertex? newVertex))
             {
                 ReplaceLocalVertex(newVertex!);
                 CleanupGraph();
@@ -190,16 +190,16 @@ public class NetworkGraph
         return Task.Run(task, cancellationToken);
     }
 
-    private Vertex CreateInitialVertex()
-    { 
-        var v = Vertex.Factory.CreateWithEmptyNeighborhood(_signer, _certificateManager, _configuration.GetHostname(), _configuration.GetOnionService());
+    public bool CreateInitialVertex()
+    {
+        using var signer = _signerProvider();
+        var v = Vertex.Factory.CreateWithEmptyNeighborhood(signer, _certificateManager, _configuration.GetHostname(), _configuration.GetOnionService());
         if(v is null)
         {
-            var ex = new Exception("Initial vertex resolved to null.");
-            _logger.LogCritical(ex, "Critical error occurred while creating initial vertex.");
-            throw ex;
+            return false;
         }
-        return v;
+        ReplaceLocalVertex(v);
+        return true;
     }
 
     private bool ValidateNewVertex(Vertex vertex)
@@ -242,13 +242,14 @@ public class NetworkGraph
 
         Vertex? newLocalVertex = null;
 
+        using var signer = _signerProvider();
         if (result < 0)
         {
-            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, _signer, _certificateManager, out newLocalVertex);
+            Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, signer, _certificateManager, out newLocalVertex);
         }
         else if (result > 0)
         {
-            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, _signer, _certificateManager, out newLocalVertex);
+            Vertex.Factory.Prototype.RemoveNeighbor(_localVertex, source, signer, _certificateManager, out newLocalVertex);
         }
 
         if (result == 0)

@@ -18,23 +18,23 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
-using Enigma5.App.Resources.Handlers;
-using Microsoft.Extensions.DependencyInjection;
+using Enigma5.App.Common.Extensions;
+using Enigma5.Security.Contracts;
+using Microsoft.Extensions.Configuration;
 
-namespace Enigma5.App.Extensions;
+namespace Enigma5.Security;
 
-[ExcludeFromCodeCoverage]
-public static class MediatRExtensions
+public abstract class KeyReader(IConfiguration configuration) : IKeyReader
 {
-    public static IServiceCollection SetupMediatR(this IServiceCollection services)
-    {
-        services.AddMediatR(config =>
-        {
-            config.RegisterServicesFromAssemblies(typeof(StartupConfiguration).Assembly);
-            config.AddOpenBehavior(typeof(RequestResponseLoggingBehavior<,>));
-        });
+    private const string PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE = "Public Key file not configured.";
 
-        return services;
-    }
+    private const string PRIVATE_KEY_NOT_CONFIGURED_ERROR_MESSAGE = "Private Key file not configured.";
+
+    public string PublicKeyPath => configuration.GetPublicKeyPath() ?? throw new Exception(PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
+
+    public string PrivateKeyPath => configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
+
+    public abstract string ReadPrivateKey();
+
+    public abstract string ReadPublicKey();
 }
