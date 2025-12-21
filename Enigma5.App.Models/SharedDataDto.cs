@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -22,36 +22,23 @@ using System.Text.Json.Serialization;
 
 namespace Enigma5.App.Models;
 
-[method: JsonConstructor]
-public class Error(string? message = null, HashSet<string>? properties = null)
+public class SharedDataDto
 {
-    public string? Message { get; private set; } = message;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Tag { get; set; }
 
-    public HashSet<string>? Properties { get; private set; } = properties;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ResourceUrl { get; set; }
 
-    public bool Equals(Error? error)
-    {
-        if(error is null)
-        {
-            return false;
-        }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Data { get; set; }
 
-        return error.Message == Message;
-    }
+    [JsonIgnore]
+    public FileStream? File { get; set; }
 
-    public override bool Equals(object? obj)
-    {
-        if(ReferenceEquals(this, obj))
-        {
-            return true;
-        }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PublicKey { get; set; }
 
-        return Equals(obj as Error);
-    }
-
-    public override int GetHashCode() => Message is null ? 0 : Message.GetHashCode();
-
-    public static bool operator==(Error e1, Error e2) => e1.Message == e2.Message;
-
-    public static bool operator!=(Error e1, Error e2) => !(e1 == e2);
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTimeOffset? ValidUntil { get; set; }
 }

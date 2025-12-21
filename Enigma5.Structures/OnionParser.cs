@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.Security.Contracts;
+
 namespace Enigma5.Structures;
 
 public class OnionParser(ICertificateManager certificateManager)

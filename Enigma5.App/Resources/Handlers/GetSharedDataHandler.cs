@@ -24,14 +24,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetSharedDataHandler(Data.EnigmaDbContext context) : IRequestHandler<GetSharedDataQuery, CommandResult<Models.SharedData>>
+public class GetSharedDataHandler(Data.EnigmaDbContext context) : IRequestHandler<GetSharedDataQuery, CommandResult<Models.SharedDataDto>>
 {
     private readonly Data.EnigmaDbContext _context = context;
 
-    public async Task<CommandResult<Models.SharedData>> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<Models.SharedDataDto>> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken: cancellationToken);
-        return sharedData is null ? CommandResult.CreateResultSuccess<Models.SharedData>() : CommandResult.CreateResultSuccess(new Models.SharedData
+        return sharedData is null ? CommandResult.CreateResultSuccess<Models.SharedDataDto>() : CommandResult.CreateResultSuccess(new Models.SharedDataDto
         {
             Tag = sharedData.Tag,
             Data = sharedData.Data,

@@ -31,7 +31,7 @@ public class AuthenticationRequestTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new AuthenticationRequest(PKey.PublicKey1, "dGVzdC1zdHJpbmc=");
+        var request = new AuthenticationRequestDto(PKey.PublicKey1, "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -44,7 +44,7 @@ public class AuthenticationRequestTests
     public void ShouldNotValidateForNullPublicKeyAndSignature()
     {
         // Arrange
-        var request = new AuthenticationRequest(null, "    ");
+        var request = new AuthenticationRequestDto(null, "    ");
 
         // Act
         var result = request.Validate();
@@ -52,7 +52,7 @@ public class AuthenticationRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(2);
         error.Properties.Should().Contain(nameof(request.PublicKey));
         error.Properties.Should().Contain(nameof(request.Signature));
@@ -62,7 +62,7 @@ public class AuthenticationRequestTests
     public void ShouldNotValidateForInvalidPublicKey()
     {
         // Arrange
-        var request = new AuthenticationRequest("invalid-public-key", "dGVzdC1zdHJpbmc=");
+        var request = new AuthenticationRequestDto("invalid-public-key", "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -70,7 +70,7 @@ public class AuthenticationRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.PublicKey));
     }
@@ -79,7 +79,7 @@ public class AuthenticationRequestTests
     public void ShouldNotValidateForInvalidSignature()
     {
         // Arrange
-        var request = new AuthenticationRequest(PKey.PublicKey1, "invalid-signature");
+        var request = new AuthenticationRequestDto(PKey.PublicKey1, "invalid-signature");
 
         // Act
         var result = request.Validate();
@@ -87,7 +87,7 @@ public class AuthenticationRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.Signature));
     }

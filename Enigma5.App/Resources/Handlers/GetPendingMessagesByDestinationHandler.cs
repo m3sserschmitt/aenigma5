@@ -25,13 +25,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Enigma5.App.Resources.Handlers;
 
 public class GetPendingMessagesByDestinationHandler(Data.EnigmaDbContext context)
-: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<Models.PendingMessage>>>
+: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<Models.PendingMessageDto>>>
 {
     private readonly Data.EnigmaDbContext _context = context;    
 
-    public async Task<CommandResult<List<Models.PendingMessage>>> Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<List<Models.PendingMessageDto>>> Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
     => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination)
-    .Select(item => new Models.PendingMessage
+    .Select(item => new Models.PendingMessageDto
     {
         Uuid = item.Uuid,
         Destination = item.Destination,

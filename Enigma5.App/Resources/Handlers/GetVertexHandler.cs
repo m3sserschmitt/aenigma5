@@ -24,20 +24,20 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class GetVertexHandler(Data.NetworkGraph graph)
-: IRequestHandler<GetVertexQuery, CommandResult<Models.Vertex>>
+: IRequestHandler<GetVertexQuery, CommandResult<Models.VertexDto>>
 {
     private readonly Data.NetworkGraph _graph = graph;
 
-    public async Task<CommandResult<Models.Vertex>> Handle(GetVertexQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<Models.VertexDto>> Handle(GetVertexQuery request, CancellationToken cancellationToken)
     {
         var vertex = await _graph.GetVertexAsync(request.Address, cancellationToken);
 
         if(vertex is null)
         {
-            return CommandResult.CreateResultSuccess<Models.Vertex>();
+            return CommandResult.CreateResultSuccess<Models.VertexDto>();
         }
 
-        return CommandResult.CreateResultSuccess(new Models.Vertex {
+        return CommandResult.CreateResultSuccess(new Models.VertexDto {
             PublicKey = vertex.PublicKey,
             SignedData = vertex.SignedData,
             Neighborhood = new(vertex.Neighborhood.Address, vertex.Neighborhood.Hostname, vertex.Neighborhood.OnionService, vertex.Neighborhood.Neighbors)

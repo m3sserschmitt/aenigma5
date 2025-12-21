@@ -48,12 +48,12 @@ internal static class HubConnectionExtensions
 
     internal static void ForwardMessageRouting(this ConnectionVector connection)
     {
-        connection.Forward<RoutingRequest>(nameof(IEnigmaHub.RouteMessage));
+        connection.Forward<RoutingRequestDto>(nameof(IEnigmaHub.RouteMessage));
     }
 
     internal static void ForwardBroadcasts(this ConnectionVector connection)
     {
-        connection.Forward<VertexBroadcastRequest>(nameof(IEnigmaHub.Broadcast));
+        connection.Forward<VertexBroadcastRequestDto>(nameof(IEnigmaHub.Broadcast));
     }
 
     internal static void ForwardCloseSignal(this ConnectionVector connection)

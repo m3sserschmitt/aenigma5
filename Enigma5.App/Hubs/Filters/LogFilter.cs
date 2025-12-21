@@ -58,7 +58,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );
-            return EmptyErrorResult.Create(InvocationErrors.INTERNAL_ERROR);
+            return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
         }
 
         if (!result.Success)

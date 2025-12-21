@@ -46,7 +46,7 @@ public partial class ApiTests : AppTestBase
         var result = await Api.GetInfo(_mediator);
 
         // Assert
-        var response = result as Ok<Models.ServerInfo>;
+        var response = result as Ok<Models.ServerInfoDto>;
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(StatusCodes.Status200OK);
         response.Value.Should().NotBeNull();
@@ -69,7 +69,7 @@ public partial class ApiTests : AppTestBase
         var result = await Api.PostShare(sharedDataCreate, _mediator);
 
         // Assert
-        var response = result as Ok<Models.SharedData>;
+        var response = result as Ok<Models.SharedDataDto>;
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(StatusCodes.Status200OK);
         response.Value.Should().NotBeNull();
@@ -84,7 +84,7 @@ public partial class ApiTests : AppTestBase
     {
         // Arrange
         var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
-        var request = new SharedDataCreate(PKey.PublicKey2, sharedDataCreate.SignedData);
+        var request = new SharedDataCreateDto(PKey.PublicKey2, sharedDataCreate.SignedData);
 
         // Act
         var result = await Api.PostShare(request, _mediator);
@@ -100,17 +100,17 @@ public partial class ApiTests : AppTestBase
     {
         // Arrange
         var sharedDataCreate = DataSeeder.ModelsFactory.CreateSharedDataCreate();
-        var request = new SharedDataCreate(sharedDataCreate.PublicKey, "invalid signed data");
+        var request = new SharedDataCreateDto(sharedDataCreate.PublicKey, "invalid signed data");
 
         // Act
         var result = await Api.PostShare(request, _mediator);
 
         // Assert
-        var response = result as BadRequest<HashSet<Error>>;
+        var response = result as BadRequest<HashSet<ErrorDto>>;
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
         response.Value.Should().HaveCount(1);
-        response.Value!.Single().Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        response.Value!.Single().Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public partial class ApiTests : AppTestBase
         var result = await Api.GetShare(testData!.Tag, _mediator);
 
         // Assert
-        var response = result as Ok<Models.SharedData>;
+        var response = result as Ok<Models.SharedDataDto>;
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(StatusCodes.Status200OK);
         response!.Value.Should().NotBeNull();
@@ -146,8 +146,8 @@ public partial class ApiTests : AppTestBase
         var result3 = await Api.GetShare(testData!.Tag, _mediator);
 
         // Assert
-        var response1 = result1 as Ok<Models.SharedData>;
-        var response2 = result2 as Ok<Models.SharedData>;
+        var response1 = result1 as Ok<Models.SharedDataDto>;
+        var response2 = result2 as Ok<Models.SharedDataDto>;
         var response3 = result3 as NotFound;
         response1.Should().NotBeNull();
         response2.Should().NotBeNull();
@@ -184,7 +184,7 @@ public partial class ApiTests : AppTestBase
         var result = await Api.GetVertices(_mediator);
 
         // Assert
-        var response = result as Ok<List<Models.Vertex>>;
+        var response = result as Ok<List<Models.VertexDto>>;
         response.Should().NotBeNull();
         response!.Value.Should().NotBeNull();
         response.Value!.Count.Should().Be(1);
@@ -206,7 +206,7 @@ public partial class ApiTests : AppTestBase
         var result = await Api.GetVertex(_certificateManager.Address, _mediator);
 
         // Assert
-        var response = result as Ok<Models.Vertex>;
+        var response = result as Ok<Models.VertexDto>;
         response.Should().NotBeNull();
         response!.Value.Should().NotBeNull();
         response.Value!.PublicKey.Should().Be(_certificateManager.PublicKey);

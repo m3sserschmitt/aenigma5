@@ -18,22 +18,30 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
 using Enigma5.App.Models.Contracts;
 using Enigma5.App.Models.Extensions;
 using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class TriggerBroadcastRequest(List<string>? newAddresses = null) : IValidatable
+[method: JsonConstructor]
+public class RoutingRequestDto(List<string?>? payloads = null, string? uuid = null) : IValidatable
 {
-    public List<string>? NewAddresses { get; set; } = newAddresses;
+    public List<string?>? Payloads { get; private set; } = payloads;
 
-    public HashSet<Error> Validate()
+    public string? Uuid { get; private set; } = uuid;
+
+    public HashSet<ErrorDto> Validate()
     {
-        var errors = new HashSet<Error>();
-        if(NewAddresses?.Any(item => !item.IsValidAddress()) ?? false)
+        var errors = new HashSet<ErrorDto>();
+        if(Payloads is null || Payloads.Count == 0)
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(NewAddresses));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Payloads));
+        }
+        else if(!Payloads.All(item => item.IsValidBase64()))
+        {
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
         }
         return errors;
     }

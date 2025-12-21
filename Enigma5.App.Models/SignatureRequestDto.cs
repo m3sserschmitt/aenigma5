@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,13 +18,29 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models.HubInvocation;
+using System.Text.Json.Serialization;
+using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
 
-public class SuccessResult<T> : InvocationResult<T>
+namespace Enigma5.App.Models;
+
+[method: JsonConstructor]
+public class SignatureRequestDto(string? nonce = null) : IValidatable
 {
-    public SuccessResult(T? data) : base(data) { }
+    public string? Nonce { get; set; } = nonce;
 
-    public SuccessResult() { }
-
-    public override bool Success => true;
+    public HashSet<ErrorDto> Validate()
+    {
+        var errors = new HashSet<ErrorDto>();
+        if(string.IsNullOrWhiteSpace(Nonce))
+        {
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Nonce));
+        }
+        else if(!Nonce.IsValidBase64())
+        {
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Nonce));
+        }
+        return errors;
+    }
 }

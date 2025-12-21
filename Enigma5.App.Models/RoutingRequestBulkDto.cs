@@ -3,20 +3,20 @@ using Enigma5.App.Models.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class RoutingRequestBulk(List<string?>? payloads = null): IValidatable
+public class RoutingRequestBulkDto(List<string?>? payloads = null): IValidatable
 {
     public List<string?>? Payloads { get; private set; } = payloads;
 
-    public HashSet<Error> Validate()
+    public HashSet<ErrorDto> Validate()
     {
-        var errors = new HashSet<Error>();
+        var errors = new HashSet<ErrorDto>();
         if(Payloads is null)
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Payloads));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Payloads));
         }
         if(Payloads?.Any(string.IsNullOrWhiteSpace) ?? false)
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
         }
         
         return errors;

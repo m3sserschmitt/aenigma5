@@ -126,8 +126,8 @@ public class HubConnectionsProxy(
             .Where(item => item.TargetPublicKey.IsValidPublicKey())
             .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToList();
             var result = _localHubConnection != null ?
-            await _localHubConnection.InvokeAsync<InvocationResult<bool>>(
-                nameof(IEnigmaHub.TriggerBroadcast), new TriggerBroadcastRequest(newAddresses), cancellationToken: cancellationToken
+            await _localHubConnection.InvokeAsync<InvocationResultDto<bool>>(
+                nameof(IEnigmaHub.TriggerBroadcast), new TriggerBroadcastRequestDto(newAddresses), cancellationToken: cancellationToken
             ) : null;
             return result?.Data ?? false;
         }

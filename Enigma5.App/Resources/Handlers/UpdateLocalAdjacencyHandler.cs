@@ -31,7 +31,7 @@ public class UpdateLocalAdjacencyHandler(
     NetworkGraph networkGraph,
     ICertificateManager certificateManager,
     ILogger<UpdateLocalAdjacencyHandler> logger)
-: IRequestHandler<UpdateLocalAdjacencyCommand, CommandResult<VertexBroadcastRequest>>
+: IRequestHandler<UpdateLocalAdjacencyCommand, CommandResult<VertexBroadcastRequestDto>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
@@ -39,11 +39,11 @@ public class UpdateLocalAdjacencyHandler(
 
     private readonly ILogger<UpdateLocalAdjacencyHandler> _logger = logger;
 
-    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<VertexBroadcastRequestDto>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
     {
         if(request.Addresses.Any(item => !item.IsValidAddress()))
         {
-            return CommandResult.CreateResultFailure<VertexBroadcastRequest>();
+            return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
         var (newLocalVertex, updated) = request.Add ?
@@ -52,15 +52,15 @@ public class UpdateLocalAdjacencyHandler(
 
         if(!updated)
         {
-            return CommandResult.CreateResultSuccess<VertexBroadcastRequest>();
+            return CommandResult.CreateResultSuccess<VertexBroadcastRequestDto>();
         }
 
         if(newLocalVertex.SignedData is null)
         {
             _logger.LogError("Local vertex has null signed data!");
-            return CommandResult.CreateResultFailure<VertexBroadcastRequest>();
+            return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        return CommandResult.CreateResultSuccess(new VertexBroadcastRequest(_certificateManager.PublicKey, newLocalVertex.SignedData));
+        return CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto(_certificateManager.PublicKey, newLocalVertex.SignedData));
     }
 }

@@ -26,7 +26,7 @@ using Enigma5.Crypto.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class SharedDataCreate(string? publicKey = null, string? signedData = null, int accessCount = 1): IValidatable
+public class SharedDataCreateDto(string? publicKey = null, string? signedData = null, int accessCount = 1): IValidatable
 {
     public string? PublicKey { get; private set; } = publicKey;
 
@@ -34,31 +34,31 @@ public class SharedDataCreate(string? publicKey = null, string? signedData = nul
 
     public int AccessCount { get; private set; } = accessCount;
 
-    public HashSet<Error> Validate()
+    public HashSet<ErrorDto> Validate()
     {
-        var errors = new HashSet<Error>();
+        var errors = new HashSet<ErrorDto>();
 
         if(string.IsNullOrWhiteSpace(PublicKey))
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
         else if(!PublicKey.IsValidPublicKey())
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
         }
 
         if(string.IsNullOrWhiteSpace(SignedData))
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(SignedData));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(SignedData));
         }
         else if(!SignedData.IsValidBase64())
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
         }
 
         if(AccessCount < 0)
         {
-            errors.AddError(ValidationErrors.INVALID_VALUE_FOR_PROPERTY, nameof(AccessCount));
+            errors.AddError(ValidationErrorsDto.INVALID_VALUE_FOR_PROPERTY, nameof(AccessCount));
         }
 
         return errors;

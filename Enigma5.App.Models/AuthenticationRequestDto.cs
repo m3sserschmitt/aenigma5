@@ -26,31 +26,31 @@ using Enigma5.Crypto.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class AuthenticationRequest(string? publicKey = null, string? signature = null): IValidatable
+public class AuthenticationRequestDto(string? publicKey = null, string? signature = null): IValidatable
 {
     public string? PublicKey { get; private set; } = publicKey;
 
     public string? Signature { get; private set; } = signature;
 
-    public HashSet<Error> Validate()
+    public HashSet<ErrorDto> Validate()
     {
-        var errors = new HashSet<Error>();
+        var errors = new HashSet<ErrorDto>();
         if(string.IsNullOrWhiteSpace(PublicKey))
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
         else if(!PublicKey.IsValidPublicKey())
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
         }
 
         if(string.IsNullOrWhiteSpace(Signature))
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Signature));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Signature));
         }
         else if(!Signature.IsValidBase64())
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Signature));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Signature));
         }
 
         return errors;

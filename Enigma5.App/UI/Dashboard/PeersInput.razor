@@ -43,9 +43,9 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 </div>
 
 @code {
-    [Parameter] public IEnumerable<Peer> Items { get; set; } = [];
-    [Parameter] public EventCallback<Peer> OnAddItem { get; set; } = default;
-    [Parameter] public EventCallback<Peer> OnRemoveItem { get; set; } = default;
+    [Parameter] public IEnumerable<PeerDto> Items { get; set; } = [];
+    [Parameter] public EventCallback<PeerDto> OnAddItem { get; set; } = default;
+    [Parameter] public EventCallback<PeerDto> OnRemoveItem { get; set; } = default;
 
     private string Host = string.Empty;
     private string Address = string.Empty;
@@ -56,7 +56,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         {
             return Task.CompletedTask;
         }
-        var newPeer = new Peer
+        var newPeer = new PeerDto
         {
             Host = Host,
             Address = Address

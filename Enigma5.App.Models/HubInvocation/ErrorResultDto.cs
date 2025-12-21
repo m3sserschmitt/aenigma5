@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,28 +18,20 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json.Serialization;
-
 namespace Enigma5.App.Models.HubInvocation;
 
-public class InvocationResult<T>
+public class ErrorResultDto<T> : InvocationResultDto<T>
 {
-    public InvocationResult(T? data)
+    public ErrorResultDto(T? data, HashSet<ErrorDto> errors) : base(data)
     {
-        Data = data;
-        Errors = [];
+        Errors = errors;
     }
 
-    public InvocationResult()
-    {
-        Data = default;
-        Errors = [];
-    }
+    public ErrorResultDto() { }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T? Data { get; set; }
+    public override bool Success => false;
 
-    public virtual bool Success { get; set; }
+    public static ErrorResultDto<T> Create(T? data, IEnumerable<string> errors) => new(data, [.. errors.Select(error => new ErrorDto(error))]);
 
-    public HashSet<Error> Errors { get; set; }
+    public static ErrorResultDto<T> Create(T? data, string error) => new(data, [new(error)]);
 }

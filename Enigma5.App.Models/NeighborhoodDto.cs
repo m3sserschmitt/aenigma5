@@ -26,7 +26,7 @@ using Enigma5.Crypto.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class Neighborhood(string? address = null, string? hostname = null, string? onionService = null, HashSet<string>? neighbors = null) : IValidatable
+public class NeighborhoodDto(string? address = null, string? hostname = null, string? onionService = null, HashSet<string>? neighbors = null) : IValidatable
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Address { get; private set; } = address;
@@ -40,26 +40,26 @@ public class Neighborhood(string? address = null, string? hostname = null, strin
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public HashSet<string>? Neighbors { get; private set; } = neighbors;
 
-    public HashSet<Error> Validate()
+    public HashSet<ErrorDto> Validate()
     {
-        var errors = new HashSet<Error>();
+        var errors = new HashSet<ErrorDto>();
 
         if (string.IsNullOrWhiteSpace(Address))
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Address));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Address));
         }
         else if (!Address.IsValidAddress())
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Address));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Address));
         }
 
         if (Neighbors is null)
         {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Neighbors));
+            errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Neighbors));
         }
         else if (Neighbors.Any(item => !item.IsValidAddress()))
         {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Neighbors));
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Neighbors));
         }
 
         return errors;

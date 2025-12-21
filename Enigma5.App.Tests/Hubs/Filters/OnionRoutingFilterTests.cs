@@ -57,7 +57,7 @@ public class OnionRoutingFilterTests : FiltersTestBase<OnionRoutingFilter>
 
         // Assert
         _hub.DestinationConnectionId.Should().BeNull();
-        var response = result as EmptyErrorResult;
+        var response = result as EmptyErrorResultDto;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_ROUTING_FAILED);

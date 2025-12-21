@@ -45,7 +45,7 @@ public class VertexBroadcastRequestTests
     public void ShouldNotValidateForNullPublicKey()
     {
         // Arrange
-        var request = new VertexBroadcastRequest(null, DataSeeder.ModelsFactory.VertexBroadcastRequest.SignedData);
+        var request = new VertexBroadcastRequestDto(null, DataSeeder.ModelsFactory.VertexBroadcastRequest.SignedData);
 
         // Act
         var result = request.Validate();
@@ -53,11 +53,11 @@ public class VertexBroadcastRequestTests
         // Assert
         result.Should().HaveCount(2);
         var firstError = result.First();
-        firstError.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        firstError.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         firstError.Properties.Should().HaveCount(1);
         firstError.Properties.Should().Contain(nameof(request.PublicKey));
         var lastError = result.Last();
-        lastError.Message.Should().Be(ValidationErrors.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED);
+        lastError.Message.Should().Be(ValidationErrorsDto.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED);
         lastError.Properties.Should().HaveCount(1);
         lastError.Properties.Should().Contain(nameof(request.SignedData));
     }
@@ -66,7 +66,7 @@ public class VertexBroadcastRequestTests
     public void ShouldNotValidateForInvalidPublicKey()
     {
         // Arrange
-        var request = new VertexBroadcastRequest("  --- invalid-public-key ---  ", DataSeeder.ModelsFactory.VertexBroadcastRequest.SignedData);
+        var request = new VertexBroadcastRequestDto("  --- invalid-public-key ---  ", DataSeeder.ModelsFactory.VertexBroadcastRequest.SignedData);
 
         // Act
         var result = request.Validate();
@@ -74,11 +74,11 @@ public class VertexBroadcastRequestTests
         // Assert
         result.Should().HaveCount(2);
         var firstError = result.First();
-        firstError.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        firstError.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         firstError.Properties.Should().HaveCount(1);
         firstError.Properties.Should().Contain(nameof(request.PublicKey));
         var lastError = result.Last();
-        lastError.Message.Should().Be(ValidationErrors.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED);
+        lastError.Message.Should().Be(ValidationErrorsDto.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED);
         lastError.Properties.Should().HaveCount(1);
         lastError.Properties.Should().Contain(nameof(request.SignedData));
     }
@@ -87,7 +87,7 @@ public class VertexBroadcastRequestTests
     public void ShouldNotValidateForInvalidSignedData()
     {
         // Arrange
-        var request = new VertexBroadcastRequest(PKey.PublicKey1, "invalid-signed-data");
+        var request = new VertexBroadcastRequestDto(PKey.PublicKey1, "invalid-signed-data");
 
         // Act
         var result = request.Validate();
@@ -95,7 +95,7 @@ public class VertexBroadcastRequestTests
         // Assert
         result.Should().HaveCount(1);
         var firstError = result.Single();
-        firstError.Message.Should().Be(ValidationErrors.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED);
+        firstError.Message.Should().Be(ValidationErrorsDto.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED);
         firstError.Properties.Should().HaveCount(1);
         firstError.Properties.Should().Contain(nameof(request.SignedData));
     }

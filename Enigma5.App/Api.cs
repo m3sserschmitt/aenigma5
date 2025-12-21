@@ -36,7 +36,7 @@ public static class Api
     }
 
     public static async Task<IResult> PostShare(
-        [FromBody] SharedDataCreate sharedDataCreate,
+        [FromBody] SharedDataCreateDto sharedDataCreate,
         [FromServices] IMediator commandRouter)
     {
         var errors = sharedDataCreate.Validate();

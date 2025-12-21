@@ -24,4 +24,4 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetServerInfoQuery : IRequest<CommandResult<ServerInfo>> { }
+public class GetServerInfoQuery : IRequest<CommandResult<ServerInfoDto>> { }

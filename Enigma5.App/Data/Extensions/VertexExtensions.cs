@@ -24,7 +24,7 @@ namespace Enigma5.App.Data.Extensions;
 
 public static class VertexExtensions
 {
-    public static VertexBroadcastRequest ToVertexBroadcast(this Vertex? vertex)
+    public static VertexBroadcastRequestDto ToVertexBroadcast(this Vertex? vertex)
     => new(vertex?.PublicKey ?? string.Empty, vertex?.SignedData ?? string.Empty);
 
     public static bool IsExpired(this Vertex? vertex, TimeSpan lifetime)

@@ -23,4 +23,4 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetPeersQuery : IRequest<CommandResult<List<Models.Peer>>> { }
+public class GetPeersQuery : IRequest<CommandResult<List<Models.PeerDto>>> { }

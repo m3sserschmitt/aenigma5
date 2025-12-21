@@ -36,7 +36,7 @@ public class LogFilterTests : FiltersTestBase<LogFilter>
     public async Task ShouldReturnSuccessResult()
     {
         // Arrange
-        var returnValue = new SuccessResult<string>("Success");
+        var returnValue = new SuccessResultDto<string>("Success");
         var valueTask = ValueTask.FromResult(returnValue);
         _next(_hubInvocationContext).Returns(returnValue);
         
@@ -44,7 +44,7 @@ public class LogFilterTests : FiltersTestBase<LogFilter>
         var result = await _filter.InvokeMethodAsync(_hubInvocationContext, _next);
 
         // Assert
-        var response = result as SuccessResult<string>;
+        var response = result as SuccessResultDto<string>;
         response.Should().NotBeNull();
         response!.Data.Should().Be(returnValue.Data);       
         await _next.Received(1)(_hubInvocationContext);
@@ -58,7 +58,7 @@ public class LogFilterTests : FiltersTestBase<LogFilter>
 
         // Act
         var result = await _filter.InvokeMethodAsync(_hubInvocationContext, _next);
-        var response = result as EmptyErrorResult;
+        var response = result as EmptyErrorResultDto;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
@@ -69,7 +69,7 @@ public class LogFilterTests : FiltersTestBase<LogFilter>
     public async Task ShouldReturnErrorResult()
     {
         // Arrange
-        var returnValue = new ErrorResult<string>("Failure", [ new("Error message") ]);
+        var returnValue = new ErrorResultDto<string>("Failure", [ new("Error message") ]);
         var valueTask = ValueTask.FromResult(returnValue);
         _next(_hubInvocationContext).Returns(returnValue);
         
@@ -77,7 +77,7 @@ public class LogFilterTests : FiltersTestBase<LogFilter>
         var result = await _filter.InvokeMethodAsync(_hubInvocationContext, _next);
 
         // Assert
-        var response = result as ErrorResult<string>;
+        var response = result as ErrorResultDto<string>;
         response.Should().NotBeNull();
         response!.Data.Should().Be(returnValue.Data);
         response.Errors.Should().HaveCount(1);

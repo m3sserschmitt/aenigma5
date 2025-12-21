@@ -42,7 +42,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 </div>
 
 @code {
-    private IEnumerable<Peer> Peers = [];
+    private IEnumerable<PeerDto> Peers = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,7 +59,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task SubmitNewPeer(Peer peer)
+    private async Task SubmitNewPeer(PeerDto peer)
     {
         if (string.IsNullOrWhiteSpace(peer.Host) || string.IsNullOrWhiteSpace(peer.Address))
         {
@@ -72,7 +72,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         }
     }
 
-    private async Task RemovePeer(Peer peer)
+    private async Task RemovePeer(PeerDto peer)
     {
         var result = await Mediator.Send(new RemovePeerCommand(peer.Id));
         if (result.IsSuccessNotNullResultValue())

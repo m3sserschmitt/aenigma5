@@ -24,7 +24,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetSharedDataQuery(string tag) : IRequest<CommandResult<SharedData>>
+public class GetSharedDataQuery(string tag) : IRequest<CommandResult<SharedDataDto>>
 {
     public string Tag { get; private set; } = tag;
 }

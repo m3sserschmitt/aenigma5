@@ -26,12 +26,12 @@ using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-public class VertexBroadcastRequest : IValidatable
+public class VertexBroadcastRequestDto : IValidatable
 {
     private string? _signedData;
 
     [JsonIgnore]
-    public Neighborhood Neighborhood { get; private set; } = new();
+    public NeighborhoodDto Neighborhood { get; private set; } = new();
 
     public string? PublicKey { get; private set; }
 
@@ -48,7 +48,7 @@ public class VertexBroadcastRequest : IValidatable
                 var decodedData = Convert.FromBase64String(value);
                 var adjacencyList = decodedData.GetStringDataFromSignature(PublicKey) ?? throw new Exception();
 
-                Neighborhood = JsonSerializer.Deserialize<Neighborhood>(adjacencyList) ?? throw new Exception();
+                Neighborhood = JsonSerializer.Deserialize<NeighborhoodDto>(adjacencyList) ?? throw new Exception();
                 _signedData = value;
             }
             catch (Exception)
@@ -60,28 +60,28 @@ public class VertexBroadcastRequest : IValidatable
     }
 
     [method: JsonConstructor]
-    public VertexBroadcastRequest(string? publicKey = null, string? signedData = null)
+    public VertexBroadcastRequestDto(string? publicKey = null, string? signedData = null)
     {
         PublicKey = publicKey;
         SignedData = signedData;
     }
 
-    public HashSet<Error> Validate()
+    public HashSet<ErrorDto> Validate()
     {
-        var validationResults = new HashSet<Error>();
+        var validationResults = new HashSet<ErrorDto>();
 
         if (string.IsNullOrWhiteSpace(PublicKey))
         {
-            validationResults.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
+            validationResults.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(PublicKey));
         }
         else if (!PublicKey.IsValidPublicKey())
         {
-            validationResults.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
+            validationResults.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(PublicKey));
         }
 
         if (string.IsNullOrEmpty(_signedData))
         {
-            validationResults.AddError(ValidationErrors.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED, nameof(SignedData));
+            validationResults.AddError(ValidationErrorsDto.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED, nameof(SignedData));
         }
         else
         {

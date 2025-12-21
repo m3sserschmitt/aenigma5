@@ -18,6 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.App.Models;
+using Enigma5.App.Models.HubInvocation;
+using Enigma5.Security.Contracts;
+using Microsoft.AspNetCore.SignalR.Client;
+
 namespace Enigma5.Security.Extensions;
 
 public static class HubConnectionExtensions
@@ -29,7 +35,7 @@ public static class HubConnectionExtensions
     {
         try
         {
-            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
+            var nonce = await connection.InvokeAsync<InvocationResultDto<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
 
             if (!nonce.Success || nonce.Data is null)
             {
@@ -44,9 +50,9 @@ public static class HubConnectionExtensions
                 return false;
             }
 
-            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(
+            var authentication = await connection.InvokeAsync<InvocationResultDto<bool>>(
                 nameof(IEnigmaHub.Authenticate),
-                new AuthenticationRequest(certificateManager.PublicKey, Convert.ToBase64String(data)),
+                new AuthenticationRequestDto(certificateManager.PublicKey, Convert.ToBase64String(data)),
                 cancellationToken);
 
             return authentication.Success && authentication.Data;

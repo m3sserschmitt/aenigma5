@@ -30,7 +30,7 @@ public class RoutingRequestTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new RoutingRequest(["dGVzdC1zdHJpbmc="]);
+        var request = new RoutingRequestDto(["dGVzdC1zdHJpbmc="]);
 
         // Act
         var result = request.Validate();
@@ -43,7 +43,7 @@ public class RoutingRequestTests
     public void ShouldNotValidateNullPayload()
     {
         // Arrange
-        var request = new RoutingRequest(null);
+        var request = new RoutingRequestDto(null);
 
         // Act
         var result = request.Validate();
@@ -51,7 +51,7 @@ public class RoutingRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
         error.Properties!.Single().Should().Be(nameof(request.Payloads));
     }
@@ -60,7 +60,7 @@ public class RoutingRequestTests
     public void ShouldNotValidateEmptyPayload()
     {
         // Arrange
-        var request = new RoutingRequest([]);
+        var request = new RoutingRequestDto([]);
 
         // Act
         var result = request.Validate();
@@ -68,7 +68,7 @@ public class RoutingRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
         error.Properties!.Single().Should().Be(nameof(request.Payloads));
     }
@@ -77,7 +77,7 @@ public class RoutingRequestTests
     public void ShouldNotValidateInvalidBase64()
     {
         // Arrange
-        var request = new RoutingRequest(["invalid-base64"]);
+        var request = new RoutingRequestDto(["invalid-base64"]);
 
         // Act
         var result = request.Validate();
@@ -85,7 +85,7 @@ public class RoutingRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties!.Single().Should().Be(nameof(request.Payloads));
     }

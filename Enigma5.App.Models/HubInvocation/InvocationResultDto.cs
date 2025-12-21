@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -20,15 +20,26 @@
 
 using System.Text.Json.Serialization;
 
-namespace Enigma5.App.Models;
+namespace Enigma5.App.Models.HubInvocation;
 
-public class Vertex
+public class InvocationResultDto<T>
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PublicKey { get; set; }
+    public InvocationResultDto(T? data)
+    {
+        Data = data;
+        Errors = [];
+    }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SignedData { get; set; }
+    public InvocationResultDto()
+    {
+        Data = default;
+        Errors = [];
+    }
 
-    public Neighborhood? Neighborhood { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public T? Data { get; set; }
+
+    public virtual bool Success { get; set; }
+
+    public HashSet<ErrorDto> Errors { get; set; }
 }

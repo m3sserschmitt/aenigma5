@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -19,30 +19,16 @@
 */
 
 using System.Text.Json.Serialization;
-using Enigma5.App.Models.Contracts;
-using Enigma5.App.Models.Extensions;
-using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.App.Models;
 
-[method: JsonConstructor]
-public class RoutingRequest(List<string?>? payloads = null, string? uuid = null) : IValidatable
+public class VertexDto
 {
-    public List<string?>? Payloads { get; private set; } = payloads;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PublicKey { get; set; }
 
-    public string? Uuid { get; private set; } = uuid;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SignedData { get; set; }
 
-    public HashSet<Error> Validate()
-    {
-        var errors = new HashSet<Error>();
-        if(Payloads is null || Payloads.Count == 0)
-        {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Payloads));
-        }
-        else if(!Payloads.All(item => item.IsValidBase64()))
-        {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
-        }
-        return errors;
-    }
+    public NeighborhoodDto? Neighborhood { get; set; }
 }

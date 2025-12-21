@@ -18,15 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models.HubInvocation;
+namespace Enigma5.App.Models;
 
-public class EmptyErrorResult : ErrorResult<object>
+public class PeerDto
 {
-    public EmptyErrorResult(HashSet<Error> errors) : base(null, errors) { }
+    public long Id { get; set; }
 
-    public EmptyErrorResult() : base() { }
+    public string? Host { get; set; }
 
-    public static EmptyErrorResult Create(List<string> errors) => new([.. errors.Select(error => new Error(error))]);
-
-    public static EmptyErrorResult Create(string error) => Create([error]);
+    public string? Address { get; set; }
 }

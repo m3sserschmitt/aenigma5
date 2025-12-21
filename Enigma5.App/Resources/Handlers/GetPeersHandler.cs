@@ -25,13 +25,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetPeersHandler(EnigmaDbContext dbContext) : IRequestHandler<GetPeersQuery, CommandResult<List<Models.Peer>>>
+public class GetPeersHandler(EnigmaDbContext dbContext) : IRequestHandler<GetPeersQuery, CommandResult<List<Models.PeerDto>>>
 {
     private readonly EnigmaDbContext _dbContext = dbContext;
 
-    public async Task<CommandResult<List<Models.Peer>>> Handle(GetPeersQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<List<Models.PeerDto>>> Handle(GetPeersQuery request, CancellationToken cancellationToken)
     => CommandResult.CreateResultSuccess(await _dbContext.Peers.Select(
-        item => new Models.Peer
+        item => new Models.PeerDto
         {
             Id = item.Id,
             Address = item.Address,

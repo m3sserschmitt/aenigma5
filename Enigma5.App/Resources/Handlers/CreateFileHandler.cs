@@ -26,18 +26,18 @@ using MediatR;
 namespace Enigma5.App.Resources.Handlers;
 
 public class CreateFileHandler(EnigmaDbContext context, IConfiguration configuration)
-    : IRequestHandler<CreateFileCommand, CommandResult<Models.SharedData>>
+    : IRequestHandler<CreateFileCommand, CommandResult<Models.SharedDataDto>>
 {
     private readonly EnigmaDbContext _context = context;
 
     private readonly IConfiguration _configuration = configuration;
 
-    public async Task<CommandResult<Models.SharedData>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<Models.SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
     {
         var webContentDirectory = _configuration.GetWebContentDirectory();
         if (webContentDirectory == null || request.File == null || request.File.Length == 0)
         {
-            return CommandResult.CreateResultFailure<Models.SharedData>();
+            return CommandResult.CreateResultFailure<Models.SharedDataDto>();
         }
 
         if (!string.IsNullOrEmpty(webContentDirectory) && !Directory.Exists(webContentDirectory))
@@ -58,7 +58,7 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
         await request.File.CopyToAsync(stream, cancellationToken);
 
         var hostname = _configuration.GetHostname();
-        return CommandResult.CreateResultSuccess(new Models.SharedData
+        return CommandResult.CreateResultSuccess(new Models.SharedDataDto
         {
             Tag = record.Tag,
             ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.FileEndpoint}?Tag={record.Tag}" : null,

@@ -60,6 +60,6 @@ public class OnionRoutingFilter(ISessionManager sessionManager, ILogger<OnionRou
         }
 
         _logger.LogDebug($"Onion null next address for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.", invocationContext.Context.ConnectionId);
-        return EmptyErrorResult.Create(InvocationErrors.ONION_ROUTING_FAILED);
+        return EmptyErrorResultDto.Create(InvocationErrors.ONION_ROUTING_FAILED);
     }
 }

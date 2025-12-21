@@ -23,7 +23,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class AddPeerCommand(string host, string address): IRequest<CommandResult<Models.Peer>>
+public class AddPeerCommand(string host, string address): IRequest<CommandResult<Models.PeerDto>>
 {
     public string Host { get; private set; } = host;
 

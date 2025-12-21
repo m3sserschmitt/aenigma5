@@ -27,14 +27,13 @@ using Enigma5.App.Resources.Queries;
 using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class GetServerInfoHandler(
     NetworkGraph graph,
     IConfiguration configuration,
-    ICertificateManager certificateManager) : IRequestHandler<GetServerInfoQuery, CommandResult<ServerInfo>>
+    ICertificateManager certificateManager) : IRequestHandler<GetServerInfoQuery, CommandResult<ServerInfoDto>>
 {
     private readonly NetworkGraph _graph = graph;
 
@@ -42,13 +41,13 @@ public class GetServerInfoHandler(
 
     private readonly IConfiguration _configuration = configuration;
 
-    public Task<CommandResult<ServerInfo>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
+    public Task<CommandResult<ServerInfoDto>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
     {
         var serializedGraph = JsonSerializer.Serialize(_graph.Vertices);
         var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
 
         return Task.FromResult(CommandResult.CreateResultSuccess(
-            new ServerInfo
+            new ServerInfoDto
             {
                 PublicKey = _certificateManager.PublicKey,
                 Address = _certificateManager.Address,

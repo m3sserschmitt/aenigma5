@@ -52,7 +52,7 @@ public class AuthorizedServiceOnlyFilter(
         if (!_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
         {
             _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-            return EmptyErrorResult.Create(InvocationErrors.NOT_AUTHORIZED);
+            return EmptyErrorResultDto.Create(InvocationErrors.NOT_AUTHORIZED);
         }
         if (address != _certificateManager.Address)
         {
@@ -60,7 +60,7 @@ public class AuthorizedServiceOnlyFilter(
             if (!result.IsSuccessResult())
             {
                 _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-                return EmptyErrorResult.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
+                return EmptyErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
             }
         }
 

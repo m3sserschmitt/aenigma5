@@ -26,13 +26,13 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<AddPeerCommand, CommandResult<Models.Peer>>
+public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<AddPeerCommand, CommandResult<Models.PeerDto>>
 {
     private readonly EnigmaDbContext _dbContext = dbContext;
 
     private readonly IMediator _mediator = mediator;
 
-    public async Task<CommandResult<Models.Peer>> Handle(AddPeerCommand request, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<Models.PeerDto>> Handle(AddPeerCommand request, CancellationToken cancellationToken = default)
     {
         if(!request.Address.IsValidAddress() || !request.Host.IsValidOnionAddress())
         {
@@ -46,7 +46,7 @@ public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRe
         await _dbContext.AddAsync(peer, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-        return CommandResult.CreateResultSuccess(new Models.Peer
+        return CommandResult.CreateResultSuccess(new Models.PeerDto
         {
             Id = peer.Id,
             Host = peer.Host,

@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,15 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models;
+namespace Enigma5.App.Models.HubInvocation;
 
-public static class ValidationErrors
+public class EmptyErrorResultDto : ErrorResultDto<object>
 {
-    public static readonly string NULL_REQUIRED_PROPERTIES = "One or more required properties not provided.";
+    public EmptyErrorResultDto(HashSet<ErrorDto> errors) : base(null, errors) { }
 
-    public static  readonly string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
+    public EmptyErrorResultDto() : base() { }
 
-    public static readonly string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";
+    public static EmptyErrorResultDto Create(List<string> errors) => new([.. errors.Select(error => new ErrorDto(error))]);
 
-    public static readonly string INVALID_VALUE_FOR_PROPERTY = "One or more properties have invalid values.";
+    public static EmptyErrorResultDto Create(string error) => Create([error]);
 }

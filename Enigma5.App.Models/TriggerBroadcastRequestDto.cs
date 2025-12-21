@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,13 +18,23 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto.Extensions;
+
 namespace Enigma5.App.Models;
 
-public class Peer
+public class TriggerBroadcastRequestDto(List<string>? newAddresses = null) : IValidatable
 {
-    public long Id { get; set; }
+    public List<string>? NewAddresses { get; set; } = newAddresses;
 
-    public string? Host { get; set; }
-
-    public string? Address { get; set; }
+    public HashSet<ErrorDto> Validate()
+    {
+        var errors = new HashSet<ErrorDto>();
+        if(NewAddresses?.Any(item => !item.IsValidAddress()) ?? false)
+        {
+            errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(NewAddresses));
+        }
+        return errors;
+    }
 }

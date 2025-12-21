@@ -48,7 +48,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
                 );
-            return EmptyErrorResult.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+            return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
         }
 
         var errors = data.Validate();
@@ -61,7 +61,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
                 );
-            return new EmptyErrorResult(errors);
+            return new EmptyErrorResultDto(errors);
         }
 
         _logger.LogDebug(

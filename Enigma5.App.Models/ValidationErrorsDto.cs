@@ -18,29 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json.Serialization;
-using Enigma5.App.Models.Contracts;
-using Enigma5.App.Models.Extensions;
-using Enigma5.Crypto.Extensions;
-
 namespace Enigma5.App.Models;
 
-[method: JsonConstructor]
-public class SignatureRequest(string? nonce = null) : IValidatable
+public static class ValidationErrorsDto
 {
-    public string? Nonce { get; set; } = nonce;
+    public static readonly string NULL_REQUIRED_PROPERTIES = "One or more required properties not provided.";
 
-    public HashSet<Error> Validate()
-    {
-        var errors = new HashSet<Error>();
-        if(string.IsNullOrWhiteSpace(Nonce))
-        {
-            errors.AddError(ValidationErrors.NULL_REQUIRED_PROPERTIES, nameof(Nonce));
-        }
-        else if(!Nonce.IsValidBase64())
-        {
-            errors.AddError(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Nonce));
-        }
-        return errors;
-    }
+    public static  readonly string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
+
+    public static readonly string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";
+
+    public static readonly string INVALID_VALUE_FOR_PROPERTY = "One or more properties have invalid values.";
 }

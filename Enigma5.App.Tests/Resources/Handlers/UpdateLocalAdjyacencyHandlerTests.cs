@@ -56,7 +56,7 @@ public class UpdateLocalAdjacencyHandlerTests : AppTestBase
         localVertex.SignedData.Should().NotBeEmpty();
         localVertex.Neighborhood.Address.Should().Be(_certificateManager.Address);
         localVertex.Neighborhood.Neighbors.Should().HaveCount(1).And.Contain(PKey.Address1);
-        broadcast.Should().NotBeNull().And.BeOfType<VertexBroadcastRequest>();
+        broadcast.Should().NotBeNull().And.BeOfType<VertexBroadcastRequestDto>();
         broadcast!.SignedData.Should().NotBeEmpty();
         broadcast.PublicKey.Should().Be(_certificateManager.PublicKey);
         broadcast.SignedData.Should().Be(localVertex.SignedData);

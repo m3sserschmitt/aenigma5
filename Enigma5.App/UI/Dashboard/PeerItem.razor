@@ -35,8 +35,8 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 </div>
 
 @code {
-    [Parameter] public required Peer Model { get; set; }
-    [Parameter] public EventCallback<Peer> OnRemove { get; set; } = default;
+    [Parameter] public required PeerDto Model { get; set; }
+    [Parameter] public EventCallback<PeerDto> OnRemove { get; set; } = default;
 
     private Task Remove() => OnRemove.InvokeAsync(Model);
 }

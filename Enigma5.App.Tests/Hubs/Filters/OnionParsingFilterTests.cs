@@ -40,7 +40,7 @@ public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
         // Arrange
         var data = new byte[] { 0x01, 0x02, 0x03, 0x04 };
         var onion = DataSeeder.ModelsFactory.CreateOnion(data);
-        _hubMethodArguments[0].Returns(new RoutingRequest([onion!]));
+        _hubMethodArguments[0].Returns(new RoutingRequestDto([onion!]));
 
         // Act
         await _filter.Handle(_hubInvocationContext, _next);
@@ -55,7 +55,7 @@ public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
     public async Task ShouldNotParseInvalidOnionReturnsError()
     {
         // Arrange
-        _hubMethodArguments[0].Returns(new RoutingRequest(["invalid-onion"]));
+        _hubMethodArguments[0].Returns(new RoutingRequestDto(["invalid-onion"]));
 
         // Act
         var result = await _filter.Handle(_hubInvocationContext, _next);
@@ -63,7 +63,7 @@ public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
         // Assert
         _hub.Next.Should().BeNull();
         _hub.Content.Should().BeNull();
-        var response = result as EmptyErrorResult;
+        var response = result as EmptyErrorResultDto;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.ONION_PARSING_FAILED);
@@ -82,7 +82,7 @@ public class OnionParsingFilterTests : FiltersTestBase<OnionParsingFilter>
         // Assert
         _hub.Next.Should().BeNull();
         _hub.Content.Should().BeNull();
-        var response = result as EmptyErrorResult;
+        var response = result as EmptyErrorResultDto;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_INVOCATION_DATA);

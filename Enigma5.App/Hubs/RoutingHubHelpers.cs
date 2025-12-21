@@ -56,7 +56,7 @@ public partial class RoutingHub
                     .SingleOrDefault()
                     ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
 
-            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequest([Convert.ToBase64String(data)], uuid));
+            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequestDto([Convert.ToBase64String(data)], uuid));
             return true;
         }
         catch (Exception ex)
@@ -68,14 +68,14 @@ public partial class RoutingHub
         }
     }
 
-    private async Task<VertexBroadcastRequest?> AddNewAdjacencies(List<string> addresses)
+    private async Task<VertexBroadcastRequestDto?> AddNewAdjacencies(List<string> addresses)
     => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, true))).Value;
 
 
-    private async Task<VertexBroadcastRequest?> RemoveAdjacencies(List<string> addresses)
+    private async Task<VertexBroadcastRequestDto?> RemoveAdjacencies(List<string> addresses)
     => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, false))).Value;
 
-    private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequest> adjacencyLists)
+    private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
     {
         foreach (var address in _networkGraph.NeighboringAddresses)
         {
@@ -89,7 +89,7 @@ public partial class RoutingHub
         }
     }
 
-    private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcastRequest> adjacencyLists)
+    private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
     {
         return (await Task.WhenAll(GenerateBroadcastTask(adjacencyLists))).All(success => success);
     }
@@ -111,19 +111,19 @@ public partial class RoutingHub
         return CommandResult.CreateResultFailure<Data.PendingMessage>();
     }
 
-    private async Task<bool> SendBroadcast(VertexBroadcastRequest adjacencyLists)
+    private async Task<bool> SendBroadcast(VertexBroadcastRequestDto adjacencyLists)
     => await SendBroadcast([adjacencyLists]);
 
-    private static InvocationResult<T> Ok<T>(T response) => new SuccessResult<T>(response);
+    private static InvocationResultDto<T> Ok<T>(T response) => new SuccessResultDto<T>(response);
 
-    private static Task<InvocationResult<T>> OkAsync<T>(T response) => Task.FromResult(Ok(response));
+    private static Task<InvocationResultDto<T>> OkAsync<T>(T response) => Task.FromResult(Ok(response));
 
-    private static InvocationResult<T> Error<T>(T? response, string error) => ErrorResult<T>.Create(response, error);
+    private static InvocationResultDto<T> Error<T>(T? response, string error) => ErrorResultDto<T>.Create(response, error);
 
-    private static Task<InvocationResult<T>> ErrorAsync<T>(T? response, string error) => Task.FromResult(Error(response, error));
+    private static Task<InvocationResultDto<T>> ErrorAsync<T>(T? response, string error) => Task.FromResult(Error(response, error));
 
-    private static InvocationResult<T> Error<T>(string error) => Error<T>(default, error);
+    private static InvocationResultDto<T> Error<T>(string error) => Error<T>(default, error);
 
-    private static Task<InvocationResult<T>> ErrorAsync<T>(string error)
+    private static Task<InvocationResultDto<T>> ErrorAsync<T>(string error)
     => Task.FromResult(Error<T>(error));
 }

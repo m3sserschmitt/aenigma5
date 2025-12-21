@@ -22,23 +22,23 @@ namespace Enigma5.App.Models.Extensions;
 
 public static class ErrorsListExtensions
 {
-    public static void AddError(this HashSet<Error> errors, string message, string? property = null)
+    public static void AddError(this HashSet<ErrorDto> errors, string message, string? property = null)
     {
-        if(property is not null && errors.TryGetValue(new Error(message), out Error? actualError) && actualError.Properties is not null)
+        if(property is not null && errors.TryGetValue(new ErrorDto(message), out ErrorDto? actualError) && actualError.Properties is not null)
         {
             actualError.Properties.Add(property);
         }
         else if(property is not null)
         {
-            errors.Add(new Error(message, [ property ]));
+            errors.Add(new ErrorDto(message, [ property ]));
         }
         else
         {
-            errors.Add(new Error(message));
+            errors.Add(new ErrorDto(message));
         }
     }
 
-    public static void AddErrors(this HashSet<Error> errors, HashSet<Error> errorsToAdd)
+    public static void AddErrors(this HashSet<ErrorDto> errors, HashSet<ErrorDto> errorsToAdd)
     {
         foreach(var errorToAdd in errorsToAdd)
         {

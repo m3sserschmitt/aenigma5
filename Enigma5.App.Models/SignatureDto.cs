@@ -20,15 +20,9 @@
 
 namespace Enigma5.App.Models;
 
-public class PendingMessage
+public class SignatureDto(string signedData, string publicKey)
 {
-    public string? Uuid { get; set; }
-    
-    public string? Destination { get; set; }
+    public string SignedData { get; set; } = signedData;
 
-    public string? Content { get; set; }
-
-    public DateTimeOffset DateReceived { get; set; }
-
-    public bool Sent { get; set; }
+    public string PublicKey { get; set; } = publicKey;
 }

@@ -21,28 +21,27 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Resources.Queries;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetFileHandler(IConfiguration configuration) : IRequestHandler<GetFileQuery, CommandResult<Models.SharedData>>
+public class GetFileHandler(IConfiguration configuration) : IRequestHandler<GetFileQuery, CommandResult<Models.SharedDataDto>>
 {
     private readonly IConfiguration _configuration = configuration;
 
-    public Task<CommandResult<Models.SharedData>> Handle(GetFileQuery request, CancellationToken cancellationToken)
+    public Task<CommandResult<Models.SharedDataDto>> Handle(GetFileQuery request, CancellationToken cancellationToken)
     {
         var webContentDirectory = _configuration.GetWebContentDirectory();
         if (string.IsNullOrEmpty(webContentDirectory) || !Directory.Exists(webContentDirectory))
         {
-            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedData>());
+            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedDataDto>());
         }
         var fullPath = Path.Combine(webContentDirectory, request.Tag);
         if (!File.Exists(fullPath))
         {
-            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedData>());
+            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedDataDto>());
         }
 
-        return Task.FromResult(CommandResult.CreateResultSuccess(new Models.SharedData
+        return Task.FromResult(CommandResult.CreateResultSuccess(new Models.SharedDataDto
         {
             Tag = request.Tag,
             File = new FileStream(fullPath, FileMode.Open, FileAccess.Read)

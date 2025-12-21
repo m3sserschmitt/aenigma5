@@ -31,7 +31,7 @@ public class SharedDataCreateTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new SharedDataCreate(PKey.PublicKey1, "dGVzdC1zdHJpbmc=");
+        var request = new SharedDataCreateDto(PKey.PublicKey1, "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -44,7 +44,7 @@ public class SharedDataCreateTests
     public void ShouldNotValidateForNullPublicKey()
     {
         // Arrange
-        var request = new SharedDataCreate(null, "dGVzdC1zdHJpbmc=");
+        var request = new SharedDataCreateDto(null, "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -52,7 +52,7 @@ public class SharedDataCreateTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.PublicKey));
     }
@@ -61,7 +61,7 @@ public class SharedDataCreateTests
     public void ShouldNotValidateForInvalidPublicKey()
     {
         // Arrange
-        var request = new SharedDataCreate("--- invalid-public-key ---", "dGVzdC1zdHJpbmc=");
+        var request = new SharedDataCreateDto("--- invalid-public-key ---", "dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -69,7 +69,7 @@ public class SharedDataCreateTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.PublicKey));
     }
@@ -78,7 +78,7 @@ public class SharedDataCreateTests
     public void ShouldNotValidateForNullSignedData()
     {
         // Arrange
-        var request = new SharedDataCreate(PKey.PublicKey1, null);
+        var request = new SharedDataCreateDto(PKey.PublicKey1, null);
 
         // Act
         var result = request.Validate();
@@ -86,7 +86,7 @@ public class SharedDataCreateTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.SignedData));
     }
@@ -95,7 +95,7 @@ public class SharedDataCreateTests
     public void ShouldNotValidateForInvalidSignedData()
     {
         // Arrange
-        var request = new SharedDataCreate(PKey.PublicKey1, "invalid-signed-data");
+        var request = new SharedDataCreateDto(PKey.PublicKey1, "invalid-signed-data");
 
         // Act
         var result = request.Validate();
@@ -103,7 +103,7 @@ public class SharedDataCreateTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.SignedData));
     }
@@ -112,7 +112,7 @@ public class SharedDataCreateTests
     public void ShouldNotValidateForInvalidAccessCount()
     {
         // Arrange
-        var request = new SharedDataCreate(PKey.PublicKey1, "dGVzdC1zdHJpbmc=", -4);
+        var request = new SharedDataCreateDto(PKey.PublicKey1, "dGVzdC1zdHJpbmc=", -4);
 
         // Act
         var result = request.Validate();
@@ -120,7 +120,7 @@ public class SharedDataCreateTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.INVALID_VALUE_FOR_PROPERTY);
+        error.Message.Should().Be(ValidationErrorsDto.INVALID_VALUE_FOR_PROPERTY);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.AccessCount));
     }

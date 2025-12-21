@@ -25,19 +25,19 @@ namespace Enigma5.App.Common.Contracts.Hubs;
 
 public interface IEnigmaHub
 {
-    Task<InvocationResult<string>> GenerateToken();
+    Task<InvocationResultDto<string>> GenerateToken();
 
-    Task<InvocationResult<List<PendingMessage>>> Pull();
+    Task<InvocationResultDto<List<PendingMessageDto>>> Pull();
 
-    Task<InvocationResult<bool>> Cleanup();
+    Task<InvocationResultDto<bool>> Cleanup();
 
-    Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request);
+    Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request);
 
-    Task<InvocationResult<Signature>> SignToken(SignatureRequest request);
+    Task<InvocationResultDto<SignatureDto>> SignToken(SignatureRequestDto request);
 
-    Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest request);
+    Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto request);
 
-    Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request);
+    Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request);
 
-    Task<InvocationResult<bool>> RouteMessage(RoutingRequest request);
+    Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request);
 }

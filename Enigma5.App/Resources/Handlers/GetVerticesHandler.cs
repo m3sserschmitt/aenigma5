@@ -23,13 +23,13 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<Models.Vertex>>>
+public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<Models.VertexDto>>>
 {
     private readonly Data.NetworkGraph _graph = graph;
 
-    public Task<CommandResult<List<Models.Vertex>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    public Task<CommandResult<List<Models.VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
     { 
-        var vertices = _graph.NonLeafVertices.Select(item => new Models.Vertex {
+        var vertices = _graph.NonLeafVertices.Select(item => new Models.VertexDto {
             PublicKey = item.PublicKey,
             SignedData = item.SignedData,
             Neighborhood = new(item.Neighborhood.Address, item.Neighborhood.Hostname, item.Neighborhood.OnionService, item.Neighborhood.Neighbors)

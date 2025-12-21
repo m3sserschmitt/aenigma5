@@ -60,7 +60,7 @@ public class Program
         {
             var client = new HttpClient();
             var response = await client.GetAsync(url);
-            return (await response.Content.ReadFromJsonAsync<ServerInfo>())?.PublicKey;
+            return (await response.Content.ReadFromJsonAsync<ServerInfoDto>())?.PublicKey;
         }
         catch (Exception ex)
         {
@@ -74,18 +74,18 @@ public class Program
     {
         if (!invocationResponse.Success)
         {
-            var errors = invocationResponse.Errors as List<Error>;
+            var errors = invocationResponse.Errors as List<ErrorDto>;
             throw new Exception($"{methodName} method invocation failed; errors: {string.Join(", ", errors?.Select(error => error.Message) ?? [])}");
         }
     }
 
-    private static VertexBroadcastRequest CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
+    private static VertexBroadcastRequestDto CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
     {
-        var neighborhood = new Neighborhood(localAddress, null, null, [serverAddress]);
+        var neighborhood = new NeighborhoodDto(localAddress, null, null, [serverAddress]);
         var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
         using var envelope = SealProvider.Factory.CreateSigner(privateKey, Encoding.UTF8.GetBytes(passphrase) ?? []);
         var signature = envelope.Sign(serializedNeighborhood);
-        return new VertexBroadcastRequest(publicKey, Convert.ToBase64String(signature!));
+        return new VertexBroadcastRequestDto(publicKey, Convert.ToBase64String(signature!));
     }
 
     public static async Task Main(string[] args)
@@ -125,7 +125,7 @@ public class Program
             })
             .Build();
 
-        connection.On<RoutingRequest>(nameof(IEnigmaHub.RouteMessage), message =>
+        connection.On<RoutingRequestDto>(nameof(IEnigmaHub.RouteMessage), message =>
         {
             foreach (var payload in message.Payloads ?? [])
             {
@@ -136,7 +136,7 @@ public class Program
             }
         });
 
-        connection.On<List<PendingMessage>>("Synchronize", messages =>
+        connection.On<List<PendingMessageDto>>("Synchronize", messages =>
         {
             foreach (var message in messages)
             {
@@ -149,18 +149,18 @@ public class Program
 
         await connection.StartAsync();
 
-        var tokenResult = await connection.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken));
+        var tokenResult = await connection.InvokeAsync<InvocationResultDto<string>>(nameof(IEnigmaHub.GenerateToken));
         HandleServerResponse(tokenResult, nameof(IEnigmaHub.GenerateToken));
 
         using var signature = SealProvider.Factory.CreateSigner(privateKey, Encoding.UTF8.GetBytes(passphrase));
         var encodedNonce = Convert.FromBase64String(tokenResult.Data!) ?? throw new Exception("Failed to base64 decode nonce.");
         var data = signature.Sign(encodedNonce) ?? throw new Exception("Nonce signature failed.");
-        var authenticationResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequest(publicKey, Convert.ToBase64String(data)));
+        var authenticationResult = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequestDto(publicKey, Convert.ToBase64String(data)));
         HandleServerResponse(authenticationResult, nameof(IEnigmaHub.Authenticate));
 
         Console.WriteLine($"Authenticated.");
 
-        var pullResult = await connection.InvokeAsync<InvocationResult<List<PendingMessage>>>(nameof(IEnigmaHub.Pull));
+        var pullResult = await connection.InvokeAsync<InvocationResultDto<List<PendingMessageDto>>>(nameof(IEnigmaHub.Pull));
         HandleServerResponse(pullResult, nameof(IEnigmaHub.Pull));
         foreach (var pendingMessage in pullResult.Data!)
         {
@@ -173,7 +173,7 @@ public class Program
         var message = "Test";
         var serverPublicKey = await RequestPublicKey(serverInfoEndpoint);
         var broadcastVertexRequest = CreateVertexBroadcast(localAddress, CertificateHelper.GetHexAddressFromPublicKey(serverPublicKey), publicKey, privateKey, passphrase);
-        var broadcastResult = await connection.InvokeAsync<InvocationResult<bool>>(nameof(IEnigmaHub.Broadcast), broadcastVertexRequest);
+        var broadcastResult = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Broadcast), broadcastVertexRequest);
 
         Console.WriteLine($"Broadcast result: {broadcastResult.Data}");
 
@@ -183,7 +183,7 @@ public class Program
             var destinationAddress = HashProvider.FromHexString(PKey.Address2);
 
             var onion = SealProvider.SealOnion(Encoding.UTF8.GetBytes(message), [destinationPublicKey, serverPublicKey], [PKey.Address1, PKey.Address2]);
-            await connection.InvokeAsync(nameof(IEnigmaHub.RouteMessage), new RoutingRequest([onion!, onion]));
+            await connection.InvokeAsync(nameof(IEnigmaHub.RouteMessage), new RoutingRequestDto([onion!, onion]));
 
             Console.ReadLine();
         }
