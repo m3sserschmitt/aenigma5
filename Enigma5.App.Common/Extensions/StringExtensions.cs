@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,21 +18,22 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
-using Enigma5.App.Resources.Queries;
-using Enigma5.Crypto.Extensions;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
-namespace Enigma5.App.Resources.Handlers;
+namespace Enigma5.App.Common.Extensions;
 
-public class CheckAuthorizedServiceHandler(EnigmaDbContext context)
-: IRequestHandler<CheckAuthorizedServiceQuery, CommandResult<bool>>
+public static partial class StringExtensions
 {
-    private readonly EnigmaDbContext _context = context;
+    private static readonly Regex OnionRegex = OnionAddressRegex();
 
-    public async Task<CommandResult<bool>> Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken = default)
-    => !request.Address.IsValidAddress() ?
-    CommandResult.CreateResultFailure<bool>() :
-    CommandResult.CreateResultSuccess(await _context.Peers.AnyAsync(item => item.Address == request.Address, cancellationToken));
+    public static bool IsValidOnionAddress(this string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return OnionRegex.IsMatch(value);
+    }
+
+    [GeneratedRegex(@"^(?:[a-z2-7]{16}|[a-z2-7]{56})\.onion$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+    private static partial Regex OnionAddressRegex();
 }

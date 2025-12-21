@@ -18,15 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
+using Enigma5.App.Common;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR.Client;
 
-namespace NetworkBridge;
+namespace Enigma5.App.NetworkBridge;
 
-public class ConnectionVector
+internal class ConnectionVector
 {
     private readonly object _locker = new();
 
@@ -40,15 +40,15 @@ public class ConnectionVector
 
     private string? _targetPublicKey;
 
-    public readonly string SourceHubHost;
+    internal readonly string SourceHubHost;
 
-    public readonly string TargetHubHost;
+    internal readonly string TargetHubHost;
 
     private readonly HubConnection _source;
 
     private readonly HubConnection _target;
 
-    public string? SourcePublicKey
+    internal string? SourcePublicKey
     {
         get
         {
@@ -66,7 +66,7 @@ public class ConnectionVector
         }
     }
 
-    public string? TargetPublicKey
+    internal string? TargetPublicKey
     {
         get
         {
@@ -84,7 +84,7 @@ public class ConnectionVector
         }
     }
 
-    private bool IsReversed
+    internal bool IsReversed
     {
         get
         {
@@ -102,7 +102,7 @@ public class ConnectionVector
         }
     }
 
-    public bool SourceAuthenticated
+    internal bool SourceAuthenticated
     {
         get
         {
@@ -120,7 +120,7 @@ public class ConnectionVector
         }
     }
 
-    public bool TargetAuthenticated
+    internal bool TargetAuthenticated
     {
         get
         {
@@ -138,14 +138,15 @@ public class ConnectionVector
         }
     }
 
-    public bool Authenticated => Connected && SourceAuthenticated && TargetAuthenticated;
+    internal bool Authenticated => Connected && SourceAuthenticated && TargetAuthenticated;
 
-    public bool Connected => _source.State == HubConnectionState.Connected && _target.State == HubConnectionState.Connected;
+    internal bool Connected => _source.State == HubConnectionState.Connected && _target.State == HubConnectionState.Connected;
 
-    public event Func<Exception?, Task>? TargetClosed
+    internal event Func<Exception?, Task>? TargetClosed
     {
         add
         {
+            _target.Closed -= value;
             _target.Closed += value;
         }
         remove
@@ -154,10 +155,11 @@ public class ConnectionVector
         }
     }
 
-    public event Func<Exception?, Task>? SourceClosed
+    internal event Func<Exception?, Task>? SourceClosed
     {
         add
         {
+            _source.Closed -= value;
             _source.Closed += value;
         }
         remove
@@ -180,31 +182,31 @@ public class ConnectionVector
         _target.Closed += OnTargetClosed;
     }
 
-    public void TargetOn<T>(string method, Func<T, Task> handler)
+    internal void TargetOn<T>(string method, Func<T, Task> handler)
     => _target.On(method, handler);
 
-    public void SourceOn<T>(string method, Func<T, Task> handler)
+    internal void SourceOn<T>(string method, Func<T, Task> handler)
     => _source.On(method, handler);
 
-    public async Task<bool> InvokeTargetAsync(string method, object? data, CancellationToken cancellationToken = default)
+    internal async Task<bool> InvokeTargetAsync(string method, object? data, CancellationToken cancellationToken = default)
     => await InvokeAsync(_target, method, data, cancellationToken);
 
-    public async Task<bool> InvokeSourceAsync(string method, object? data, CancellationToken cancellationToken = default)
+    internal async Task<bool> InvokeSourceAsync(string method, object? data, CancellationToken cancellationToken = default)
     => await InvokeAsync(_source, method, data, cancellationToken);
 
-    public async Task<bool> InvokeTargetAsync(string method, CancellationToken cancellationToken = default)
+    internal async Task<bool> InvokeTargetAsync(string method, CancellationToken cancellationToken = default)
     => await InvokeAsync(_target, method, cancellationToken);
 
-    public async Task<bool> InvokeSourceAsync(string method, CancellationToken cancellationToken = default)
+    internal async Task<bool> InvokeSourceAsync(string method, CancellationToken cancellationToken = default)
     => await InvokeAsync(_source, method, cancellationToken);
 
-    public async Task<bool> StopTargetAsync(CancellationToken cancellationToken = default)
+    internal async Task<bool> StopTargetAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken);
 
-    public async Task<bool> StopSourceAsync(CancellationToken cancellationToken = default)
+    internal async Task<bool> StopSourceAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_source, cancellationToken);
 
-    public async Task<bool> StartAsync(CancellationToken cancellationToken = default)
+    internal async Task<bool> StartAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -226,10 +228,10 @@ public class ConnectionVector
         }
     }
 
-    public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
+    internal async Task<bool> StopAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
 
-    public async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
+    internal async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
     {
         if (Authenticated)
         {
@@ -354,14 +356,14 @@ public class ConnectionVector
 
     public override bool Equals(object? obj) => obj is ConnectionVector vector && this == vector;
 
-    public static ConnectionVector Create(string sourceHubUrl, string targetHubUrl)
+    internal static ConnectionVector Create(string sourceHubUrl, string targetHubUrl)
     => new(CreateHubConnection(sourceHubUrl), CreateHubConnection(targetHubUrl), sourceHubUrl, targetHubUrl);
 
-    public static HubConnection CreateHubConnection(string baseUrl)
+    internal static HubConnection CreateHubConnection(string baseUrl)
     => new HubConnectionBuilder()
-        .WithUrl($"{baseUrl.Trim('/')}/{Endpoints.OnionRoutingEndpoint}")
+        .WithUrl($"{baseUrl.Trim('/')}/{Constants.OnionRoutingEndpoint}")
         .Build();
 
-    public static HashSet<ConnectionVector> CreateConnections(string sourceHubUrl, List<string> targetUrls)
+    internal static HashSet<ConnectionVector> CreateConnections(string sourceHubUrl, List<string> targetUrls)
     => targetUrls.Select(item => Create(sourceHubUrl, item)).ToHashSet();
 }

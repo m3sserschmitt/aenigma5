@@ -22,10 +22,10 @@ using Enigma5.App.Attributes;
 using Enigma5.App.Common.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Hubs.Sessions.Contracts;
-using Enigma5.App.Resources.Queries;
-using MediatR;
-using Microsoft.Extensions.Logging;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.Security.Contracts;
+using MediatR;
+using Enigma5.App.Resources.Queries;
 using Enigma5.App.Resources.Handlers;
 
 namespace Enigma5.App.Hubs.Filters;
@@ -33,9 +33,12 @@ namespace Enigma5.App.Hubs.Filters;
 public class AuthorizedServiceOnlyFilter(
     ISessionManager sessionManager,
     IMediator commandRouter,
-    ILogger<AuthorizedServiceOnlyFilter> logger
+    ILogger<AuthorizedServiceOnlyFilter> logger,
+    ICertificateManager certificateManager
     ) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
 {
+    private readonly ICertificateManager _certificateManager = certificateManager;
+
     private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly IMediator _commandRouter = commandRouter;
@@ -46,22 +49,19 @@ public class AuthorizedServiceOnlyFilter(
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-#if DEBUG
-        _logger.LogDebug($"Authorization skipped for {{{nameof(invocationContext.HubMethodName)}}} invocation in debug mode.", invocationContext.HubMethodName);
-        return await next(invocationContext);
-#endif
-#pragma warning disable CS0162 // Unreachable code detected
         if (!_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
         {
             _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
             return EmptyErrorResult.Create(InvocationErrors.NOT_AUTHORIZED);
         }
-#pragma warning restore CS0162 // Unreachable code detected
-        var result = await _commandRouter.Send(new CheckAuthorizedServiceQuery(address!));
-        if (!result.IsSuccessResult() || !result.Value)
+        if (address != _certificateManager.Address)
         {
-            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-            return EmptyErrorResult.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
+            var result = await _commandRouter.Send(new CheckAuthorizedServiceQuery(address!));
+            if (!result.IsSuccessResult())
+            {
+                _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
+                return EmptyErrorResult.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
+            }
         }
 
         _logger.LogDebug($"{{{nameof(invocationContext.HubMethodName)}}} invocation authorized for {{{nameof(invocationContext.Context.ConnectionId)}}}.", invocationContext.HubMethodName, invocationContext.Context.ConnectionId);

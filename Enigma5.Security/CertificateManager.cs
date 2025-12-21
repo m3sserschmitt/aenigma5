@@ -72,7 +72,7 @@ public sealed class CertificateManager(IPassphraseProvider passphraseProvider, I
     {
         var passphraseChars = passphrase ?? _passphraseProvider.ProvidePassphrase();
         var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
-        var ok = GenerateKeys(passphraseChars) && SetMasterPassphrase(passphraseBytes);
+        var ok = passphraseChars.Length != 0 && GenerateKeys(passphraseChars) && SetMasterPassphrase(passphraseBytes);
         Array.Clear(passphraseBytes);
         Array.Clear(passphraseChars);
         return ok;

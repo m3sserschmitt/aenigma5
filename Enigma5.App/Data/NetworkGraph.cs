@@ -21,7 +21,6 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
-using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
 
 namespace Enigma5.App.Data;
@@ -29,8 +28,6 @@ namespace Enigma5.App.Data;
 public class NetworkGraph
 {
     private readonly object _locker = new();
-
-    private readonly Func<IEnvelopeSigner> _signerProvider;
 
     private readonly ICertificateManager _certificateManager;
 
@@ -50,9 +47,8 @@ public class NetworkGraph
 
     public HashSet<Vertex> NonLeafVertices => ThreadSafeExecution.Execute(() => _vertices.Where(item => !item.IsLeaf).Select(item => item.CopyBySerialization()).ToHashSet(), [], _locker, _logger);
 
-    public NetworkGraph(Func<IEnvelopeSigner> signerProvider, ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger)
+    public NetworkGraph(ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger)
     {
-        _signerProvider = signerProvider;
         _certificateManager = certificateManager;
         _configuration = configuration;
         _localVertex = Vertex.Factory.Create(certificateManager.Address);
@@ -84,7 +80,7 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            using var signer = _signerProvider();
+            using var signer = _certificateManager.CreateSigner();
             if (Vertex.Factory.Prototype.AddNeighbors(_localVertex, addresses, signer, _certificateManager, out Vertex? newVertex)
                 && ValidateNewVertex(newVertex!))
             {
@@ -104,7 +100,7 @@ public class NetworkGraph
     => ThreadSafeExecution.Execute(
         () =>
         {
-            using var signer = _signerProvider();
+            using var signer = _certificateManager.CreateSigner();
             if (Vertex.Factory.Prototype.RemoveNeighbors(_localVertex, addresses, signer, _certificateManager, out Vertex? newVertex))
             {
                 ReplaceLocalVertex(newVertex!);
@@ -192,7 +188,7 @@ public class NetworkGraph
 
     public bool CreateInitialVertex()
     {
-        using var signer = _signerProvider();
+        using var signer = _certificateManager.CreateSigner();
         var v = Vertex.Factory.CreateWithEmptyNeighborhood(signer, _certificateManager, _configuration.GetHostname(), _configuration.GetOnionService());
         if(v is null)
         {
@@ -242,7 +238,7 @@ public class NetworkGraph
 
         Vertex? newLocalVertex = null;
 
-        using var signer = _signerProvider();
+        using var signer = _certificateManager.CreateSigner();
         if (result < 0)
         {
             Vertex.Factory.Prototype.AddNeighbor(_localVertex, source, signer, _certificateManager, out newLocalVertex);

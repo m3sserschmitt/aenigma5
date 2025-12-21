@@ -23,7 +23,6 @@ using Enigma5.App.Resources.Commands;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Extensions;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 

@@ -18,17 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Microsoft.EntityFrameworkCore;
+using Enigma5.App.Resources.Handlers;
+using MediatR;
 
-namespace Enigma5.App.Data;
+namespace Enigma5.App.Resources.Commands;
 
-public class EnigmaDbContext(DbContextOptions options) : DbContext(options)
+public class AddPeerCommand(string host, string address): IRequest<CommandResult<Models.Peer>>
 {
-    public DbSet<PendingMessage> Messages { get; set; }
+    public string Host { get; private set; } = host;
 
-    public DbSet<SharedData> SharedData { get; set; }
-
-    public DbSet<Peer> Peers { get; set; }
-
-    public DbSet<FileRecord> Files { get; set; }
+    public string Address { get; private set; } = address;
 }

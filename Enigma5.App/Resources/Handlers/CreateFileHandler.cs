@@ -22,7 +22,6 @@ using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -48,7 +47,6 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
 
         var record = new FileRecord
         {
-            Data = [0],
             MaxAccessCount = request.MaxAccessCount
         };
 

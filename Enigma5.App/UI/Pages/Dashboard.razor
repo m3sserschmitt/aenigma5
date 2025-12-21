@@ -19,7 +19,12 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 @page "/Dashboard"
 @rendermode InteractiveServer
 
+@using Enigma5.App.Models
 @using Enigma5.App.Resources.Commands
+@using Enigma5.App.Resources.Handlers
+@using Enigma5.App.Resources.Queries
+@using Enigma5.App.UI.Common
+@using Enigma5.App.UI.Dashboard
 @using Enigma5.Security.Contracts
 @using System.Collections.Immutable
 @using System.Text
@@ -27,32 +32,58 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
 @inject IMediator Mediator
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title mb-3 text-center">Aenigma</h4>
-                    <div class="form-group mb-3">
-                        <label for="passwordInput">Password</label>
-                        <input type="password"
-                               id="passwordInput"
-                               class="form-control"
-                               @bind="Password" />
-                    </div>
-                    <button class="btn btn-primary w-100" @onclick="Submit">Submit</button>
-                </div>
-            </div>
-        </div>
+<div class="row justify-content-center">
+    <div class="col col-3">
+        <PassphraseInput OnSubmit="SubmitPassphrase" />
+    </div>
+    <div class="col col-9">
+        <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" />
     </div>
 </div>
 
 @code {
-    private string Password { get; set; } = string.Empty;
+    private IEnumerable<Peer> Peers = [];
 
-    private void Submit()
+    protected override async Task OnInitializedAsync()
     {
-        Mediator.Send(new SetMasterPassphraseCommand(Password.ToCharArray()));
-        Password = string.Empty;        
+        await LoadPeers();
+    }
+
+    private async Task LoadPeers()
+    {
+        var result = await Mediator.Send(new GetPeersQuery());
+        if (result.IsSuccessNotNullResultValue())
+        {
+            Peers = result.Value!;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SubmitNewPeer(Peer peer)
+    {
+        if (string.IsNullOrWhiteSpace(peer.Host) || string.IsNullOrWhiteSpace(peer.Address))
+        {
+            return;
+        }
+        var result = await Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
+        if (result.IsSuccessNotNullResultValue())
+        {
+            await LoadPeers();
+        }
+    }
+
+    private async Task RemovePeer(Peer peer)
+    {
+        var result = await Mediator.Send(new RemovePeerCommand(peer.Id));
+        if (result.IsSuccessNotNullResultValue())
+        {
+            await LoadPeers();
+        }
+    }
+
+    private async Task SubmitPassphrase(char[] passphrase)
+    {
+        await Mediator.Send(new SetMasterPassphraseCommand(passphrase));
+        Array.Clear(passphrase);
     }
 }

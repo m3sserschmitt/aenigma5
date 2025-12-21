@@ -1,0 +1,42 @@
+﻿@* Aenigma - Federal messaging system
+Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+This file is part of Aenigma project.
+
+Aenigma is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Aenigma is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
+
+@using Enigma5.App.Models
+
+<div class="list-group-items-action card shadow">
+    <div class="card-body">
+        <div class="row">
+            <div class="col col-6">
+                Host: <strong>@Model.Host</strong>
+            </div>
+            <div class="col col-5">
+                Address: <strong>@Model.Address</strong>
+            </div>
+            <div class="col col-1">
+                <button class="btn btn-danger" @onclick="Remove">Remove</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public required Peer Model { get; set; }
+    [Parameter] public EventCallback<Peer> OnRemove { get; set; } = default;
+
+    private Task Remove() => OnRemove.InvokeAsync(Model);
+}

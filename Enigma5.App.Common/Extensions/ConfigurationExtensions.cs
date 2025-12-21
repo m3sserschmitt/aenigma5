@@ -18,16 +18,10 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Enums;
-using Microsoft.Extensions.Configuration;
-
 namespace Enigma5.App.Common.Extensions;
 
 public static class ConfigurationExtensions
 {
-    public static List<string> GetPeers(this IConfiguration configuration)
-    => configuration.GetSection("Peers").Get<List<string>>() ?? [];
-
     public static string? GetLocalListenAddress(this IConfiguration configuration)
     => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null);
 
@@ -59,13 +53,13 @@ public static class ConfigurationExtensions
     => configuration.GetValue<string?>("PassphrasePath", null);
 
     public static bool GetRetryConnection(this IConfiguration configuration)
-    => configuration.GetValue("RetryConnection", false);
+    => configuration.GetValue("Network:RetryConnections", false);
 
     public static int GetConnectionRetriesCount(this IConfiguration configuration)
-    => configuration.GetValue("ConnectionRetriesCount", 0);
+    => configuration.GetValue("Network:ConnectionRetriesCount", 0);
 
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
-    => configuration.GetValue("DelayBetweenConnectionRetries", 0);
+    => configuration.GetValue("Network:DelayBetweenConnectionRetries", 0);
 
     private static TimeSpan GetTimeSpan(this IConfiguration configuration, string key, TimeSpan defaultValue)
     {

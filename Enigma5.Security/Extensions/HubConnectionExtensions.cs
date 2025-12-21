@@ -18,20 +18,14 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Contracts.Hubs;
-using Enigma5.App.Models;
-using Enigma5.App.Models.HubInvocation;
-using Microsoft.AspNetCore.SignalR.Client;
-
 namespace Enigma5.Security.Extensions;
 
 public static class HubConnectionExtensions
 {
     public static async Task<bool> AuthenticateAsync(
         this HubConnection connection,
-        CertificateManager certificateManager,
-        CancellationToken cancellationToken = default
-    )
+        ICertificateManager certificateManager,
+        CancellationToken cancellationToken = default)
     {
         try
         {

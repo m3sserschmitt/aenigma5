@@ -18,9 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common;
 using Enigma5.App.Data;
+using Enigma5.App.Hangfire;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Security.Contracts;
+using Hangfire;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
@@ -33,5 +36,22 @@ public class SetMasterPassphraseHandler(ICertificateManager certificateManager, 
     private readonly NetworkGraph _networkGraph = networkGraph;
 
     public Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
-    => Task.FromResult(CommandResult.CreateResultSuccess(_certificateManager.Setup(request.Passphrase) && _networkGraph.CreateInitialVertex()));
+    {
+        var result = _certificateManager.Setup(request.Passphrase) && _networkGraph.CreateInitialVertex();
+        if (result)
+        {
+            SendInvokeNetworkBridgeCommand();
+        }
+        return Task.FromResult(CommandResult.CreateResultSuccess(result));
+    }
+
+    private static void SendInvokeNetworkBridgeCommand()
+    {
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            Constants.InvokeNetworkBridgeRecurringJob,
+            bridge => bridge.Send(new InvokeNetworkBridgeCommand()),
+            Constants.InvokeNetworkBridgeJobInterval
+        );
+        BackgroundJob.Enqueue<MediatorHangfireBridge>(bridge => bridge.Send(new InvokeNetworkBridgeCommand()));
+    }
 }

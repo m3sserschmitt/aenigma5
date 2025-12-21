@@ -25,6 +25,7 @@ public static class Constants
     public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(01, 00, 00);
 
     public static readonly TimeSpan LeafsLifetimeDefault = new(03, 00, 00, 00);
+
     public static readonly int MaxSharedFileSize = 100 * 1024 * 1024;
 
     public static readonly int MaxSharedDataSize = 1 * 1024 * 1024;
@@ -46,4 +47,20 @@ public static class Constants
     public const string IncrementFileAccessCountEndpoint = "IncrementFileAccessCount";
 
     public const string ProductionConfigurationFileName = "/usr/local/etc/aenigma/appsettings.Production.json";
+
+    public const string MessagesCleanupRecurringJob = "messages-cleanup";
+
+    public const string SharedDataCleanupRecurringJob = "shared-data-cleanup";
+
+    public const string FilesCleanupRecurringJob = "files-cleanup";
+
+    public const string InvokeNetworkBridgeRecurringJob = "invoke-network-bridge";
+
+    public const string MessagesCleanupJobInterval = "*/5 * * * *";
+
+    public const string SharedDataCleanupJobInterval = "*/5 * * * *";
+
+    public const string FilesCleanupJobInterval = "*/5 * * * *";
+
+    public const string InvokeNetworkBridgeJobInterval = "*/15 * * * *";
 }

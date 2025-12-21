@@ -22,7 +22,6 @@ using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Common.Enums;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
-using Enigma5.App.Hangfire;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Security;
@@ -81,13 +80,4 @@ public static class ServiceCollectionExtensions
         PassphraseSource.Keyboard => services.AddTransient(typeof(IPassphraseProvider), typeof(CommandLinePassphraseReader)),
         _ => services
     };
-
-    public static IServiceCollection SetupSigner(this IServiceCollection services)
-    => services.AddTransient<Func<IEnvelopeSigner>>(provider => () => provider.GetRequiredService<ICertificateManager>().CreateSigner());
-
-    public static IServiceCollection SetupUnsealer(this IServiceCollection services)
-    => services.AddTransient<Func<IEnvelopeUnsealer>>(provider => () => provider.GetRequiredService<ICertificateManager>().CreateUnsealer());
-
-    public static IGlobalConfiguration<HangfireActivator> UseAsHangfireActivator(this IServiceProvider serviceProvider)
-    => GlobalConfiguration.Configuration.UseActivator(new HangfireActivator(serviceProvider));
 }

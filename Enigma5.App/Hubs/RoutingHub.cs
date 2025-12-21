@@ -149,7 +149,6 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
-    [AuthorizedServiceOnly]
     public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
     {
         var decodedNonce = Convert.FromBase64String(request.Nonce!);

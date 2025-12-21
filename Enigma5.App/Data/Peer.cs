@@ -18,17 +18,18 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace Enigma5.App.Data;
 
-public class EnigmaDbContext(DbContextOptions options) : DbContext(options)
+public class Peer : Entity
 {
-    public DbSet<PendingMessage> Messages { get; set; }
+    [Key]
+    public long Id { get; set; }
 
-    public DbSet<SharedData> SharedData { get; set; }
+    [Required]
+    public string? Host { get; set; }
 
-    public DbSet<Peer> Peers { get; set; }
-
-    public DbSet<FileRecord> Files { get; set; }
+    [Required]
+    public string? Address { get; set; }
 }

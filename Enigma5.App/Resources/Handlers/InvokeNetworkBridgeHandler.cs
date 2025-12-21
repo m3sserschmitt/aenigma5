@@ -18,17 +18,16 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Microsoft.EntityFrameworkCore;
+using Enigma5.App.NetworkBridge;
+using Enigma5.App.Resources.Commands;
+using MediatR;
 
-namespace Enigma5.App.Data;
+namespace Enigma5.App.Resources.Handlers;
 
-public class EnigmaDbContext(DbContextOptions options) : DbContext(options)
+public class InvokeNetworkBridgeHandler(Bridge bridge) : IRequestHandler<InvokeNetworkBridgeCommand, CommandResult<bool>>
 {
-    public DbSet<PendingMessage> Messages { get; set; }
+    private readonly Bridge _bridge = bridge;
 
-    public DbSet<SharedData> SharedData { get; set; }
-
-    public DbSet<Peer> Peers { get; set; }
-
-    public DbSet<FileRecord> Files { get; set; }
+    public async Task<CommandResult<bool>> Handle(InvokeNetworkBridgeCommand request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _bridge.StartAsync());
 }

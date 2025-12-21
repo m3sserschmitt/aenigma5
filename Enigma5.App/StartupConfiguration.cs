@@ -33,9 +33,9 @@ using Hangfire;
 using Enigma5.Structures;
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs.Sessions.Contracts;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
-using MediatR;
+using Enigma5.App.Common;
+using Enigma5.App.NetworkBridge;
 
 namespace Enigma5.App;
 
@@ -46,8 +46,7 @@ public class StartupConfiguration(IConfiguration configuration)
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddSignalR()
-        .AddHubOptions<RoutingHub>(options =>
+        services.AddSignalR().AddHubOptions<RoutingHub>(options =>
         {
             options.AddFilter<LogFilter>();
             options.AddFilter<AuthenticatedFilter>();
@@ -60,11 +59,11 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
+        services.AddSingleton<Bridge>();
+        services.AddSingleton<HubConnectionsProxy>();
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
-        services.SetupSigner();
-        services.SetupUnsealer();
         services.AddRazorComponents().AddInteractiveServerComponents();
         services.SetupKeyReader(_configuration);
         services.SetupPassphraseReader(_configuration);
@@ -82,63 +81,54 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
-            endpoints.MapHub<RoutingHub>(Common.Constants.OnionRoutingEndpoint);
-            endpoints.MapGet(Common.Constants.InfoEndpoint, Api.GetInfo);
-            endpoints.MapPost(Common.Constants.ShareEndpoint, Api.PostShare)
-                .WithMetadata(new RequestSizeLimitAttribute(Common.Constants.MaxSharedDataSize));
-            endpoints.MapGet(Common.Constants.ShareEndpoint, Api.GetShare);
-            endpoints.MapPut(Common.Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
-            endpoints.MapGet(Common.Constants.VerticesEndpoint, Api.GetVertices);
-            endpoints.MapGet(Common.Constants.VertexEndpoint, Api.GetVertex);
-            endpoints.MapPost(Common.Constants.FileEndpoint, Api.PostFile)
+            endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint);
+            endpoints.MapGet(Constants.InfoEndpoint, Api.GetInfo);
+            endpoints.MapPost(Constants.ShareEndpoint, Api.PostShare)
+                .WithMetadata(new RequestSizeLimitAttribute(Constants.MaxSharedDataSize));
+            endpoints.MapGet(Constants.ShareEndpoint, Api.GetShare);
+            endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
+            endpoints.MapGet(Constants.VerticesEndpoint, Api.GetVertices);
+            endpoints.MapGet(Constants.VertexEndpoint, Api.GetVertex);
+            endpoints.MapPost(Constants.FileEndpoint, Api.PostFile)
                 .Accepts<IFormFile>("multipart/form-data")
                 .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
-                .WithMetadata(new RequestSizeLimitAttribute(Common.Constants.MaxSharedFileSize))
+                .WithMetadata(new RequestSizeLimitAttribute(Constants.MaxSharedFileSize))
                 .WithMetadata(new RequestFormLimitsAttribute
                 {
-                    MultipartBodyLengthLimit = Common.Constants.MaxSharedFileSize
+                    MultipartBodyLengthLimit = Constants.MaxSharedFileSize
                 }).DisableAntiforgery();
-            endpoints.MapGet(Common.Constants.FileEndpoint, Api.GetFile);
-            endpoints.MapPut(Common.Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
+            endpoints.MapGet(Constants.FileEndpoint, Api.GetFile);
+            endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
         });
-
         serviceProvider.UseAsHangfireActivator();
+        serviceProvider.MigrateDatabase();
+        serviceProvider.SetupMasterPassphrase();
 
+        StartJobs(configuration);
+    }
+
+    private static void StartJobs(IConfiguration configuration)
+    {
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "messages-cleanup",
+            Constants.MessagesCleanupRecurringJob,
             bridge => bridge.Send(
                 new CleanupMessagesCommand(configuration.GetMessageRetentionPeriod(), configuration.GetSentMessageRetentionPeriod())
             ),
-            "*/5 * * * *"
+            Constants.MessagesCleanupJobInterval
         );
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "shared-data-cleanup",
+            Constants.SharedDataCleanupRecurringJob,
             bridge => bridge.Send(
                 new CleanupSharedDataCommand(configuration.GetSharedDataRetentionPeriod())
             ),
-            "*/5 * * * *"
+            Constants.SharedDataCleanupJobInterval
         );
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "files-cleanup",
+            Constants.FilesCleanupRecurringJob,
             bridge => bridge.Send(
                 new CleanupFilesCommand(configuration.GetFilesRetentionPeriod())
             ),
-            "*/5 * * * *"
+            Constants.FilesCleanupJobInterval
         );
-
-        using var scope = app.ApplicationServices.CreateScope();
-        try
-        {
-            var context = scope.ServiceProvider.GetRequiredService<EnigmaDbContext>();
-            context.Database.Migrate();
-        }
-        catch (Exception ex)
-        {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<StartupConfiguration>>();
-            logger.LogError(ex, "An error occurred while creating the database.");
-            throw;
-        }
-
-        scope.ServiceProvider.GetRequiredService<IMediator>().Send(new SetMasterPassphraseCommand(null));
     }
 }

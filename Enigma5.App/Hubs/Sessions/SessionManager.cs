@@ -44,7 +44,10 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
     public IReadOnlyConnectionsMapper ConnectionsMapper => _connectionsMapper;
 
     private bool AddPending(string connectionId, string token)
-    => _pending.TryAdd(connectionId, token);
+    {
+        _pending.Remove(connectionId);
+        return _pending.TryAdd(connectionId, token);
+    }
 
     private bool Authenticate(string connectionId)
     => _pending.Remove(connectionId) && _authenticated.Add(connectionId);

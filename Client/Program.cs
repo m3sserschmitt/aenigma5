@@ -28,6 +28,8 @@ using Enigma5.Crypto;
 using System.Net.Http.Json;
 using Enigma5.App.Models.HubInvocation;
 using System.Text.Json;
+using NSubstitute;
+using Enigma5.Security.Contracts;
 
 namespace Client;
 
@@ -38,7 +40,9 @@ public class Program
         Console.WriteLine($"Message received");
 
         using var unsealer = SealProvider.Factory.CreateUnsealer(privateKey, Encoding.UTF8.GetBytes(passphrase));
-        var onionParser = new OnionParser(() => unsealer);
+        var certificateManager = Substitute.For<ICertificateManager>();
+        certificateManager.CreateUnsealer().Returns(unsealer);
+        var onionParser = new OnionParser(certificateManager);
 
         if (onionParser.Parse(message))
         {

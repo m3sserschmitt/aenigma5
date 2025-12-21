@@ -1,4 +1,3 @@
-
 /*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
@@ -27,9 +26,6 @@ public class FileRecord: Entity
 {
     [Key]
     public string Tag { get; set; } = Guid.NewGuid().ToString();
-
-    [Required]
-    public byte[]? Data { get; set; }
 
     [Required]
     public int AccessCount { get; set; } = 0;

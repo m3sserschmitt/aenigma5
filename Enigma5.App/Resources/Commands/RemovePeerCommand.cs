@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,15 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.ComponentModel.DataAnnotations;
+using Enigma5.App.Resources.Handlers;
+using MediatR;
 
-namespace Enigma5.App.Data;
+namespace Enigma5.App.Resources.Commands;
 
-public class AuthorizedService: Entity
+public class RemovePeerCommand(long id): IRequest<CommandResult<bool>>
 {
-    [Key]
-    public long Id { get; set; }
-
-    [Required]
-    public string? Address { get; set; }
+    public long Id { get; private set; } = id;
 }

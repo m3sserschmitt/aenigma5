@@ -18,17 +18,24 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
+using Enigma5.App.Resources.Queries;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Enigma5.App.Data;
+namespace Enigma5.App.Resources.Handlers;
 
-public class EnigmaDbContext(DbContextOptions options) : DbContext(options)
+public class GetPeersHandler(EnigmaDbContext dbContext) : IRequestHandler<GetPeersQuery, CommandResult<List<Models.Peer>>>
 {
-    public DbSet<PendingMessage> Messages { get; set; }
+    private readonly EnigmaDbContext _dbContext = dbContext;
 
-    public DbSet<SharedData> SharedData { get; set; }
-
-    public DbSet<Peer> Peers { get; set; }
-
-    public DbSet<FileRecord> Files { get; set; }
+    public async Task<CommandResult<List<Models.Peer>>> Handle(GetPeersQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _dbContext.Peers.Select(
+        item => new Models.Peer
+        {
+            Id = item.Id,
+            Address = item.Address,
+            Host = item.Host
+        }
+    ).ToListAsync(cancellationToken: cancellationToken));
 }

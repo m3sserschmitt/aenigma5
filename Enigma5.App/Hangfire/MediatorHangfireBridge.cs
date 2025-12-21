@@ -20,7 +20,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hangfire;
 
