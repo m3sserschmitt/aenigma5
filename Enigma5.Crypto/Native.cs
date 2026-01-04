@@ -63,7 +63,13 @@ internal static partial class Native
     internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
 
     [LibraryImport("libaenigma")]
+    internal static partial IntPtr CreateAsymmetricDecryptionContextFromFile([MarshalAs(UnmanagedType.LPTStr)] string path, [In] byte[]? passphrase);
+
+    [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
+
+    [LibraryImport("libaenigma")]
+    internal static partial IntPtr CreateSignatureContextFromFile([MarshalAs(UnmanagedType.LPStr)] string path, [In] byte[]? passphrase);
 
     [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateVerificationContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);

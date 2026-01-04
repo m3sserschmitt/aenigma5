@@ -22,9 +22,28 @@ namespace Enigma5.App.Models;
 
 public class PeerDto
 {
-    public long Id { get; set; }
+    public long? Id { get; set; }
 
     public string? Host { get; set; }
 
     public string? Address { get; set; }
+
+    public bool Equals(PeerDto? peer)
+    {
+        if (ReferenceEquals(peer, this))
+        {
+            return true;
+        }
+
+        if (peer == null)
+        {
+            return false;
+        }
+
+        return Host?.Trim() == peer.Host?.Trim() && Address?.Trim() == peer.Address?.Trim();
+    }
+
+    public override bool Equals(object? obj) => Equals(obj as PeerDto);
+
+    public override int GetHashCode() => Address?.GetHashCode() ?? 0;
 }

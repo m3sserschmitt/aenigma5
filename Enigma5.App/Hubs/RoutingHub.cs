@@ -27,11 +27,8 @@ using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Data;
 using Microsoft.AspNetCore.SignalR;
-using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models.HubInvocation;
-using Microsoft.Extensions.Logging;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.Crypto;
 using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs;
@@ -83,14 +80,14 @@ public partial class RoutingHub(
     }
 
     [Authenticated]
-    public async Task<InvocationResultDto<List<Models.PendingMessageDto>>> Pull()
+    public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull()
     {
         if (ClientAddress is null)
         {
             _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
             nameof(Pull),
             Context.ConnectionId);
-            return Error<List<Models.PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
+            return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
         var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
@@ -105,7 +102,7 @@ public partial class RoutingHub(
         nameof(Pull),
         Context.ConnectionId,
         result);
-        return Error<List<Models.PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
+        return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
     }
 
     [Authenticated]
@@ -199,17 +196,15 @@ public partial class RoutingHub(
     [AuthorizedServiceOnly]
     public async Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request)
     {
-        var vertexBroadcastRequest = request.NewAddresses is null || request.NewAddresses.Count == 0
-        ? _networkGraph.LocalVertex.ToVertexBroadcast()
-        : (await AddNewAdjacencies(request.NewAddresses));
+        var localVertex = await AddNewAdjacencies(request.NewAddresses ?? []);
 
-        if (vertexBroadcastRequest is null)
+        if (localVertex is null)
         {
             _logger.LogWarning($"{nameof(TriggerBroadcast)} resulted in no changes to be broadcasted.");
             return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
 
-        return await SendBroadcast(vertexBroadcastRequest!)
+        return await SendBroadcast(localVertex!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
     }

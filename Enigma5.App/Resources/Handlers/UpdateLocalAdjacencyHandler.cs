@@ -46,21 +46,17 @@ public class UpdateLocalAdjacencyHandler(
             return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        var (newLocalVertex, updated) = request.Add ?
+        await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
+        var localVertex = request.Add ?
         await _networkGraph.AddAdjacencyAsync(request.Addresses, cancellationToken)
         : await _networkGraph.RemoveAdjacencyAsync(request.Addresses, cancellationToken);
 
-        if(!updated)
-        {
-            return CommandResult.CreateResultSuccess<VertexBroadcastRequestDto>();
-        }
-
-        if(newLocalVertex.SignedData is null)
+        if(localVertex.SignedData is null)
         {
             _logger.LogError("Local vertex has null signed data!");
             return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        return CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto(_certificateManager.PublicKey, newLocalVertex.SignedData));
+        return CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto(_certificateManager.PublicKey, localVertex.SignedData));
     }
 }

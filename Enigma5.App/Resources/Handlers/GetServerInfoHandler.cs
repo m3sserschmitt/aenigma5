@@ -19,7 +19,6 @@
 */
 
 using System.Text;
-using System.Text.Json;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
@@ -43,7 +42,7 @@ public class GetServerInfoHandler(
 
     public Task<CommandResult<ServerInfoDto>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
     {
-        var serializedGraph = JsonSerializer.Serialize(_graph.Vertices);
+        var serializedGraph = _graph.Vertices.CanonicallySerialize();
         var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
 
         return Task.FromResult(CommandResult.CreateResultSuccess(

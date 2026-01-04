@@ -21,6 +21,7 @@
 using Enigma5.Crypto;
 using System.Text.Json;
 using Enigma5.Crypto.Extensions;
+using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.App.Data;
 
@@ -42,8 +43,9 @@ public static partial class NetworkGraphValidationPolicy
         {
             var decodedSignature = Convert.FromBase64String(vertex.SignedData);
             var plaintext = decodedSignature.GetStringDataFromSignature(vertex.PublicKey);
+            var canonicalJsonNeighborhood = vertex.Neighborhood.CanonicallySerialize();
 
-            if(plaintext is null)
+            if(plaintext != canonicalJsonNeighborhood)
             {
                 return false;
             }

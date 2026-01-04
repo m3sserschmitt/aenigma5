@@ -86,8 +86,8 @@ public static class ConfigurationExtensions
         return result;
     }
 
-    public static TimeSpan GetLeafsLifetime(this IConfiguration configuration)
-    => configuration.GetTimeSpan("LeafsLifetime", Constants.LeafsLifetimeDefault);
+    public static TimeSpan GetVertexLifetime(this IConfiguration configuration)
+    => configuration.GetTimeSpan("VertexLifetime", Constants.LeafsLifetimeDefault);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetValue<string?>("AzureVaultUrl", null);

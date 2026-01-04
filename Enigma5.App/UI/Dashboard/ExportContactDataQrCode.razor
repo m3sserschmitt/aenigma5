@@ -1,0 +1,42 @@
+﻿@* Aenigma - Federal messaging system
+Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+This file is part of Aenigma project.
+
+Aenigma is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Aenigma is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
+
+@using Enigma5.App.Common.Extensions
+@using Enigma5.App.Models
+@using Enigma5.Security.Contracts
+
+@inject IConfiguration Configuration
+@inject ICertificateManager CertificateManager
+
+<div class="card shadow">
+    <img class="card-image-top" src="@QrCode" alt="image">
+    <div class="card-body">
+        <p class="card-text">Scan QR code to connect to this server</p>
+    </div>
+</div>
+
+@code {
+    private string QrCode
+    => new ExportedContactDataDto
+    {
+        Host = Configuration.GetHostname(),
+        OnionService = Configuration.GetOnionService(),
+        Address = CertificateManager.Address,
+        PublicKey = CertificateManager.PublicKey
+    }.ToQrCode();
+}

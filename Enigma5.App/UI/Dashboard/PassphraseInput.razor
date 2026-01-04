@@ -16,14 +16,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
-<div class="card shadow-sm">
+<div class="card shadow">
     <div class="card-body">
         <h4 class="card-title mb-3 text-center">Aenigma</h4>
         <div class="form-group mb-3">
             <label for="passwordInput">Password</label>
             <input type="password" id="passwordInput" class="form-control" @bind="Password" />
         </div>
-        <button class="btn btn-primary w-100" @onclick="Submit">Submit</button>
+        <div class="d-flex justify-content-center align-items center">
+            <button class="btn btn-primary rounded-pill" @onclick="Submit">Submit</button>
+        </div>
     </div>
 </div>
 
@@ -32,7 +34,8 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     private string Password { get; set; } = string.Empty;
 
-    private Task Submit() {
+    private Task Submit()
+    {
         var passphraseChars = Password.ToCharArray();
         Password = string.Empty;
         return OnSubmit.InvokeAsync(passphraseChars);

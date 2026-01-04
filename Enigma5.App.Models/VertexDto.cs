@@ -18,16 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json.Serialization;
-
 namespace Enigma5.App.Models;
 
 public class VertexDto
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PublicKey { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SignedData { get; set; }
 
     public NeighborhoodDto? Neighborhood { get; set; }

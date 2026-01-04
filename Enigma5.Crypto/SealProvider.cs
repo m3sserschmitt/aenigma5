@@ -150,8 +150,14 @@ public sealed class SealProvider :
         public static IEnvelopeSigner CreateSigner(string key, byte[]? passphrase)
         => new SealProvider(CryptoContext.Factory.CreateSignatureContext(key, passphrase));
 
+        public static IEnvelopeSigner CreateSignerFromFile(string path, byte[]? passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateSignatureContextFromFile(path, passphrase));
+
         public static IEnvelopeSigner CreateSigner(string key)
         => CreateSigner(key, null);
+
+        public static IEnvelopeSigner CreateSignerFromFile(string path)
+        => CreateSignerFromFile(path, null);
 
         public static IEnvelopeVerifier CreateVerifier(string key)
         => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key));
@@ -159,8 +165,14 @@ public sealed class SealProvider :
         public static IEnvelopeUnsealer CreateUnsealer(string key, byte[]? passphrase)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase));
 
+        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path, byte[]? passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
+
         public static IEnvelopeUnsealer CreateUnsealer(string key)
         => CreateUnsealer(key, null);
+
+        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path)
+        => CreateUnsealerFromFile(path, null);
 
         public static IEnvelopeSealer CreateSealer(string key)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));

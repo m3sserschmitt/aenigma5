@@ -26,13 +26,13 @@ using Enigma5.Crypto.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class SharedDataCreateDto(string? publicKey = null, string? signedData = null, int accessCount = 1): IValidatable
+public class SharedDataCreateDto(string? publicKey = null, string? signedData = null, int? accessCount = 1): IValidatable
 {
     public string? PublicKey { get; private set; } = publicKey;
 
     public string? SignedData { get; private set; } = signedData;
 
-    public int AccessCount { get; private set; } = accessCount;
+    public int? AccessCount { get; private set; } = accessCount;
 
     public HashSet<ErrorDto> Validate()
     {
@@ -56,7 +56,7 @@ public class SharedDataCreateDto(string? publicKey = null, string? signedData = 
             errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
         }
 
-        if(AccessCount < 0)
+        if(AccessCount <= 0)
         {
             errors.AddError(ValidationErrorsDto.INVALID_VALUE_FOR_PROPERTY, nameof(AccessCount));
         }

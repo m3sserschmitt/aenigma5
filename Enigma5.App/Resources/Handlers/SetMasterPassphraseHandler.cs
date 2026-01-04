@@ -35,14 +35,14 @@ public class SetMasterPassphraseHandler(ICertificateManager certificateManager, 
 
     private readonly NetworkGraph _networkGraph = networkGraph;
 
-    public Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
     {
-        var result = _certificateManager.Setup(request.Passphrase) && _networkGraph.CreateInitialVertex();
+        var result = _certificateManager.Setup(request.Passphrase) && await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
         if (result)
         {
             SendInvokeNetworkBridgeCommand();
         }
-        return Task.FromResult(CommandResult.CreateResultSuccess(result));
+        return CommandResult.CreateResultSuccess(result);
     }
 
     private static void SendInvokeNetworkBridgeCommand()

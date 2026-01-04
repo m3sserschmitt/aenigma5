@@ -18,8 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json.Serialization;
-
 namespace Enigma5.App.Models.HubInvocation;
 
 public class InvocationResultDto<T>
@@ -36,7 +34,6 @@ public class InvocationResultDto<T>
         Errors = [];
     }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Data { get; set; }
 
     public virtual bool Success { get; set; }

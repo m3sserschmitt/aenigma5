@@ -79,15 +79,6 @@ public class Program
         }
     }
 
-    private static VertexBroadcastRequestDto CreateVertexBroadcast(string localAddress, string serverAddress, string publicKey, string privateKey, string passphrase)
-    {
-        var neighborhood = new NeighborhoodDto(localAddress, null, null, [serverAddress]);
-        var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
-        using var envelope = SealProvider.Factory.CreateSigner(privateKey, Encoding.UTF8.GetBytes(passphrase) ?? []);
-        var signature = envelope.Sign(serializedNeighborhood);
-        return new VertexBroadcastRequestDto(publicKey, Convert.ToBase64String(signature!));
-    }
-
     public static async Task Main(string[] args)
     {
         string localAddress;
@@ -172,11 +163,7 @@ public class Program
 
         var message = "Test";
         var serverPublicKey = await RequestPublicKey(serverInfoEndpoint);
-        var broadcastVertexRequest = CreateVertexBroadcast(localAddress, CertificateHelper.GetHexAddressFromPublicKey(serverPublicKey), publicKey, privateKey, passphrase);
-        var broadcastResult = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Broadcast), broadcastVertexRequest);
-
-        Console.WriteLine($"Broadcast result: {broadcastResult.Data}");
-
+        
         while (args[0] == "1" && serverPublicKey != null)
         {
             var destinationPublicKey = PKey.PublicKey2;

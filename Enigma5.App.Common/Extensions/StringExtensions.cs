@@ -19,6 +19,7 @@
 */
 
 using System.Text.RegularExpressions;
+using QRCoder;
 
 namespace Enigma5.App.Common.Extensions;
 
@@ -32,6 +33,17 @@ public static partial class StringExtensions
             return false;
 
         return OnionRegex.IsMatch(value);
+    }
+
+    public static string ToQrCode(this string text, int pixelsPerModule = 20)
+    {
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
+
+        var qrCode = new PngByteQRCode(data);
+        byte[] pngBytes = qrCode.GetGraphic(pixelsPerModule);
+
+        return $"data:image/png;base64,{Convert.ToBase64String(pngBytes)}";
     }
 
     [GeneratedRegex(@"^(?:[a-z2-7]{16}|[a-z2-7]{56})\.onion$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]

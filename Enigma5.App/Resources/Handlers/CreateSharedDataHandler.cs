@@ -60,7 +60,7 @@ public class CreateSharedDataHandler(
         {
             Data = request.SharedDataCreate.SignedData,
             PublicKey = request.SharedDataCreate.PublicKey,
-            MaxAccessCount = request.SharedDataCreate.AccessCount
+            MaxAccessCount = request.SharedDataCreate.AccessCount ?? 1
         };
         await _context.AddAsync(sharedData, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);

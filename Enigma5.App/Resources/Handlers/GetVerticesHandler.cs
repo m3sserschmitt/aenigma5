@@ -18,21 +18,29 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<Models.VertexDto>>>
+public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<VertexDto>>>
 {
     private readonly Data.NetworkGraph _graph = graph;
 
-    public Task<CommandResult<List<Models.VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
-    { 
-        var vertices = _graph.NonLeafVertices.Select(item => new Models.VertexDto {
+    public Task<CommandResult<List<VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    {
+        var vertices = _graph.Vertices.Select(item => new VertexDto
+        {
             PublicKey = item.PublicKey,
             SignedData = item.SignedData,
-            Neighborhood = new(item.Neighborhood.Address, item.Neighborhood.Hostname, item.Neighborhood.OnionService, item.Neighborhood.Neighbors)
+            Neighborhood = new(
+                item.Neighborhood.Address,
+                item.Neighborhood.Hostname,
+                item.Neighborhood.OnionService,
+                item.Neighborhood.Neighbors,
+                item.Neighborhood.LastUpdate
+            )
         }).ToList();
         return Task.FromResult(CommandResult.CreateResultSuccess(vertices));
     }

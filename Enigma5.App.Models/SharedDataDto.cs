@@ -24,21 +24,16 @@ namespace Enigma5.App.Models;
 
 public class SharedDataDto
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Tag { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ResourceUrl { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Data { get; set; }
 
     [JsonIgnore]
     public FileStream? File { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PublicKey { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTimeOffset? ValidUntil { get; set; }
 }

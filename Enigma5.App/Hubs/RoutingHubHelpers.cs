@@ -20,12 +20,12 @@
 
 using System.Reflection;
 using Enigma5.App.Attributes;
+using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs;
 
@@ -52,8 +52,7 @@ public partial class RoutingHub
         try
         {
             var routingMethod = typeof(RoutingHub).GetMethods()
-                    .Where(m => m.GetCustomAttribute<OnionRoutingAttribute>() != null)
-                    .SingleOrDefault()
+                    .SingleOrDefault(m => m.GetCustomAttribute<OnionRoutingAttribute>() != null)
                     ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
 
             await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequestDto([Convert.ToBase64String(data)], uuid));
@@ -94,7 +93,7 @@ public partial class RoutingHub
         return (await Task.WhenAll(GenerateBroadcastTask(adjacencyLists))).All(success => success);
     }
 
-    private async Task<CommandResult<Data.PendingMessage>> CreatePendingMessage()
+    private async Task<CommandResult<PendingMessage>> CreatePendingMessage()
     {
         if (Content != null)
         {
@@ -103,12 +102,12 @@ public partial class RoutingHub
             if (encodedContent is null)
             {
                 _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
-                return CommandResult.CreateResultFailure<Data.PendingMessage>();
+                return CommandResult.CreateResultFailure<PendingMessage>();
             }
             return await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
         }
         _logger.LogDebug($"Could not save pending message for connectionId {{{nameof(Context.ConnectionId)}}} because the content is null.", Context.ConnectionId);
-        return CommandResult.CreateResultFailure<Data.PendingMessage>();
+        return CommandResult.CreateResultFailure<PendingMessage>();
     }
 
     private async Task<bool> SendBroadcast(VertexBroadcastRequestDto adjacencyLists)

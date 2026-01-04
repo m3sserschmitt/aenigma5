@@ -18,18 +18,22 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
 @using Enigma5.App.Models
 
-<div class="list-group-items-action card shadow">
-    <div class="card-body">
-        <div class="row">
-            <div class="col col-6">
-                Host: <strong>@Model.Host</strong>
-            </div>
-            <div class="col col-5">
-                Address: <strong>@Model.Address</strong>
-            </div>
-            <div class="col col-1">
-                <button class="btn btn-danger" @onclick="Remove">Remove</button>
-            </div>
+<div class="list-group-item list-group-item-action rounded shadow-sm">
+    <div class="row">
+        <div class="col col-6">
+            Host: <strong>@Model.Host</strong>
+        </div>
+        <div class="col col-5">
+            Address: <strong>@Model.Address</strong>
+        </div>
+        <div class="col col-1">
+            @if (Model.Id > 0)
+            {
+                <button class="d-flex btn btn-outline-danger rounded-circle align-items-center justify-content-center"
+                    @onclick="Remove">
+                    <i class="bi bi-trash"></i>
+                </button>
+            }
         </div>
     </div>
 </div>

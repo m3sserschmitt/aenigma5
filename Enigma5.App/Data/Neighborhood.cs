@@ -23,13 +23,15 @@ using System.Text.Json.Serialization;
 namespace Enigma5.App.Data;
 
 [method: JsonConstructor]
-public class Neighborhood(HashSet<string> neighbors, string address, string? hostname, string? onionService)
+public class Neighborhood(HashSet<string> neighbors, string address, string? hostname, string? onionService, DateTimeOffset? lastUpdate)
 {
     public string? Hostname { get; private set; } = hostname;
 
     public string? OnionService { get; private set; } = onionService;
 
     public string Address { get; private set; } = address;
+
+    public DateTimeOffset? LastUpdate { get; private set; } = lastUpdate;
 
     public HashSet<string> Neighbors { get; private set; } = [.. neighbors];
 
@@ -53,7 +55,9 @@ public class Neighborhood(HashSet<string> neighbors, string address, string? hos
 
     public static bool operator !=(Neighborhood? obj1, Neighborhood? obj2) => !(obj1 == obj2);
 
-    public override bool Equals(object? obj) => obj is Neighborhood other && Address == other.Address;
+    public bool Equals(Neighborhood? neighborhood) => this == neighborhood;
+
+    public override bool Equals(object? obj) => Equals(obj as Neighborhood);
 
     public override int GetHashCode() => Address.GetHashCode();
 }

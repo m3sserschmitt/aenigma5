@@ -16,9 +16,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
-@page "/Dashboard"
-@rendermode InteractiveServer
-
 @using Enigma5.App.Models
 @using Enigma5.App.Resources.Commands
 @using Enigma5.App.Resources.Handlers
@@ -30,11 +27,19 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 @using System.Text
 @using MediatR
 
+@page "/Dashboard"
+@rendermode InteractiveServer
+@implements IDisposable
+
 @inject IMediator Mediator
+@inject DashboardUIState DashboardUIState
 
 <div class="row justify-content-center">
     <div class="col col-3">
         <PassphraseInput OnSubmit="SubmitPassphrase" />
+        <div class="mt-2">
+            <ExportContactDataQrCode />
+        </div>
     </div>
     <div class="col col-9">
         <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" />
@@ -46,15 +51,20 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     protected override async Task OnInitializedAsync()
     {
+        DashboardUIState.OnPeersChanged += OnPeersChanged;
         await LoadPeers();
     }
+
+    private void OnPeersChanged() => Task.Run(LoadPeers);
 
     private async Task LoadPeers()
     {
         var result = await Mediator.Send(new GetPeersQuery());
         if (result.IsSuccessNotNullResultValue())
         {
-            Peers = result.Value!;
+            var resultSet = new HashSet<PeerDto>(result.Value!);
+            resultSet.UnionWith(DashboardUIState.Peers);
+            Peers = resultSet;
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -74,7 +84,11 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     private async Task RemovePeer(PeerDto peer)
     {
-        var result = await Mediator.Send(new RemovePeerCommand(peer.Id));
+        if(peer.Id == null)
+        {
+            return;
+        }
+        var result = await Mediator.Send(new RemovePeerCommand(peer.Id.Value));
         if (result.IsSuccessNotNullResultValue())
         {
             await LoadPeers();
@@ -85,5 +99,10 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
     {
         await Mediator.Send(new SetMasterPassphraseCommand(passphrase));
         Array.Clear(passphrase);
+    }
+
+    public void Dispose()
+    {
+        DashboardUIState.OnPeersChanged -= OnPeersChanged;
     }
 }

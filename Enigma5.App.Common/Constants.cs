@@ -22,7 +22,7 @@ namespace Enigma5.App.Common;
 
 public static class Constants
 {
-    public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(01, 00, 00);
+    public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(00, 05, 00);
 
     public static readonly TimeSpan LeafsLifetimeDefault = new(03, 00, 00, 00);
 
@@ -62,5 +62,5 @@ public static class Constants
 
     public const string FilesCleanupJobInterval = "*/5 * * * *";
 
-    public const string InvokeNetworkBridgeJobInterval = "*/15 * * * *";
+    public const string InvokeNetworkBridgeJobInterval = "*/5 * * * *";
 }

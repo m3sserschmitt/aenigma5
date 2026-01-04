@@ -29,29 +29,26 @@ public class ErrorDto(string? message = null, HashSet<string>? properties = null
 
     public HashSet<string>? Properties { get; private set; } = properties;
 
-    public bool Equals(ErrorDto? error)
-    {
-        if(error is null)
-        {
-            return false;
-        }
+    public bool Equals(ErrorDto? error) => this == error;
 
-        return error.Message == Message;
-    }
-
-    public override bool Equals(object? obj)
+    public static bool operator ==(ErrorDto? obj1, ErrorDto? obj2)
     {
-        if(ReferenceEquals(this, obj))
+        if (ReferenceEquals(obj1, obj2))
         {
             return true;
         }
 
-        return Equals(obj as ErrorDto);
+        if (obj1 is null || obj2 is null)
+        {
+            return false;
+        }
+
+        return obj1.Message == obj2.Message;
     }
 
-    public override int GetHashCode() => Message is null ? 0 : Message.GetHashCode();
+    public override bool Equals(object? obj) => Equals(obj as ErrorDto);
 
-    public static bool operator==(ErrorDto e1, ErrorDto e2) => e1.Message == e2.Message;
+    public override int GetHashCode() => Message?.GetHashCode() ?? 0;
 
-    public static bool operator!=(ErrorDto e1, ErrorDto e2) => !(e1 == e2);
+    public static bool operator !=(ErrorDto e1, ErrorDto e2) => !(e1 == e2);
 }

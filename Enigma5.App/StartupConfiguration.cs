@@ -36,6 +36,8 @@ using Enigma5.App.Hubs.Sessions.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Enigma5.App.Common;
 using Enigma5.App.NetworkBridge;
+using Enigma5.App.UI;
+using System.Text.Json.Serialization;
 
 namespace Enigma5.App;
 
@@ -59,6 +61,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
+        services.AddSingleton<DashboardUIState>();
         services.AddSingleton<Bridge>();
         services.AddSingleton<HubConnectionsProxy>();
         services.AddTransient<OnionParser>();
@@ -71,6 +74,10 @@ public class StartupConfiguration(IConfiguration configuration)
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
         services.AddAntiforgery();
+        services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        });
     }
 
     public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IConfiguration configuration)
