@@ -34,13 +34,13 @@ public static class KeysGenerator
 
     private const string ExportPublicKeyArguments = "rsa -in {0} -outform PEM -pubout -out {1} -passin stdin";
 
-    public static bool Generate(string privatePemPath, char[] passphrase, int keySize = KeySizeBits)
+    public static Task<bool> Generate(string privatePemPath, char[] passphrase, int keySize = KeySizeBits)
     => LaunchProcess(GenerateKeyCommand, string.Format(GenerateKeyArguments, privatePemPath, keySize), passphrase);
 
-    public static bool ExportPublicKey(string privatePemPath, string publicPemPath, char[] passphrase)
+    public static Task<bool> ExportPublicKey(string privatePemPath, string publicPemPath, char[] passphrase)
     => LaunchProcess(ExportPublicKeyCommand, string.Format(ExportPublicKeyArguments, privatePemPath, publicPemPath), passphrase);
 
-    private static bool LaunchProcess(string command, string arguments, char[] passphrase)
+    private static async Task<bool> LaunchProcess(string command, string arguments, char[] passphrase)
     {
         try
         {
@@ -59,10 +59,10 @@ public static class KeysGenerator
             {
                 return false;
             }
-            process.StandardInput.Write(passphrase);
-            process.StandardInput.Flush();
+            await process.StandardInput.WriteAsync(passphrase);
+            await process.StandardInput.FlushAsync();
             process.StandardInput.Close();
-            process.WaitForExit();
+            await process.WaitForExitAsync();
             return true;
         }
         catch (Exception)

@@ -26,15 +26,15 @@ namespace Enigma5.Security;
 
 public abstract class KeyReader(IConfiguration configuration) : IKeyReader
 {
-    private const string PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE = "Public Key file not configured.";
+    public string? PublicKeyPath => configuration.GetPublicKeyPath();
 
-    private const string PRIVATE_KEY_NOT_CONFIGURED_ERROR_MESSAGE = "Private Key file not configured.";
+    public string? PrivateKeyPath => configuration.GetPrivateKeyPath();
 
-    public string PublicKeyPath => configuration.GetPublicKeyPath() ?? throw new Exception(PUBLIC_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
+    public string? ReadPrivateKey() => ReadPrivateKeyAsync().GetAwaiter().GetResult();
 
-    public string PrivateKeyPath => configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_NOT_CONFIGURED_ERROR_MESSAGE);
+    public abstract Task<string?> ReadPrivateKeyAsync();
 
-    public abstract string ReadPrivateKey();
+    public string? ReadPublicKey() => ReadPublicKeyAsync().GetAwaiter().GetResult();
 
-    public abstract string ReadPublicKey();
+    public abstract Task<string?> ReadPublicKeyAsync();
 }

@@ -34,39 +34,44 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 @inject IMediator Mediator
 @inject DashboardUIState DashboardUIState
 
-<div class="row justify-content-center">
-    <div class="col col-3">
-        <PassphraseInput OnSubmit="SubmitPassphrase" />
-        <div class="mt-2">
-            <ExportContactDataQrCode />
-        </div>
+<div class="row justify-content-center h-100">
+    <div class="d-flex flex-column justify-content-between col col-3 ">
+        <PassphraseInput OnUnlockKey="UnlockPrivateKey" OnLockKey="LockPrivateKey"/>
+        <ExportContactDataQrCode />
     </div>
     <div class="col col-9">
-        <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" />
+        <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" OnRetry="ReloadPeerConnections"/>
     </div>
 </div>
 
 @code {
     private IEnumerable<PeerDto> Peers = [];
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
-        DashboardUIState.OnPeersChanged += OnPeersChanged;
-        await LoadPeers();
+        DashboardUIState.OnInboundPeersChanged += OnPeersChanged;
+        DashboardUIState.OnOutboundPeersChanged += OnPeersChanged;
+        return InvokeAsync(LoadPeers);
     }
 
-    private void OnPeersChanged() => Task.Run(LoadPeers);
+    private void OnPeersChanged(HashSet<PeerDto> peers) => InvokeAsync(LoadPeers);
 
-    private async Task LoadPeers()
+    private Task LoadPeers()
     {
-        var result = await Mediator.Send(new GetPeersQuery());
-        if (result.IsSuccessNotNullResultValue())
+        lock (DashboardUIState.OutboundPeers)
         {
-            var resultSet = new HashSet<PeerDto>(result.Value!);
-            resultSet.UnionWith(DashboardUIState.Peers);
-            Peers = resultSet;
+            lock (DashboardUIState.InboundPeers)
+            {
+                var result = new HashSet<PeerDto>(DashboardUIState.OutboundPeers);
+                foreach (var outboundPeer in DashboardUIState.OutboundPeers)
+                {
+                    outboundPeer.Connected = DashboardUIState.InboundPeers.TryGetValue(outboundPeer, out var _);
+                    result.Add(outboundPeer);
+                }
+                Peers = result.Union(DashboardUIState.InboundPeers);
+            }
         }
-        await InvokeAsync(StateHasChanged);
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task SubmitNewPeer(PeerDto peer)
@@ -78,31 +83,36 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         var result = await Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
         if (result.IsSuccessNotNullResultValue())
         {
-            await LoadPeers();
+            await InvokeAsync(LoadPeers);
         }
     }
 
     private async Task RemovePeer(PeerDto peer)
     {
-        if(peer.Id == null)
+        if (peer.Id == null)
         {
             return;
         }
         var result = await Mediator.Send(new RemovePeerCommand(peer.Id.Value));
         if (result.IsSuccessNotNullResultValue())
         {
-            await LoadPeers();
+            await InvokeAsync(LoadPeers);
         }
     }
 
-    private async Task SubmitPassphrase(char[] passphrase)
+    private async Task UnlockPrivateKey(char[] passphrase)
     {
         await Mediator.Send(new SetMasterPassphraseCommand(passphrase));
         Array.Clear(passphrase);
     }
 
+    private Task LockPrivateKey() => Mediator.Send(new RemoveMasterPassphraseCommand());
+
+    private Task ReloadPeerConnections() => Mediator.Send(new InvokeNetworkBridgeCommand());
+
     public void Dispose()
     {
-        DashboardUIState.OnPeersChanged -= OnPeersChanged;
+        DashboardUIState.OnInboundPeersChanged -= OnPeersChanged;
+        DashboardUIState.OnOutboundPeersChanged -= OnPeersChanged;
     }
 }

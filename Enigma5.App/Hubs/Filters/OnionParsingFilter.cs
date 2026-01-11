@@ -50,7 +50,7 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
             var errors = new HashSet<ErrorDto>();
             foreach (var item in request.Payloads!)
             {
-                if (_parser.Parse(item!))
+                if (await _parser.ParseAsync(item!))
                 {
                     _ = new OnionParsingHubAdapter(invocationContext.Hub)
                     {

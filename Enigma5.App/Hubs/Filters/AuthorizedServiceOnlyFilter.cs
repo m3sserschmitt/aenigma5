@@ -21,50 +21,28 @@
 using Enigma5.App.Attributes;
 using Enigma5.App.Common.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR;
-using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.Security.Contracts;
-using MediatR;
-using Enigma5.App.Resources.Queries;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Hubs.Adapters;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class AuthorizedServiceOnlyFilter(
-    ISessionManager sessionManager,
-    IMediator commandRouter,
-    ILogger<AuthorizedServiceOnlyFilter> logger,
-    ICertificateManager certificateManager
-    ) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
+public class AuthorizedServiceOnlyFilter(ILogger<AuthorizedServiceOnlyFilter> logger) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
 {
-    private readonly ICertificateManager _certificateManager = certificateManager;
-
-    private readonly ISessionManager _sessionManager = sessionManager;
-
-    private readonly IMediator _commandRouter = commandRouter;
-
     private readonly ILogger<AuthorizedServiceOnlyFilter> _logger = logger;
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        if (!_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
+        if (new AuthorizedServiceHubAdapter(invocationContext.Hub).IsAuthorizedService)
         {
-            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-            return EmptyErrorResultDto.Create(InvocationErrors.NOT_AUTHORIZED);
-        }
-        if (address != _certificateManager.Address)
-        {
-            var result = await _commandRouter.Send(new CheckAuthorizedServiceQuery(address!));
-            if (!result.IsSuccessResult())
-            {
-                _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-                return EmptyErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
-            }
+            _logger.LogDebug($"{{{nameof(invocationContext.HubMethodName)}}} invocation authorized for {{{nameof(invocationContext.Context.ConnectionId)}}}.",
+            invocationContext.HubMethodName, invocationContext.Context.ConnectionId);
+            return await next(invocationContext);
         }
 
-        _logger.LogDebug($"{{{nameof(invocationContext.HubMethodName)}}} invocation authorized for {{{nameof(invocationContext.Context.ConnectionId)}}}.", invocationContext.HubMethodName, invocationContext.Context.ConnectionId);
-        return await next(invocationContext);
+        _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+        invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
+        return EmptyErrorResultDto.Create(InvocationErrors.NOT_AUTHORIZED);
     }
 }

@@ -45,10 +45,14 @@ internal static partial class Native
 
     [LibraryImport("libaenigma")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static partial bool SetMasterPassphraseName([MarshalAs(UnmanagedType.LPStr)]string name);
+    internal static partial bool SetMasterPassphraseName([MarshalAs(UnmanagedType.LPStr)] string name);
 
     [LibraryImport("libaenigma")]
     internal static partial int CreateMasterPassphrase([In] byte[] passphrase);
+
+    [LibraryImport("libaenigma")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool RemoveMasterPassphrase();
 
     [LibraryImport("libaenigma")]
     internal static partial int GetPKeySize([MarshalAs(UnmanagedType.LPStr)] string publicKey);
@@ -57,13 +61,16 @@ internal static partial class Native
     internal static partial int GetAddressSize();
 
     [LibraryImport("libaenigma")]
+    internal static partial int GetKernelKeyMaxSize();
+
+    [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateAsymmetricEncryptionContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
     [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
 
     [LibraryImport("libaenigma")]
-    internal static partial IntPtr CreateAsymmetricDecryptionContextFromFile([MarshalAs(UnmanagedType.LPTStr)] string path, [In] byte[]? passphrase);
+    internal static partial IntPtr CreateAsymmetricDecryptionContextFromFile([MarshalAs(UnmanagedType.LPStr)] string path, [In] byte[]? passphrase);
 
     [LibraryImport("libaenigma")]
     internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);

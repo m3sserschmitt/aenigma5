@@ -24,8 +24,10 @@ namespace Enigma5.Security;
 
 public class DummyPassphraseProvider : IPassphraseProvider
 {
-    public char[] ProvidePassphrase()
+    public char[]? ProvidePassphrase()
     {
         return [];
     }
+
+    public Task<char[]?> ProvidePassphraseAsync() => Task.Run(ProvidePassphrase);
 }

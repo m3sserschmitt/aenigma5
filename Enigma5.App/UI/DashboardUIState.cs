@@ -24,17 +24,64 @@ namespace Enigma5.App.UI;
 
 public class DashboardUIState
 {
-    private IEnumerable<PeerDto> _peers = [];
+    private HashSet<PeerDto> _inboundPeers = [];
 
-    public IEnumerable<PeerDto> Peers
+    private HashSet<PeerDto> _outboundPeers = [];
+
+    private bool _privateKeyUnlocked = false;
+
+    public HashSet<PeerDto> InboundPeers
     {
-        get => _peers;
+        get => _inboundPeers;
         set
         {
-            _peers = value;
-            OnPeersChanged?.Invoke();
+            var valueSet = new HashSet<PeerDto>(value);
+            lock (_inboundPeers)
+            {
+                if (valueSet.SetEquals(_inboundPeers))
+                {
+                    return;
+                }
+                _inboundPeers = valueSet;
+            }
+            OnInboundPeersChanged?.Invoke(_inboundPeers);
         }
     }
 
-    public event Action? OnPeersChanged;
+    public HashSet<PeerDto> OutboundPeers
+    {
+        get => _outboundPeers;
+        set
+        {
+            var valueSet = new HashSet<PeerDto>(value);
+            lock (_outboundPeers)
+            {
+                if (valueSet.SetEquals(_outboundPeers))
+                {
+                    return;
+                }
+                _outboundPeers = valueSet;
+            }
+            OnOutboundPeersChanged?.Invoke(_outboundPeers);
+        }
+    }
+
+    public bool PrivateKeyUnlocked
+    {
+        get => _privateKeyUnlocked;
+        set
+        {
+            if(value != _privateKeyUnlocked)
+            {
+                _privateKeyUnlocked = value;
+                OnPrivateKeyUnlockedChanged?.Invoke(_privateKeyUnlocked);
+            }
+        }
+    }
+
+    public event Action<HashSet<PeerDto>>? OnInboundPeersChanged;
+
+    public event Action<HashSet<PeerDto>>? OnOutboundPeersChanged;
+
+    public event Action<bool>? OnPrivateKeyUnlockedChanged;
 }

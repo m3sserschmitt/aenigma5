@@ -30,13 +30,13 @@ public class OnionParser(ICertificateManager certificateManager)
 
     public byte[]? Content { get; private set; }
 
-    public bool Parse(string onion)
+    public async Task<bool> ParseAsync(string onion)
     {
         try
         {
             string? next = null;
             byte[]? content = null;
-            using var unsealer = _certificateManager.CreateUnsealer();
+            using var unsealer = await _certificateManager.CreateUnsealerAsync();
             if(unsealer.UnsealOnion(onion, ref next, ref content))
             {
                 NextAddress = next;

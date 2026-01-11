@@ -35,6 +35,12 @@ public static class HubConnectionExtensions
     {
         try
         {
+            var publicKey = certificateManager.PublicKey;
+            if(string.IsNullOrWhiteSpace(publicKey))
+            {
+                return false;
+            }
+
             var nonce = await connection.InvokeAsync<InvocationResultDto<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
 
             if (!nonce.Success || nonce.Data is null)
@@ -52,7 +58,7 @@ public static class HubConnectionExtensions
 
             var authentication = await connection.InvokeAsync<InvocationResultDto<bool>>(
                 nameof(IEnigmaHub.Authenticate),
-                new AuthenticationRequestDto(certificateManager.PublicKey, Convert.ToBase64String(data)),
+                new AuthenticationRequestDto(publicKey, Convert.ToBase64String(data)),
                 cancellationToken);
 
             return authentication.Success && authentication.Data;

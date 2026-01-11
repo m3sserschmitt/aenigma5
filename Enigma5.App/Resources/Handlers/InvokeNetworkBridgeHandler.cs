@@ -20,14 +20,33 @@
 
 using Enigma5.App.NetworkBridge;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Queries;
+using Enigma5.App.UI;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class InvokeNetworkBridgeHandler(Bridge bridge) : IRequestHandler<InvokeNetworkBridgeCommand, CommandResult<bool>>
+public class InvokeNetworkBridgeHandler(IMediator mediator, Bridge bridge, DashboardUIState dashboardUIState)
+: IRequestHandler<InvokeNetworkBridgeCommand, CommandResult<bool>>
 {
+    private readonly IMediator _mediator = mediator;
+
     private readonly Bridge _bridge = bridge;
 
+    private readonly DashboardUIState _dashboardUIState = dashboardUIState;
+
     public async Task<CommandResult<bool>> Handle(InvokeNetworkBridgeCommand request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(await _bridge.StartAsync());
+    {
+        await UpdateDashboardUIState(cancellationToken);
+        return CommandResult.CreateResultSuccess(await _bridge.StartAsync());
+    }
+
+    private async Task UpdateDashboardUIState(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPeersQuery(), cancellationToken);
+        if (result.IsSuccessNotNullResultValue())
+        {
+            _dashboardUIState.OutboundPeers = [.. result.Value!];
+        }
+    }
 }

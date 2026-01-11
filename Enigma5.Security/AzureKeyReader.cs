@@ -32,33 +32,37 @@ public class AzureKeysReader(
 
     private readonly AzureClient _azureClient = azureClient;
 
-    public string PrivateKey => ReadPrivateKey();
-
-    public string PublicKey => ReadPublicKey();
-
-    public override string ReadPublicKey()
+    public override async Task<string?> ReadPublicKeyAsync()
     {
         try
         {
-            return _azureClient.GetSecret(PublicKeyPath);
+            if(string.IsNullOrWhiteSpace(PublicKeyPath))
+            {
+                throw new Exception("Public key path is null or empty.");
+            }
+            return await _azureClient.GetSecretAsync(PublicKeyPath);
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error occurred while reading public key.");
-            throw;
+            return null;
         }
     }
 
-    public override string ReadPrivateKey()
+    public override async Task<string?> ReadPrivateKeyAsync()
     {
         try
         {
-            return _azureClient.GetSecret(PrivateKeyPath);
+            if(string.IsNullOrWhiteSpace(PrivateKeyPath))
+            {
+                throw new Exception("Private key path is null or empty.");
+            }
+            return await _azureClient.GetSecretAsync(PrivateKeyPath);
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error occurred while reading private key.");
-            throw;
+            return null;
         }
     }
 }

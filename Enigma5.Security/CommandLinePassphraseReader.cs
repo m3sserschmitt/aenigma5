@@ -26,9 +26,9 @@ public class CommandLinePassphraseReader : IPassphraseProvider
 {
     private static readonly int PASSPHRASE_MAX_LENGTH = 128;
 
-    public char[] ProvidePassphrase() => ReadPassphrase();
+    public char[]? ProvidePassphrase() => ReadPassphrase();
 
-    private static char[] ReadPassphrase()
+    private static char[]? ReadPassphrase()
     {
         var i = 0;
         var password = new char[PASSPHRASE_MAX_LENGTH];
@@ -72,4 +72,6 @@ public class CommandLinePassphraseReader : IPassphraseProvider
 
         return validChars;
     }
+
+    public Task<char[]?> ProvidePassphraseAsync() => Task.Run(ReadPassphrase);
 }

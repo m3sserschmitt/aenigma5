@@ -73,13 +73,13 @@ public class HubConnectionsProxy(
             return await ReloadConnections();
         }
 
-        var listenAddress = _configuration.GetLocalListenAddress();
-        if (string.IsNullOrWhiteSpace(listenAddress))
+        var localAddress = _configuration.GetAuthorizedLocalListenAddress();
+        if (string.IsNullOrWhiteSpace(localAddress))
         {
             return false;
         }
 
-        _localHubConnection ??= ConnectionVector.CreateHubConnection(listenAddress);
+        _localHubConnection ??= ConnectionVector.CreateHubConnection(localAddress);
 
         using var scope = _scopeFactory.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -95,7 +95,7 @@ public class HubConnectionsProxy(
             return true;
         }
 
-        _connections = ConnectionVector.CreateConnections(listenAddress, urls);
+        _connections = ConnectionVector.CreateConnections(localAddress, urls);
 
         foreach (var connection in _connections)
         {

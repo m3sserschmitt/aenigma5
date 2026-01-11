@@ -19,32 +19,47 @@
 */
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
 
-public class FileKeyReader(IConfiguration configuration): KeyReader(configuration)
+public class FileKeyReader(IConfiguration configuration, ILogger<FileKeyReader> logger) : KeyReader(configuration)
 {
-    private const string PRIVATE_KEY_FILE_NOT_FOUND_ERROR_MESSAGE = "Private Key file not found.";
+    private readonly ILogger<FileKeyReader> _logger = logger;
 
-    private const string PUBLIC_KEY_NOT_FOUND_ERROR_MESSAGE = "Public Key file not found.";
-
-    public override string ReadPublicKey()
+    public override async Task<string?> ReadPublicKeyAsync()
     {
-        if(!File.Exists(PublicKeyPath))
+        try
         {
-            throw new Exception(PUBLIC_KEY_NOT_FOUND_ERROR_MESSAGE);
-        }
+            if (string.IsNullOrWhiteSpace(PublicKeyPath) || !File.Exists(PublicKeyPath))
+            {
+                throw new Exception("Public key path is null, empty or does not exist.");
+            }
 
-        return File.ReadAllText(PublicKeyPath);
+            return await File.ReadAllTextAsync(PublicKeyPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Error encountered while reading public key file.");
+            return null;
+        }
     }
 
-    public override string ReadPrivateKey()
+    public override async Task<string?> ReadPrivateKeyAsync()
     {
-        if(!File.Exists(PrivateKeyPath))
+        try
         {
-            throw new Exception(PRIVATE_KEY_FILE_NOT_FOUND_ERROR_MESSAGE);
-        }
+            if (string.IsNullOrWhiteSpace(PrivateKeyPath) || !File.Exists(PrivateKeyPath))
+            {
+                throw new Exception("Private key path is null, empty or does not exist.");
+            }
 
-        return File.ReadAllText(PrivateKeyPath);
+            return await File.ReadAllTextAsync(PrivateKeyPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Error encountered while reading private key file.");
+            return null;
+        }
     }
 }

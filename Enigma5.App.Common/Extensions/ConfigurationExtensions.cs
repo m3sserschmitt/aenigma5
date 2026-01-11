@@ -26,7 +26,10 @@ namespace Enigma5.App.Common.Extensions;
 public static class ConfigurationExtensions
 {
     public static string? GetLocalListenAddress(this IConfiguration configuration)
-    => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null);
+    => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null)?.Trim('/', ' ');
+
+    public static string? GetAuthorizedLocalListenAddress(this IConfiguration configuration)
+    => configuration.GetValue<string?>("Kestrel:EndPoints:HttpAuthorized:Url", null)?.Trim('/', ' ');
 
     public static string? GetHostname(this IConfiguration configuration)
     => configuration.GetValue<string?>("Hostname", null)?.Trim('/', ' ');

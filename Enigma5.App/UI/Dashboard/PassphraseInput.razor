@@ -16,28 +16,57 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
+@inject DashboardUIState DashboardUIState
+
 <div class="card shadow">
     <div class="card-body">
         <h4 class="card-title mb-3 text-center">Aenigma</h4>
         <div class="form-group mb-3">
-            <label for="passwordInput">Password</label>
-            <input type="password" id="passwordInput" class="form-control" @bind="Password" />
+            <label for="passwordInput">Password (max. @Crypto.Constants.KeynelKeyMaxSize chars)</label>
+            <InputText type="password" id="passwordInput" class="form-control" @bind-Value="@Password"
+                placeholder="Enter key passphrase here..." disabled="@(PrivateKeyUnlocked)" />
         </div>
         <div class="d-flex justify-content-center align-items center">
-            <button class="btn btn-primary rounded-pill" @onclick="Submit">Submit</button>
+            @if (PrivateKeyUnlocked)
+            {
+                <button class="btn btn-primary rounded-pill" @onclick="LockKey">Lock Private Key</button>
+            }
+            else
+            {
+                <button class="btn btn-primary rounded-pill" @onclick="UnlockKey">Unlock Private Key</button>
+            }
         </div>
     </div>
 </div>
 
 @code {
-    [Parameter] public EventCallback<char[]> OnSubmit { get; set; } = default;
+    [Parameter] public EventCallback<char[]> OnUnlockKey { get; set; } = default;
+    [Parameter] public EventCallback OnLockKey { get; set; } = default;
 
     private string Password { get; set; } = string.Empty;
+    private bool PrivateKeyUnlocked = false;
 
-    private Task Submit()
+    protected override Task OnInitializedAsync()
     {
+        DashboardUIState.OnPrivateKeyUnlockedChanged += OnPrivateKeyUnlockedChanged;
+        return Task.CompletedTask;
+    }
+
+    private void OnPrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
+    {
+        PrivateKeyUnlocked = unlocked;
+    });
+
+    private Task UnlockKey()
+    {
+        if(string.IsNullOrWhiteSpace(Password))
+        {
+            return Task.CompletedTask;
+        }
         var passphraseChars = Password.ToCharArray();
         Password = string.Empty;
-        return OnSubmit.InvokeAsync(passphraseChars);
+        return OnUnlockKey.InvokeAsync(passphraseChars);
     }
+
+    private Task LockKey() => OnLockKey.InvokeAsync();
 }

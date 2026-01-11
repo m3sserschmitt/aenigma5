@@ -30,8 +30,6 @@ public sealed class SealProvider :
     IEnvelopeSigner,
     IEnvelopeVerifier
 {
-    public const int AddressSize = 32;
-
     private readonly CryptoContext _ctx;
 
     private SealProvider(CryptoContext ctx)
@@ -85,18 +83,18 @@ public sealed class SealProvider :
 
             var data = Native.UnsealOnion(_ctx, decodedOnion, out var outLen);
 
-            if (data == IntPtr.Zero || outLen < AddressSize)
+            if (data == IntPtr.Zero || outLen < Constants.AddressSize)
             {
                 return false;
             }
 
-            var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, AddressSize);
+            var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
             next = null;
             if(nextBytes is not null)
             {
                 next = HashProvider.ToHex(nextBytes);
             }
-            content = KeyUtil.CopyKeyFromNativeBuffer(data + AddressSize, outLen - AddressSize);
+            content = KeyUtil.CopyKeyFromNativeBuffer(data + Constants.AddressSize, outLen - Constants.AddressSize);
 
             return next is not null && content is not null;
         }
@@ -134,6 +132,8 @@ public sealed class SealProvider :
     public static bool SetMasterPassphraseName(string name) => Native.SetMasterPassphraseName(name);
 
     public static int CreateMasterPassphrase(byte[] passphrase) => Native.CreateMasterPassphrase(passphrase);
+
+    public static bool RemoveMasterPassphrase() => Native.RemoveMasterPassphrase();
 
     public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.Run) : null;
 

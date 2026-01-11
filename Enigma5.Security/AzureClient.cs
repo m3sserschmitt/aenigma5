@@ -28,40 +28,48 @@ namespace Enigma5.Security;
 
 public class AzureClient(IConfiguration configuration, ILogger<AzureKeysReader> logger)
 {
-    private static readonly string KEYS_LOCATION_NOT_PROVIDED = "Keys location url not provided.";
+    private static readonly string KEYS_LOCATION_NOT_PROVIDED = "Azure Vault URL is null or empty.";
+
+    private static readonly string COULD_NOT_CREATE_AZURE_CLIENT = "Could not create Azure Client.";
 
     private readonly IConfiguration _configuration = configuration;
 
     private readonly ILogger<AzureKeysReader> _logger = logger;
 
-    private string Url
+    private string? Url
     {
         get
         {
             try
             {
-                return _configuration.GetAzureVaultUrl() ?? throw new Exception(KEYS_LOCATION_NOT_PROVIDED);
+                var azureVaultUrl = _configuration.GetAzureVaultUrl();
+                if(string.IsNullOrWhiteSpace(azureVaultUrl))
+                {
+                    throw new Exception(KEYS_LOCATION_NOT_PROVIDED);
+                }
+                return azureVaultUrl;
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "Fatal error encountered while trying to retrieve keys location from config.");
-                throw;
+                return null;
             }
         }
     }
 
-    private SecretClient SecretClient => new(new Uri(Url), new DefaultAzureCredential());
-
-    public string GetSecret(string name, string? version = null, CancellationToken cancellationToken = default)
+    public async Task<string?> GetSecretAsync(string name, string? version = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            return SecretClient.GetSecret(name, version, cancellationToken).Value.Value; ;
+            var client = CreateSecretClient() ?? throw new Exception(COULD_NOT_CREATE_AZURE_CLIENT);
+            return (await client.GetSecretAsync(name, version, cancellationToken)).Value.Value; ;
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error encountered while trying to read secret from vault.");
-            throw;
+            return null;
         }
     }
+
+    private SecretClient? CreateSecretClient() => !string.IsNullOrWhiteSpace(Url) ? new(new Uri(Url), new DefaultAzureCredential()) : null;
 }

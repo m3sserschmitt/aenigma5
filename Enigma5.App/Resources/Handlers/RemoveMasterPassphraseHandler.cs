@@ -18,35 +18,28 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
-using Enigma5.App.Models;
-using Enigma5.App.Resources.Queries;
+using Enigma5.App.Resources.Commands;
+using Enigma5.App.UI;
 using Enigma5.Security.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetServerInfoHandler(
-    NetworkGraph graph,
-    IConfiguration configuration,
-    ICertificateManager certificateManager) : IRequestHandler<GetServerInfoQuery, CommandResult<ServerInfoDto>>
+public class RemoveMasterPassphraseHandler(ICertificateManager certificateManager, NetworkGraph networkGraph, DashboardUIState dashboardUIState)
+: IRequestHandler<RemoveMasterPassphraseCommand, CommandResult<bool>>
 {
-    private readonly NetworkGraph _graph = graph;
-
     private readonly ICertificateManager _certificateManager = certificateManager;
 
-    private readonly IConfiguration _configuration = configuration;
+    private readonly DashboardUIState _dashboardUIState = dashboardUIState;
 
-    public async Task<CommandResult<ServerInfoDto>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(
-        new ServerInfoDto
-        {
-            PublicKey = _certificateManager.PublicKey,
-            Address = _certificateManager.Address,
-            GraphVersion = await _graph.GetGraphHashAsync(),
-            OnionService = _configuration.GetOnionService(),
-            Hostname = _configuration.GetHostname()
-        }
-    );
+    private readonly NetworkGraph _networkGraph = networkGraph;
+
+    public async Task<CommandResult<bool>> Handle(RemoveMasterPassphraseCommand request, CancellationToken cancellationToken)
+    {
+        await _certificateManager.RemoveMasterPassphraseAsync();
+        await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
+        _dashboardUIState.PrivateKeyUnlocked = !string.IsNullOrWhiteSpace(_networkGraph.LocalVertex?.SignedData);
+        return CommandResult.CreateResultSuccess(!_dashboardUIState.PrivateKeyUnlocked);
+    }
 }

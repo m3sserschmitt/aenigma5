@@ -22,26 +22,33 @@ using Enigma5.App.Common;
 using Enigma5.App.Data;
 using Enigma5.App.Hangfire;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.UI;
 using Enigma5.Security.Contracts;
 using Hangfire;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class SetMasterPassphraseHandler(ICertificateManager certificateManager, NetworkGraph networkGraph)
+public class SetMasterPassphraseHandler(
+    ICertificateManager certificateManager,
+    NetworkGraph networkGraph,
+    DashboardUIState dashboardUIState)
 : IRequestHandler<SetMasterPassphraseCommand, CommandResult<bool>>
 {
     private readonly ICertificateManager _certificateManager = certificateManager;
 
     private readonly NetworkGraph _networkGraph = networkGraph;
 
+    private readonly DashboardUIState _dashboardUIState = dashboardUIState;
+
     public async Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
     {
-        var result = _certificateManager.Setup(request.Passphrase) && await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
+        var result = await _certificateManager.SetupAsync(request.Passphrase) && await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
         if (result)
         {
             SendInvokeNetworkBridgeCommand();
         }
+        UpdateDashboardUIState();
         return CommandResult.CreateResultSuccess(result);
     }
 
@@ -53,5 +60,10 @@ public class SetMasterPassphraseHandler(ICertificateManager certificateManager, 
             Constants.InvokeNetworkBridgeJobInterval
         );
         BackgroundJob.Enqueue<MediatorHangfireBridge>(bridge => bridge.Send(new InvokeNetworkBridgeCommand()));
+    }
+
+    private void UpdateDashboardUIState()
+    {
+        _dashboardUIState.PrivateKeyUnlocked = !string.IsNullOrWhiteSpace(_networkGraph.LocalVertex?.SignedData);
     }
 }

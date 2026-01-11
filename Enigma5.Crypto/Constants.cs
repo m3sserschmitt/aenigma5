@@ -18,38 +18,17 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models;
+namespace Enigma5.Crypto;
 
-public class PeerDto
+public static class Constants
 {
-    public long? Id { get; set; }
+    public static readonly int AddressSize;
 
-    public string? Host { get; set; }
+    public static readonly int KeynelKeyMaxSize;
 
-    public string? Address { get; set; }
-
-    public bool Connected { get; set; }
-
-    public bool Equals(PeerDto? peer) => peer == this;
-
-    public static bool operator ==(PeerDto? obj1, PeerDto? obj2)
+    static Constants()
     {
-        if (ReferenceEquals(obj1, obj2))
-        {
-            return true;
-        }
-
-        if (obj1 is null || obj2 is null)
-        {
-            return false;
-        }
-
-        return obj1.Address == obj2.Address;
+        AddressSize = Native.GetAddressSize();
+        KeynelKeyMaxSize = Native.GetKernelKeyMaxSize();
     }
-
-    public static bool operator !=(PeerDto? obj1, PeerDto? obj2) => !(obj1 == obj2);
-
-    public override bool Equals(object? obj) => Equals(obj as PeerDto);
-
-    public override int GetHashCode() => Address?.GetHashCode() ?? 0;
 }

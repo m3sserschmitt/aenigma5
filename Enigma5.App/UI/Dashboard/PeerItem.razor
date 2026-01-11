@@ -20,17 +20,21 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
 <div class="list-group-item list-group-item-action rounded shadow-sm">
     <div class="row">
-        <div class="col col-6">
-            Host: <strong>@Model.Host</strong>
+        <div class="col col-5">
+            <p class="m-0">@Model.Host</p>
         </div>
         <div class="col col-5">
-            Address: <strong>@Model.Address</strong>
+            <p class="m-0">@Model.Address</p>
+        </div>
+        <div class="col col-1">
+            <p class="@(Model.Connected ? "text-success" : "text-danger") small m-0">
+                @(Model.Connected ? "Connected" : "Disconnected")
+            </p>
         </div>
         <div class="col col-1">
             @if (Model.Id > 0)
             {
-                <button class="d-flex btn btn-outline-danger rounded-circle align-items-center justify-content-center"
-                    @onclick="Remove">
+                <button class="d-flex btn btn-outline-danger rounded-circle align-items-center justify-content-center" @onclick="Remove">
                     <i class="bi bi-trash"></i>
                 </button>
             }

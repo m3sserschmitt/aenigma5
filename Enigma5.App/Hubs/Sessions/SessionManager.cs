@@ -27,8 +27,6 @@ namespace Enigma5.App.Hubs.Sessions;
 
 public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManager
 {
-    private const int TOKEN_SIZE = 64;
-
     private readonly object _locker = new();
 
     private readonly Dictionary<string, string> _pending = [];
@@ -54,7 +52,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
 
     public string? AddPending(string connectionId)
     {
-        var tokenData = new byte[TOKEN_SIZE];
+        var tokenData = new byte[Common.Constants.AuthTokenSize];
         new Random().NextBytes(tokenData);
         var token = Convert.ToBase64String(tokenData);
 
@@ -71,7 +69,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         return _connectionsMapper.Remove(connectionId, out address);
     }
 
-    public bool Authenticate(string connectionId, string publicKey, string signature)
+    public bool Authenticate(string connectionId, string publicKey, string signature, bool authorizedConnection)
     {
         return ThreadSafeExecution.Execute(
             () =>
@@ -85,7 +83,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
                     return false;
                 }
 
-                var encodedToken = Convert.ToBase64String(token);
+                var encodedToken = Convert.ToBase64String(authorizedConnection ? [.. token.Take(Common.Constants.AuthTokenSize)] : token);
 
                 if (encodedToken is null)
                 {

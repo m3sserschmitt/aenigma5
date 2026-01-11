@@ -22,5 +22,7 @@ namespace Enigma5.Security.Contracts;
 
 public interface IPassphraseProvider
 {
-    char[] ProvidePassphrase();
+    char[]? ProvidePassphrase();
+
+    Task<char[]?> ProvidePassphraseAsync();
 }

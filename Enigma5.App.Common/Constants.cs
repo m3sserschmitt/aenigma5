@@ -22,6 +22,8 @@ namespace Enigma5.App.Common;
 
 public static class Constants
 {
+    public const int AuthTokenSize = 64;
+
     public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(00, 05, 00);
 
     public static readonly TimeSpan LeafsLifetimeDefault = new(03, 00, 00, 00);
@@ -45,6 +47,8 @@ public static class Constants
     public const string IncrementSharedDataAccessCountEndpoint = "IncrementSharedDataAccessCount";
 
     public const string IncrementFileAccessCountEndpoint = "IncrementFileAccessCount";
+
+    public const string DashboardPageEndpoint = "Dashboard";
 
     public const string ProductionConfigurationFileName = "/usr/local/etc/aenigma/appsettings.Production.json";
 

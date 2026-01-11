@@ -25,35 +25,36 @@ using Enigma5.App.Resources.Queries;
 using Enigma5.App.Models;
 using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Contracts.Hubs;
-using Enigma5.App.Data;
 using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Hubs.Sessions.Contracts;
+using Enigma5.App.Common;
 
 namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub(
     ISessionManager sessionManager,
     ICertificateManager certificateManager,
-    NetworkGraph networkGraph,
     IMediator commandRouter,
+    IConfiguration configuration,
     ILogger<RoutingHub> logger) :
     Hub,
     IEnigmaHub,
     IOnionParsingHub,
     IOnionRoutingHub,
-    IIdentityHub
+    IIdentityHub,
+    IAuthorizedServiceHub
 {
     private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
-    private readonly NetworkGraph _networkGraph = networkGraph;
-
     private readonly IMediator _commandRouter = commandRouter;
 
     private readonly ILogger<RoutingHub> _logger = logger;
+
+    private readonly IConfiguration _configuration = configuration;
 
     public string? DestinationConnectionId { get; set; }
 
@@ -133,7 +134,7 @@ public partial class RoutingHub(
     [ValidateModel]
     public Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request)
     {
-        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!);
+        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!, IsAuthorizedService);
 
         if (!authenticated)
         {
@@ -146,22 +147,34 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
-    public Task<InvocationResultDto<SignatureDto>> SignToken(SignatureRequestDto request)
+    public async Task<InvocationResultDto<SignatureDto>> SignToken(SignatureRequestDto request)
     {
+        var publicKey = _certificateManager.PublicKey;
+        if (string.IsNullOrWhiteSpace(publicKey))
+        {
+            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
+        }
         var decodedNonce = Convert.FromBase64String(request.Nonce!);
         if (decodedNonce is null)
         {
             _logger.LogDebug($"Could not base64 decode nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
+            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
-        var signer = _certificateManager.CreateSigner();
+        if (!IsAuthorizedService)
+        {
+            var tokenData = new byte[Constants.AuthTokenSize];
+            new Random().NextBytes(tokenData);
+            decodedNonce = [.. decodedNonce, .. tokenData];
+        }
+
+        using var signer = await _certificateManager.CreateSignerAsync();
         var data = signer.Sign(decodedNonce);
 
         if (data == null)
         {
             _logger.LogError($"Could not sign nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
+            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
         var encodedData = Convert.ToBase64String(data);
@@ -169,10 +182,10 @@ public partial class RoutingHub(
         if (encodedData is null)
         {
             _logger.LogError($"Could not base64 encode signed nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
+            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
         }
 
-        return OkAsync<SignatureDto>(new(encodedData, _certificateManager.PublicKey));
+        return Ok<SignatureDto>(new(encodedData, publicKey));
     }
 
     [Authenticated]
@@ -218,15 +231,15 @@ public partial class RoutingHub(
         bool success = false;
         var vertex = await _commandRouter.Send(new GetVertexQuery(Next!));
         var notLeaf = vertex.IsSuccessNotNullResultValue() && vertex.Value!.PublicKey is not null;
-        if(notLeaf && DestinationConnectionId != null && Content != null)
+        if (notLeaf && DestinationConnectionId != null && Content != null)
         {
             success = await RouteMessage(DestinationConnectionId, Content, null);
-            if(!success)
+            if (!success)
             {
                 success = (await CreatePendingMessage()).IsSuccessNotNullResultValue();
             }
         }
-        else if(Content is not null)
+        else if (Content is not null)
         {
             var result = await CreatePendingMessage();
             success = result.IsSuccessNotNullResultValue();

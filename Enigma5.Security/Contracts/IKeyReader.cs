@@ -22,11 +22,15 @@ namespace Enigma5.Security.Contracts;
 
 public interface IKeyReader
 {
-    public string PublicKeyPath { get; }
+    public string? PublicKeyPath { get; }
 
-    public string PrivateKeyPath { get; }
+    public string? PrivateKeyPath { get; }
     
-    public string ReadPublicKey();
+    public Task<string?> ReadPublicKeyAsync();
 
-    public string ReadPrivateKey();
+    public Task<string?> ReadPrivateKeyAsync();
+
+    public string? ReadPublicKey();
+
+    public string? ReadPrivateKey();
 }

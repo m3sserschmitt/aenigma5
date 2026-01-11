@@ -19,14 +19,20 @@
 */
 
 using System.Text;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
+using Enigma5.App.Models;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
+using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.Security;
 
-public sealed class CertificateManager(IPassphraseProvider passphraseProvider, IKeyReader keysProvider) : ICertificateManager, IDisposable
+public sealed class CertificateManager(
+    IConfiguration configuration,
+    IPassphraseProvider passphraseProvider,
+    IKeyReader keysProvider) : ICertificateManager, IDisposable
 {
     private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = new();
 
@@ -34,55 +40,95 @@ public sealed class CertificateManager(IPassphraseProvider passphraseProvider, I
 
     private readonly IPassphraseProvider _passphraseProvider = passphraseProvider;
 
+    private readonly IConfiguration _configuration = configuration;
+
     private const string KERNEL_KEY_DESCRIPTION = "enigma5key: Key used for cryptographic operations.";
 
     private readonly object _locker = new();
 
-    private string? _publicKey = null;
+    public string? PublicKey => ThreadSafeExecution.Execute(() => _keysProvider.ReadPublicKey(), null, _locker);
 
-    public string PublicKey => ThreadSafeExecution.Execute(() => _publicKey ??= _keysProvider.ReadPublicKey(), string.Empty, _locker);
+    public string? PrivateKey => ThreadSafeExecution.Execute(() => _keysProvider.ReadPrivateKey(), null, _locker);
 
-    public string PrivateKey => ThreadSafeExecution.Execute(() => _keysProvider.ReadPrivateKey(), string.Empty, _locker);
-
-    public string Address { get => CertificateHelper.GetHexAddressFromPublicKey(PublicKey); }
+    public string? Address { get => CertificateHelper.GetHexAddressFromPublicKey(PublicKey); }
 
     static CertificateManager()
     {
         SealProvider.SetMasterPassphraseName(KERNEL_KEY_DESCRIPTION);
     }
 
-    public bool GenerateKeys(char[] passphrase)
-    {
-        if (!File.Exists(_keysProvider.PrivateKeyPath))
-        {
-            return KeysGenerator.Generate(_keysProvider.PrivateKeyPath, passphrase) &&
-            KeysGenerator.ExportPublicKey(_keysProvider.PrivateKeyPath, _keysProvider.PublicKeyPath, passphrase);
-        }
-        else if (!File.Exists(_keysProvider.PublicKeyPath))
-        {
-            return KeysGenerator.ExportPublicKey(_keysProvider.PrivateKeyPath, _keysProvider.PublicKeyPath, passphrase);
-        }
-        return true;
-    }
+    public bool GenerateKeys(char[] passphrase) => GenerateKeysAsync(passphrase).GetAwaiter().GetResult();
 
-    public bool SetMasterPassphrase(byte[] passphrase) =>
-    _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0).GetAwaiter().GetResult();
+    public bool CreateMasterPassphrase(byte[] passphrase) => CreateMasterPassphraseAsync(passphrase).GetAwaiter().GetResult();
 
-    public bool Setup(char[]? passphrase)
+    public bool Setup(char[]? passphrase) => SetupAsync(passphrase).GetAwaiter().GetResult();
+
+    public void Dispose() { _simpleSingleThreadRunner.Dispose(); }
+
+    public IEnvelopeUnsealer CreateUnsealer() => CreateUnsealerAsync().GetAwaiter().GetResult();
+
+    public IEnvelopeSigner CreateSigner() => CreateSignerAsync().GetAwaiter().GetResult();
+
+    public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0);
+
+    public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(SealProvider.RemoveMasterPassphrase);
+
+    public Task<IEnvelopeUnsealer> CreateUnsealerAsync()
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty));
+
+    public Task<IEnvelopeSigner> CreateSignerAsync()
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty));
+
+    public async Task<bool> SetupAsync(char[]? passphrase)
     {
-        var passphraseChars = passphrase ?? _passphraseProvider.ProvidePassphrase();
+        var passphraseChars = passphrase ?? await _passphraseProvider.ProvidePassphraseAsync();
+        if (passphraseChars == null)
+        {
+            return false;
+        }
         var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
-        var ok = passphraseChars.Length != 0 && GenerateKeys(passphraseChars) && SetMasterPassphrase(passphraseBytes);
+        var ok = passphraseChars.Length != 0 && await GenerateKeysAsync(passphraseChars) && await CreateMasterPassphraseAsync(passphraseBytes);
         Array.Clear(passphraseBytes);
         Array.Clear(passphraseChars);
         return ok;
     }
 
-    public void Dispose() { _simpleSingleThreadRunner.Dispose(); }
+    public async Task<bool> GenerateKeysAsync(char[] passphrase)
+    {
+        var publicKeyPath = _keysProvider.PublicKeyPath;
+        var privateKeyPath = _keysProvider.PrivateKeyPath;
+        if (string.IsNullOrWhiteSpace(publicKeyPath) || string.IsNullOrWhiteSpace(privateKeyPath))
+        {
+            return false;
+        }
+        if (!File.Exists(privateKeyPath))
+        {
+            return await KeysGenerator.Generate(privateKeyPath, passphrase) &&
+            await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+        }
+        else if (!File.Exists(publicKeyPath))
+        {
+            return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+        }
+        return true;
+    }
 
-    public IEnvelopeUnsealer CreateUnsealer()
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealer(PrivateKey)).GetAwaiter().GetResult();
+    public bool RemoveMasterPassphrase() => Task.Run(RemoveMasterPassphraseAsync).GetAwaiter().GetResult();
 
-    public IEnvelopeSigner CreateSigner()
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSigner(PrivateKey)).GetAwaiter().GetResult();
+    public Task<string?> GetPublicKeyAsync() => _simpleSingleThreadRunner.RunAsync(_keysProvider.ReadPublicKeyAsync);
+
+    public Task<string?> GetPrivateKeyAsync() => _simpleSingleThreadRunner.RunAsync(_keysProvider.ReadPrivateKeyAsync);
+
+    public async Task<ExportedContactDataDto> GetExportedContactDataAsync()
+    => new()
+    {
+        Host = _configuration.GetHostname(),
+        OnionService = _configuration.GetOnionService(),
+        Address = await GetAddressAsync(),
+        PublicKey = await GetPublicKeyAsync()
+    };
+
+    public async Task<string?> GetAddressAsync()
+    => CertificateHelper.GetHexAddressFromPublicKey(await GetPublicKeyAsync());
 }

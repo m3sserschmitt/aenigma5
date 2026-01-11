@@ -20,33 +20,34 @@
 
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Crypto.Extensions;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<AddPeerCommand, CommandResult<Models.PeerDto>>
+public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<AddPeerCommand, CommandResult<PeerDto>>
 {
     private readonly EnigmaDbContext _dbContext = dbContext;
 
     private readonly IMediator _mediator = mediator;
 
-    public async Task<CommandResult<Models.PeerDto>> Handle(AddPeerCommand request, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<PeerDto>> Handle(AddPeerCommand request, CancellationToken cancellationToken = default)
     {
-        if(!request.Address.IsValidAddress() || !request.Host.IsValidOnionAddress())
+        if (!request.Address.IsValidAddress() || !request.Host.IsValidOnionAddress())
         {
-            // return CommandResult.CreateResultFailure<Models.Peer>();
+            // return CommandResult.CreateResultFailure<Peer>();
         }
         var peer = new Peer
         {
             Host = request.Host,
-            Address = request.Address  
+            Address = request.Address
         };
         await _dbContext.AddAsync(peer, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-        return CommandResult.CreateResultSuccess(new Models.PeerDto
+        return CommandResult.CreateResultSuccess(new PeerDto
         {
             Id = peer.Id,
             Host = peer.Host,

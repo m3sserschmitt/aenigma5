@@ -24,14 +24,9 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs.Adapters;
 
-public class OnionRoutingHubAdapter : IOnionRoutingHub
+public class OnionRoutingHubAdapter(Hub hub) : IOnionRoutingHub
 {
-    private readonly IOnionRoutingHub? onionRouterHub;
-
-    public OnionRoutingHubAdapter(Hub hub)
-    {
-        onionRouterHub = hub.As<IOnionRoutingHub>();
-    }
+    private readonly IOnionRoutingHub? onionRouterHub = hub.As<IOnionRoutingHub>();
 
     public string? DestinationConnectionId
     {

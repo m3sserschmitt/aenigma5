@@ -54,6 +54,17 @@ public sealed class SimpleSingleThreadRunner : IDisposable
         return tcs.Task;
     }
 
+    public Task<T> RunAsync<T>(Func<Task<T>> work)
+    {
+        var tcs = new TaskCompletionSource<T>();
+        _queue.Add(async () =>
+        {
+            try { tcs.SetResult(await work()); }
+            catch (Exception ex) { tcs.SetException(ex); }
+        });
+        return tcs.Task;
+    }
+
     public void Dispose()
     {
         _queue.CompleteAdding();

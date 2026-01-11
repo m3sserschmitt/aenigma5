@@ -26,17 +26,29 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 <div class="card shadow">
     <img class="card-image-top" src="@QrCode" alt="image">
     <div class="card-body">
-        <p class="card-text">Scan QR code to connect to this server</p>
+        <p class="card-text">Scan the QR code to connect to this server or share the connection details below.</p>
+        <p class="card-text m-0">Local address:
+            <strong>
+                @(string.IsNullOrWhiteSpace(Address) ? "not available" : Address)
+            </strong>
+        </p>
+        <p class="card-text m-0">Onion service:
+            <strong>
+                @(string.IsNullOrWhiteSpace(OnionService) ? "not available" : OnionService)
+            </strong>
+        </p>
     </div>
 </div>
 
 @code {
-    private string QrCode
-    => new ExportedContactDataDto
+    private string QrCode = string.Empty;
+    private string? Address;
+    private string? OnionService;
+
+    protected override async Task OnInitializedAsync()
     {
-        Host = Configuration.GetHostname(),
-        OnionService = Configuration.GetOnionService(),
-        Address = CertificateManager.Address,
-        PublicKey = CertificateManager.PublicKey
-    }.ToQrCode();
+        QrCode = (await CertificateManager.GetExportedContactDataAsync()).ToQrCode();
+        Address = await CertificateManager.GetAddressAsync();
+        OnionService = Configuration.GetOnionService();
+    }
 }

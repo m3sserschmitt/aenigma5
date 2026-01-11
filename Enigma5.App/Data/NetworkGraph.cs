@@ -18,11 +18,13 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.UI;
+using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
 
 namespace Enigma5.App.Data;
@@ -72,6 +74,27 @@ public class NetworkGraph
             return null;
         }, null, _locker, _logger
     );
+
+    public string? GetGraphHash()
+    => ThreadSafeExecution.Execute(
+        () =>
+        {
+            if (string.IsNullOrWhiteSpace(_localVertex.SignedData))
+            {
+                return null;
+            }
+            var serializedGraph = _vertices.Select(v =>
+                new Vertex(
+                    new(v.Neighborhood.Neighbors, v.Neighborhood.Address, v.Neighborhood.Hostname, v.Neighborhood.OnionService, null),
+                    v.PublicKey,
+                    v.SignedData
+                    )
+                ).ToList().CanonicallySerialize();
+            return HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
+        }, null, _locker, _logger
+    );
+
+    public Task<string?> GetGraphHashAsync() => Task.Run(GetGraphHash);
 
     public Task<Vertex?> GetVertexAsync(string address, CancellationToken cancellationToken = default)
     => Task.Run(() => GetVertex(address), cancellationToken);
@@ -177,6 +200,7 @@ public class NetworkGraph
             var v = Vertex.Factory.Create(_certificateManager, _localVertex.Neighborhood.Neighbors, _configuration.GetHostname(), _configuration.GetOnionService());
             if (v is null)
             {
+                ReplaceLocalVertex(Vertex.Factory.Create(_certificateManager.Address));
                 return false;
             }
             ReplaceLocalVertex(v);
@@ -187,9 +211,15 @@ public class NetworkGraph
 
     private void NotifyPeersChanged()
     {
-        _dashboardUIState.Peers = [.. _vertices.Where(v => v.Neighborhood.Neighbors.Contains(_certificateManager.Address)).Select(v => new PeerDto {
+        var address = _certificateManager.Address;
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return;
+        }
+        _dashboardUIState.InboundPeers = [.. _vertices.Where(v => v.Neighborhood.Neighbors.Contains(address)).Select(v => new PeerDto {
             Host = v.Neighborhood.Hostname,
-            Address = v.Neighborhood.Address
+            Address = v.Neighborhood.Address,
+            Connected = true
             })
         ];
     }
@@ -252,6 +282,12 @@ public class NetworkGraph
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)
-    => (_localVertex.Neighborhood.Neighbors.Contains(vertex2.Neighborhood.Address) ? 1 : 0)
+    {
+        if (string.IsNullOrWhiteSpace(vertex2.Neighborhood.Address) || string.IsNullOrWhiteSpace(_localVertex.Neighborhood.Address))
+        {
+            return 0;
+        }
+        return (_localVertex.Neighborhood.Neighbors.Contains(vertex2.Neighborhood.Address) ? 1 : 0)
        - (vertex2.Neighborhood.Neighbors.Contains(_localVertex.Neighborhood.Address) ? 1 : 0);
+    }
 }

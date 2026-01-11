@@ -20,17 +20,33 @@
 
 using System.Reflection;
 using Enigma5.App.Attributes;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Resources.Queries;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub
 {
+    public bool IsAuthorizedService
+    {
+        get
+        {
+            var authorizedLocalAddress = _configuration.GetAuthorizedLocalListenAddress();
+            if (authorizedLocalAddress == null)
+            {
+                return false;
+            }
+            var parsedAuthorizedLocalAddress = new Uri(authorizedLocalAddress);
+            return Context.GetHttpContext()?.Connection.LocalPort == parsedAuthorizedLocalAddress.Port;
+        }
+    }
+
     protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
         try
@@ -74,24 +90,31 @@ public partial class RoutingHub
     private async Task<VertexBroadcastRequestDto?> RemoveAdjacencies(List<string> addresses)
     => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, false))).Value;
 
-    private IEnumerable<Task<bool>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
+    private async Task<IEnumerable<Task<bool>>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
     {
-        foreach (var address in _networkGraph.NeighboringAddresses)
+        var tasks = new List<Task<bool>>();
+        var result = await _commandRouter.Send(new GetNeighborAddresses());
+        
+        if(!result.IsSuccessNotNullResultValue())
+        {
+            return tasks;
+        }
+
+        foreach (var address in result.Value ?? [])
         {
             if (_sessionManager.TryGetConnectionId(address, out string? connectionId))
             {
                 foreach (var adjacencyList in adjacencyLists)
                 {
-                    yield return SendAsync(connectionId!, nameof(Broadcast), adjacencyList);
+                    tasks.Add(SendAsync(connectionId!, nameof(Broadcast), adjacencyList));
                 }
             }
         }
+        return tasks;
     }
 
     private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
-    {
-        return (await Task.WhenAll(GenerateBroadcastTask(adjacencyLists))).All(success => success);
-    }
+    => (await Task.WhenAll(await GenerateBroadcastTask(adjacencyLists))).All(success => success);
 
     private async Task<CommandResult<PendingMessage>> CreatePendingMessage()
     {

@@ -38,7 +38,7 @@ public class OnionParserTests
         var onionParser = new OnionParser(unsealer);
 
         // Act
-        var result = onionParser.Parse(onion);
+        var result = onionParser.ParseAsync(onion);
 
         // Assert
         result.Should().Be(expectedResult);

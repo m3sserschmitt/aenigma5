@@ -46,10 +46,14 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             try
             {
                 var publicKey = certificateManager.PublicKey;
+                if (string.IsNullOrWhiteSpace(publicKey))
+                {
+                    return null;
+                }
                 var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname, onionService, DateTimeOffset.Now);
                 var serializedNeighborhood = Encoding.ASCII.GetBytes(neighborhood.CanonicallySerialize());
                 var signature = certificateManager.CreateSigner().Sign(serializedNeighborhood);
-                if(signature == null)
+                if (signature == null)
                 {
                     return null;
                 }
@@ -67,7 +71,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         public static Vertex? Create(ICertificateManager certificateManager, string? hostname = null, string? onionService = null)
         => Create(certificateManager, [], hostname, onionService);
 
-        public static Vertex Create(string address)
+        public static Vertex Create(string? address)
         => new(new([], address, null, null, DateTimeOffset.Now), null, null);
 
         public static class Prototype
@@ -92,8 +96,14 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             => AddNeighbors(vertex, [address], certificateManager, out newVertex);
 
             public static bool AddNeighbor(Vertex vertex, Vertex newNeighbor, ICertificateManager certificateManager, out Vertex? newVertex)
-            => AddNeighbors(vertex, [newNeighbor.Neighborhood.Address], certificateManager, out newVertex);
-
+            {
+                if (string.IsNullOrWhiteSpace(newNeighbor.Neighborhood.Address))
+                {
+                    newVertex = null;
+                    return false;
+                }
+                return AddNeighbors(vertex, [newNeighbor.Neighborhood.Address], certificateManager, out newVertex);
+            }
             public static bool RemoveNeighbors(Vertex vertex, List<string> addresses, ICertificateManager certificateManager, out Vertex? newVertex)
             {
                 var previousCount = vertex.Neighborhood.Neighbors.Count;
@@ -114,7 +124,14 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             => RemoveNeighbors(vertex, [address], certificateManager, out newVertex);
 
             public static bool RemoveNeighbor(Vertex vertex, Vertex neighbor, ICertificateManager certificateManager, out Vertex? newVertex)
-            => RemoveNeighbors(vertex, [neighbor.Neighborhood.Address], certificateManager, out newVertex);
+            {
+                if (string.IsNullOrWhiteSpace(neighbor.Neighborhood.Address))
+                {
+                    newVertex = null;
+                    return false;
+                }
+                return RemoveNeighbors(vertex, [neighbor.Neighborhood.Address], certificateManager, out newVertex);
+            }
         }
     }
 
@@ -139,5 +156,5 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
     public bool Equals(Vertex? vertex) => this == vertex;
 
-    public override int GetHashCode() => Neighborhood.Address.GetHashCode();
+    public override int GetHashCode() => Neighborhood.Address?.GetHashCode() ?? 0;
 }

@@ -68,7 +68,7 @@ public static partial class NetworkGraphValidationPolicy
     }
 
     public static bool CheckCycles(this Vertex vertex)
-    => !vertex.Neighborhood.Neighbors.Contains(vertex.Neighborhood.Address);
+    => !string.IsNullOrWhiteSpace(vertex.Neighborhood.Address) && !vertex.Neighborhood.Neighbors.Contains(vertex.Neighborhood.Address);
 
     public static bool ValidatePublicKey(this Vertex vertex)
     => vertex.PublicKey.IsValidPublicKey();

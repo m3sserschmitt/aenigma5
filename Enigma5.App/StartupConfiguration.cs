@@ -38,6 +38,7 @@ using Enigma5.App.Common;
 using Enigma5.App.NetworkBridge;
 using Enigma5.App.UI;
 using System.Text.Json.Serialization;
+using Enigma5.App.Middlewares;
 
 namespace Enigma5.App;
 
@@ -85,6 +86,7 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseRouting();
         app.UseAntiforgery();
         app.UseStaticFiles();
+        app.UseMiddleware<AuthorizedPortRestrictedPageMiddleware>($"/{Constants.DashboardPageEndpoint}");
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
