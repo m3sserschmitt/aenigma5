@@ -22,66 +22,92 @@ using Enigma5.App.Models;
 
 namespace Enigma5.App.UI;
 
-public class DashboardUIState
+public sealed class DashboardUIState
 {
+    private readonly object _inboundLock = new();
+    private readonly object _outboundLock = new();
+    private readonly object _keyLock = new();
+
     private HashSet<PeerDto> _inboundPeers = [];
-
     private HashSet<PeerDto> _outboundPeers = [];
+    private bool _privateKeyUnlocked;
 
-    private bool _privateKeyUnlocked = false;
+    public IReadOnlyCollection<PeerDto> InboundPeers => _inboundPeers;
+    public IReadOnlyCollection<PeerDto> OutboundPeers => _outboundPeers;
+    public bool PrivateKeyUnlocked => _privateKeyUnlocked;
 
-    public HashSet<PeerDto> InboundPeers
+    public event Func<IReadOnlyCollection<PeerDto>, Task>? InboundPeersChanged;
+    public event Func<IReadOnlyCollection<PeerDto>, Task>? OutboundPeersChanged;
+    public event Func<bool, Task>? PrivateKeyUnlockedChanged;
+
+    public async Task SetInboundPeersAsync(IEnumerable<PeerDto> peers)
     {
-        get => _inboundPeers;
-        set
+        var newSet = peers.ToHashSet();
+        bool changed;
+
+        lock (_inboundLock)
         {
-            var valueSet = new HashSet<PeerDto>(value);
-            lock (_inboundPeers)
+            changed = !_inboundPeers.SetEquals(newSet);
+            if (changed)
             {
-                if (valueSet.SetEquals(_inboundPeers))
-                {
-                    return;
-                }
-                _inboundPeers = valueSet;
+                _inboundPeers = newSet;
             }
-            OnInboundPeersChanged?.Invoke(_inboundPeers);
+        }
+
+        if (changed)
+        {
+            await NotifyAsync(InboundPeersChanged, _inboundPeers);
         }
     }
 
-    public HashSet<PeerDto> OutboundPeers
+    public async Task SetOutboundPeersAsync(IEnumerable<PeerDto> peers)
     {
-        get => _outboundPeers;
-        set
+        var newSet = peers.ToHashSet();
+        bool changed;
+
+        lock (_outboundLock)
         {
-            var valueSet = new HashSet<PeerDto>(value);
-            lock (_outboundPeers)
+            changed = !_outboundPeers.SetEquals(newSet);
+            if (changed)
             {
-                if (valueSet.SetEquals(_outboundPeers))
-                {
-                    return;
-                }
-                _outboundPeers = valueSet;
+                _outboundPeers = newSet;
             }
-            OnOutboundPeersChanged?.Invoke(_outboundPeers);
+        }
+
+        if (changed)
+        {
+            await NotifyAsync(OutboundPeersChanged, _outboundPeers);
         }
     }
 
-    public bool PrivateKeyUnlocked
+    public async Task SetPrivateKeyUnlockedAsync(bool unlocked)
     {
-        get => _privateKeyUnlocked;
-        set
+        bool changed;
+
+        lock (_keyLock)
         {
-            if(value != _privateKeyUnlocked)
+            changed = unlocked != _privateKeyUnlocked;
+            if (changed)
             {
-                _privateKeyUnlocked = value;
-                OnPrivateKeyUnlockedChanged?.Invoke(_privateKeyUnlocked);
+                _privateKeyUnlocked = unlocked;
             }
+        }
+
+        if (changed)
+        {
+            await NotifyAsync(PrivateKeyUnlockedChanged, unlocked);
         }
     }
 
-    public event Action<HashSet<PeerDto>>? OnInboundPeersChanged;
-
-    public event Action<HashSet<PeerDto>>? OnOutboundPeersChanged;
-
-    public event Action<bool>? OnPrivateKeyUnlockedChanged;
+    private static async Task NotifyAsync<T>(Func<T, Task>? handlers, T value)
+    {
+        if (handlers is null)
+        {
+            return;
+        }
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            await ((Func<T, Task>)handler)(value);
+        }
+    }
 }

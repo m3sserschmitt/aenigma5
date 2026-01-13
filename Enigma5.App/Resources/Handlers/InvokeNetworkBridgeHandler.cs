@@ -46,7 +46,7 @@ public class InvokeNetworkBridgeHandler(IMediator mediator, Bridge bridge, Dashb
         var result = await _mediator.Send(new GetPeersQuery(), cancellationToken);
         if (result.IsSuccessNotNullResultValue())
         {
-            _dashboardUIState.OutboundPeers = [.. result.Value!];
+            await _dashboardUIState.SetOutboundPeersAsync([.. result.Value!]);
         }
     }
 }

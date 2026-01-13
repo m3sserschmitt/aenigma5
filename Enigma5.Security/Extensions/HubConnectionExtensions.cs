@@ -35,7 +35,7 @@ public static class HubConnectionExtensions
     {
         try
         {
-            var publicKey = certificateManager.PublicKey;
+            var publicKey = await certificateManager.GetPublicKeyAsync();
             if(string.IsNullOrWhiteSpace(publicKey))
             {
                 return false;
@@ -48,8 +48,8 @@ public static class HubConnectionExtensions
                 return false;
             }
 
-            using var signature = certificateManager.CreateSigner();
-            var data = signature.Sign(Convert.FromBase64String(nonce.Data));
+            using var signer = await certificateManager.CreateSignerAsync();
+            var data = signer.Sign(Convert.FromBase64String(nonce.Data));
 
             if (data is null)
             {

@@ -25,37 +25,19 @@ namespace Enigma5.Security.Contracts;
 
 public interface ICertificateManager
 {
-    string? PublicKey { get; }
-
-    string? PrivateKey { get; }
-
-    string? Address { get; }
-
     Task<string?> GetPublicKeyAsync();
 
     Task<string?> GetPrivateKeyAsync();
 
     Task<string?> GetAddressAsync();
 
-    bool GenerateKeys(char[] passphrase);
-
     Task<bool> GenerateKeysAsync(char[] passphrase);
-
-    bool CreateMasterPassphrase(byte[] passphrase);
 
     Task<bool> CreateMasterPassphraseAsync(byte[] passphrase);
 
-    bool RemoveMasterPassphrase();
-
     Task<bool> RemoveMasterPassphraseAsync();
 
-    bool Setup(char[]? passphrase);
-
     Task<bool> SetupAsync(char[]? passphrase);
-
-    IEnvelopeUnsealer CreateUnsealer();
-
-    IEnvelopeSigner CreateSigner();
 
     Task<IEnvelopeUnsealer> CreateUnsealerAsync();
 

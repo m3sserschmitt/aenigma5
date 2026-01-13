@@ -149,7 +149,7 @@ public partial class RoutingHub(
     [ValidateModel]
     public async Task<InvocationResultDto<SignatureDto>> SignToken(SignatureRequestDto request)
     {
-        var publicKey = _certificateManager.PublicKey;
+        var publicKey = await _certificateManager.GetPublicKeyAsync();
         if (string.IsNullOrWhiteSpace(publicKey))
         {
             return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);

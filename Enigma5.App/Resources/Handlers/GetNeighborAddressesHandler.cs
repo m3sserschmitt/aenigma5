@@ -28,6 +28,6 @@ public class GetNeighborAddressesHandler(NetworkGraph networkGraph) : IRequestHa
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
-    public Task<CommandResult<HashSet<string>>> Handle(GetNeighborAddresses request, CancellationToken cancellationToken)
-    => Task.FromResult(CommandResult.CreateResultSuccess(_networkGraph.NeighboringAddresses));
+    public async Task<CommandResult<HashSet<string>>> Handle(GetNeighborAddresses request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(await _networkGraph.GetNeighborAddressesAsync());
 }

@@ -29,7 +29,8 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
             <h3 class="card-text">Connected Peers</h3>
             @if (Items.Count() > 0)
             {
-                <button class="btn btn-primary rounded-pill" @onclick="Retry" disabled="@(!PrivateKeyUnlocked)">Retry</button>
+                <button class="btn btn-primary rounded-pill" @onclick="Retry"
+                    disabled="@(!PrivateKeyUnlocked)">Retry</button>
                 <ItemsList Items="Items">
                     <PeerItem Model="context" OnRemove="OnRemoveItem" />
                 </ItemsList>
@@ -70,11 +71,11 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     protected override Task OnInitializedAsync()
     {
-        DashboardUIState.OnPrivateKeyUnlockedChanged += OnPrivateKeyUnlockedChanged;
+        DashboardUIState.PrivateKeyUnlockedChanged += PrivateKeyUnlockedChanged;
         return Task.CompletedTask;
     }
 
-    private void OnPrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
+    private Task PrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
     {
         PrivateKeyUnlocked = unlocked;
     });
@@ -104,6 +105,6 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     public void Dispose()
     {
-        DashboardUIState.OnPrivateKeyUnlockedChanged -= OnPrivateKeyUnlockedChanged;
+        DashboardUIState.PrivateKeyUnlockedChanged -= PrivateKeyUnlockedChanged;
     }
 }

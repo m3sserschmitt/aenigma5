@@ -26,6 +26,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 @using System.Collections.Immutable
 @using System.Text
 @using MediatR
+@using System.Collections.ObjectModel
 
 @page "/Dashboard"
 @rendermode InteractiveServer
@@ -36,68 +37,67 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
 <div class="row justify-content-center h-100">
     <div class="d-flex flex-column justify-content-between col col-3 ">
-        <PassphraseInput OnUnlockKey="UnlockPrivateKey" OnLockKey="LockPrivateKey"/>
+        <PassphraseInput OnUnlockKey="UnlockPrivateKey" OnLockKey="LockPrivateKey" />
         <ExportContactDataQrCode />
     </div>
     <div class="col col-9">
-        <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" OnRetry="ReloadPeerConnections"/>
+        <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" OnRetry="ReloadPeerConnections" />
     </div>
 </div>
 
 @code {
     private IEnumerable<PeerDto> Peers = [];
+    private IReadOnlyCollection<PeerDto> InboundPeers = new HashSet<PeerDto>();
+    private IReadOnlyCollection<PeerDto> OutboundPeers = new HashSet<PeerDto>();
 
-    protected override Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        DashboardUIState.OnInboundPeersChanged += OnPeersChanged;
-        DashboardUIState.OnOutboundPeersChanged += OnPeersChanged;
-        return InvokeAsync(LoadPeers);
+        DashboardUIState.InboundPeersChanged += OnInboundPeersChanged;
+        DashboardUIState.OutboundPeersChanged += OnOutboundPeersChanged;
     }
 
-    private void OnPeersChanged(HashSet<PeerDto> peers) => InvokeAsync(LoadPeers);
+    private Task OnInboundPeersChanged(IReadOnlyCollection<PeerDto> peers)
+    => InvokeAsync(() =>
+    {
+        InboundPeers = peers;
+        return LoadPeers();
+    });
+
+    private Task OnOutboundPeersChanged(IReadOnlyCollection<PeerDto> peers)
+    => InvokeAsync(() =>
+    {
+        OutboundPeers = peers;
+        return LoadPeers();
+    });
 
     private Task LoadPeers()
     {
-        lock (DashboardUIState.OutboundPeers)
+        var result = new HashSet<PeerDto>(OutboundPeers);
+        foreach (var outboundPeer in OutboundPeers)
         {
-            lock (DashboardUIState.InboundPeers)
-            {
-                var result = new HashSet<PeerDto>(DashboardUIState.OutboundPeers);
-                foreach (var outboundPeer in DashboardUIState.OutboundPeers)
-                {
-                    outboundPeer.Connected = DashboardUIState.InboundPeers.TryGetValue(outboundPeer, out var _);
-                    result.Add(outboundPeer);
-                }
-                Peers = result.Union(DashboardUIState.InboundPeers);
-            }
+            outboundPeer.Connected = InboundPeers.Contains(outboundPeer);
+            result.Add(outboundPeer);
         }
+        Peers = result.Union(InboundPeers);
         return InvokeAsync(StateHasChanged);
     }
 
-    private async Task SubmitNewPeer(PeerDto peer)
+    private Task SubmitNewPeer(PeerDto peer)
     {
         if (string.IsNullOrWhiteSpace(peer.Host) || string.IsNullOrWhiteSpace(peer.Address))
         {
-            return;
+            return Task.CompletedTask;
         }
-        var result = await Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
-        if (result.IsSuccessNotNullResultValue())
-        {
-            await InvokeAsync(LoadPeers);
-        }
+        return Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
     }
 
-    private async Task RemovePeer(PeerDto peer)
+    private Task RemovePeer(PeerDto peer)
     {
         if (peer.Id == null)
         {
-            return;
+            return Task.CompletedTask;
         }
-        var result = await Mediator.Send(new RemovePeerCommand(peer.Id.Value));
-        if (result.IsSuccessNotNullResultValue())
-        {
-            await InvokeAsync(LoadPeers);
-        }
+        return Mediator.Send(new RemovePeerCommand(peer.Id.Value));
     }
 
     private async Task UnlockPrivateKey(char[] passphrase)
@@ -112,7 +112,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     public void Dispose()
     {
-        DashboardUIState.OnInboundPeersChanged -= OnPeersChanged;
-        DashboardUIState.OnOutboundPeersChanged -= OnPeersChanged;
+        DashboardUIState.InboundPeersChanged -= OnInboundPeersChanged;
+        DashboardUIState.OutboundPeersChanged -= OnOutboundPeersChanged;
     }
 }

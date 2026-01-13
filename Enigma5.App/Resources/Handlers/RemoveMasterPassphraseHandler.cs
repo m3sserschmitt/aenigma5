@@ -38,8 +38,8 @@ public class RemoveMasterPassphraseHandler(ICertificateManager certificateManage
     public async Task<CommandResult<bool>> Handle(RemoveMasterPassphraseCommand request, CancellationToken cancellationToken)
     {
         await _certificateManager.RemoveMasterPassphraseAsync();
-        await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
-        _dashboardUIState.PrivateKeyUnlocked = !string.IsNullOrWhiteSpace(_networkGraph.LocalVertex?.SignedData);
+        await _networkGraph.GenerateLocalVertexAsync();
+        await _dashboardUIState.SetPrivateKeyUnlockedAsync(!string.IsNullOrWhiteSpace((await _networkGraph.GetLocalVertexAsync())?.SignedData));
         return CommandResult.CreateResultSuccess(!_dashboardUIState.PrivateKeyUnlocked);
     }
 }

@@ -19,11 +19,14 @@
 */
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Common.Utils;
 
 public sealed class SimpleSingleThreadRunner : IDisposable
 {
+    private const string EXCEPTION_MESSAGE = "Exception encountered while doing work on single thread executor";
+
     readonly Thread _thread;
 
     readonly BlockingCollection<Func<Task>> _queue = [];
@@ -42,25 +45,33 @@ public sealed class SimpleSingleThreadRunner : IDisposable
         }
     }
 
-    public Task<T> RunAsync<T>(Func<T> work)
+    public Task<T> RunAsync<T>(Func<T> work, ILogger? logger = null)
     {
         var tcs = new TaskCompletionSource<T>();
         _queue.Add(() =>
         {
             try { tcs.SetResult(work()); }
-            catch (Exception ex) { tcs.SetException(ex); }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+                logger?.LogError(ex, EXCEPTION_MESSAGE);
+            }
             return Task.CompletedTask;
         });
         return tcs.Task;
     }
 
-    public Task<T> RunAsync<T>(Func<Task<T>> work)
+    public Task<T> RunAsync<T>(Func<Task<T>> work, ILogger? logger = null)
     {
         var tcs = new TaskCompletionSource<T>();
         _queue.Add(async () =>
         {
             try { tcs.SetResult(await work()); }
-            catch (Exception ex) { tcs.SetException(ex); }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+                logger?.LogError(ex, EXCEPTION_MESSAGE);
+            }
         });
         return tcs.Task;
     }

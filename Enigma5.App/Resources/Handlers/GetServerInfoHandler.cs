@@ -42,8 +42,8 @@ public class GetServerInfoHandler(
     => CommandResult.CreateResultSuccess(
         new ServerInfoDto
         {
-            PublicKey = _certificateManager.PublicKey,
-            Address = _certificateManager.Address,
+            PublicKey = await _certificateManager.GetPublicKeyAsync(),
+            Address = await _certificateManager.GetAddressAsync(),
             GraphVersion = await _graph.GetGraphHashAsync(),
             OnionService = _configuration.GetOnionService(),
             Hostname = _configuration.GetHostname()

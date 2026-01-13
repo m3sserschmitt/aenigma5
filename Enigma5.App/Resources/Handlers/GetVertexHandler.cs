@@ -32,7 +32,7 @@ public class GetVertexHandler(NetworkGraph graph)
 
     public async Task<CommandResult<VertexDto>> Handle(GetVertexQuery request, CancellationToken cancellationToken)
     {
-        var vertex = await _graph.GetVertexAsync(request.Address, cancellationToken);
+        var vertex = await _graph.GetVertexAsync(request.Address);
 
         if (vertex is null)
         {

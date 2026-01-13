@@ -46,10 +46,10 @@ public class UpdateLocalAdjacencyHandler(
             return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
+        await _networkGraph.GenerateLocalVertexAsync();
         var localVertex = request.Add ?
-        await _networkGraph.AddAdjacencyAsync(request.Addresses, cancellationToken)
-        : await _networkGraph.RemoveAdjacencyAsync(request.Addresses, cancellationToken);
+        await _networkGraph.AddAdjacencyAsync(request.Addresses)
+        : await _networkGraph.RemoveAdjacencyAsync(request.Addresses);
 
         if(localVertex.SignedData is null)
         {
@@ -57,6 +57,6 @@ public class UpdateLocalAdjacencyHandler(
             return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        return CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto(_certificateManager.PublicKey, localVertex.SignedData));
+        return CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto(await _certificateManager.GetPublicKeyAsync(), localVertex.SignedData));
     }
 }

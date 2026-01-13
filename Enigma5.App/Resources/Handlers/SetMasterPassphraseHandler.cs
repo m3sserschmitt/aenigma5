@@ -43,12 +43,12 @@ public class SetMasterPassphraseHandler(
 
     public async Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
     {
-        var result = await _certificateManager.SetupAsync(request.Passphrase) && await _networkGraph.GenerateLocalVertexAsync(cancellationToken);
+        var result = await _certificateManager.SetupAsync(request.Passphrase) && await _networkGraph.GenerateLocalVertexAsync();
         if (result)
         {
             SendInvokeNetworkBridgeCommand();
         }
-        UpdateDashboardUIState();
+        await UpdateDashboardUIState();
         return CommandResult.CreateResultSuccess(result);
     }
 
@@ -62,8 +62,6 @@ public class SetMasterPassphraseHandler(
         BackgroundJob.Enqueue<MediatorHangfireBridge>(bridge => bridge.Send(new InvokeNetworkBridgeCommand()));
     }
 
-    private void UpdateDashboardUIState()
-    {
-        _dashboardUIState.PrivateKeyUnlocked = !string.IsNullOrWhiteSpace(_networkGraph.LocalVertex?.SignedData);
-    }
+    private async Task UpdateDashboardUIState()
+    => await _dashboardUIState.SetPrivateKeyUnlockedAsync(!string.IsNullOrWhiteSpace((await _networkGraph.GetLocalVertexAsync())?.SignedData));
 }

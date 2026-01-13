@@ -40,7 +40,7 @@ public class BroadcastHandler(NetworkGraph networkGraph)
         }
 
         var vertex = request.BroadcastAdjacencyList.ToVertex();
-        var vertices = await _networkGraph.UpdateAsync(vertex, cancellationToken);
+        var vertices = await _networkGraph.UpdateAsync(vertex);
         return CommandResult.CreateResultSuccess(vertices.Select(item => item.ToVertexBroadcast()).ToList());
     }
 }

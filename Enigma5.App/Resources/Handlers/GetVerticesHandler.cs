@@ -28,20 +28,17 @@ public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVe
 {
     private readonly Data.NetworkGraph _graph = graph;
 
-    public Task<CommandResult<List<VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<List<VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess((await _graph.GetVerticesAsync()).Select(item => new VertexDto
     {
-        var vertices = _graph.Vertices.Select(item => new VertexDto
-        {
-            PublicKey = item.PublicKey,
-            SignedData = item.SignedData,
-            Neighborhood = new(
-                item.Neighborhood.Address,
-                item.Neighborhood.Hostname,
-                item.Neighborhood.OnionService,
-                item.Neighborhood.Neighbors,
-                item.Neighborhood.LastUpdate
+        PublicKey = item.PublicKey,
+        SignedData = item.SignedData,
+        Neighborhood = new(
+            item.Neighborhood.Address,
+            item.Neighborhood.Hostname,
+            item.Neighborhood.OnionService,
+            item.Neighborhood.Neighbors,
+            item.Neighborhood.LastUpdate
             )
-        }).ToList();
-        return Task.FromResult(CommandResult.CreateResultSuccess(vertices));
-    }
+    }).ToList());
 }

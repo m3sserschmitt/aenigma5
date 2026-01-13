@@ -26,13 +26,15 @@ using Enigma5.Crypto;
 using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
 
 public sealed class CertificateManager(
     IConfiguration configuration,
     IPassphraseProvider passphraseProvider,
-    IKeyReader keysProvider) : ICertificateManager, IDisposable
+    IKeyReader keysProvider,
+    ILogger<CertificateManager> logger) : ICertificateManager, IDisposable
 {
     private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = new();
 
@@ -42,43 +44,27 @@ public sealed class CertificateManager(
 
     private readonly IConfiguration _configuration = configuration;
 
+    private readonly ILogger _logger = logger;
+
     private const string KERNEL_KEY_DESCRIPTION = "enigma5key: Key used for cryptographic operations.";
-
-    private readonly object _locker = new();
-
-    public string? PublicKey => ThreadSafeExecution.Execute(() => _keysProvider.ReadPublicKey(), null, _locker);
-
-    public string? PrivateKey => ThreadSafeExecution.Execute(() => _keysProvider.ReadPrivateKey(), null, _locker);
-
-    public string? Address { get => CertificateHelper.GetHexAddressFromPublicKey(PublicKey); }
 
     static CertificateManager()
     {
         SealProvider.SetMasterPassphraseName(KERNEL_KEY_DESCRIPTION);
     }
 
-    public bool GenerateKeys(char[] passphrase) => GenerateKeysAsync(passphrase).GetAwaiter().GetResult();
-
-    public bool CreateMasterPassphrase(byte[] passphrase) => CreateMasterPassphraseAsync(passphrase).GetAwaiter().GetResult();
-
-    public bool Setup(char[]? passphrase) => SetupAsync(passphrase).GetAwaiter().GetResult();
-
     public void Dispose() { _simpleSingleThreadRunner.Dispose(); }
 
-    public IEnvelopeUnsealer CreateUnsealer() => CreateUnsealerAsync().GetAwaiter().GetResult();
-
-    public IEnvelopeSigner CreateSigner() => CreateSignerAsync().GetAwaiter().GetResult();
-
     public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0);
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0, _logger);
 
-    public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(SealProvider.RemoveMasterPassphrase);
+    public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(SealProvider.RemoveMasterPassphrase, _logger);
 
     public Task<IEnvelopeUnsealer> CreateUnsealerAsync()
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty));
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
 
     public Task<IEnvelopeSigner> CreateSignerAsync()
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty));
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
 
     public async Task<bool> SetupAsync(char[]? passphrase)
     {
@@ -114,14 +100,11 @@ public sealed class CertificateManager(
         return true;
     }
 
-    public bool RemoveMasterPassphrase() => Task.Run(RemoveMasterPassphraseAsync).GetAwaiter().GetResult();
+    public Task<string?> GetPublicKeyAsync() => _keysProvider.ReadPublicKeyAsync();
 
-    public Task<string?> GetPublicKeyAsync() => _simpleSingleThreadRunner.RunAsync(_keysProvider.ReadPublicKeyAsync);
+    public Task<string?> GetPrivateKeyAsync() => _keysProvider.ReadPrivateKeyAsync();
 
-    public Task<string?> GetPrivateKeyAsync() => _simpleSingleThreadRunner.RunAsync(_keysProvider.ReadPrivateKeyAsync);
-
-    public async Task<ExportedContactDataDto> GetExportedContactDataAsync()
-    => new()
+    public async Task<ExportedContactDataDto> GetExportedContactDataAsync() => new()
     {
         Host = _configuration.GetHostname(),
         OnionService = _configuration.GetOnionService(),

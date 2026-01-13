@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
+@implements IDisposable
 @inject DashboardUIState DashboardUIState
 
 <div class="card shadow">
@@ -48,18 +49,18 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     protected override Task OnInitializedAsync()
     {
-        DashboardUIState.OnPrivateKeyUnlockedChanged += OnPrivateKeyUnlockedChanged;
+        DashboardUIState.PrivateKeyUnlockedChanged += OnPrivateKeyUnlockedChanged;
         return Task.CompletedTask;
     }
 
-    private void OnPrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
+    private Task OnPrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
     {
         PrivateKeyUnlocked = unlocked;
     });
 
     private Task UnlockKey()
     {
-        if(string.IsNullOrWhiteSpace(Password))
+        if (string.IsNullOrWhiteSpace(Password))
         {
             return Task.CompletedTask;
         }
@@ -69,4 +70,9 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
     }
 
     private Task LockKey() => OnLockKey.InvokeAsync();
+
+    public void Dispose()
+    {
+        DashboardUIState.PrivateKeyUnlockedChanged -= OnPrivateKeyUnlockedChanged;
+    }
 }
