@@ -18,21 +18,4 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
-
-APP_NAME="aenigma"
-SERVICE_USER=$APP_NAME
-SERVICE_NAME=$APP_NAME
-SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
-
-case "$1" in
-  remove)
-    sudo systemctl stop "$SERVICE_NAME"
-    sudo systemctl disable "$SERVICE_NAME"
-    ;;
-
-  purge)
-    sudo rm "$SERVICE_FILE"
-    sudo deluser --system --remove-all-files "$SERVICE_USER"
-    ;;
-esac
+/usr/local/aenigma/Enigma5.App --config /usr/local/etc/aenigma/appsettings.json

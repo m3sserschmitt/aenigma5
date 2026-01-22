@@ -20,16 +20,18 @@
 
 set -e
 
+SERVICE_NAME="aenigma"
+
 # Function to display usage/help message
 show_help() {
     echo "Usage: $0 -d DOMAIN -p APP_PORT"
     echo ""
     echo "Options:"
     echo "  -d DOMAIN     The domain name for the reverse proxy (e.g., example.com)"
-    echo "  -p APP_PORT   The port on which the ASP.NET application is running (e.g., 5000)"
+    echo "  -p APP_PORT   The port on which the ASP.NET application is running (e.g., 8080)"
     echo ""
     echo "Example:"
-    echo "  sudo $0 -d example.com -p 5000"
+    echo "  sudo $0 -d example.com -p 8080"
     exit 1
 }
 
@@ -54,8 +56,16 @@ if [ -z "$DOMAIN" ] || [ -z "$APP_PORT" ]; then
     show_help
 fi
 
+# ------------------------------
+# 1. Check root
+# ------------------------------
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: Please run the script as root."
+    exit 1
+fi
+
 # Set Apache configuration path and log directory
-APACHE_CONF="/etc/apache2/sites-available/aenigma.conf"
+APACHE_CONF="/etc/apache2/sites-available/$SERVICE_NAME.conf"
 LOG_DIR="/var/log/apache2"
 
 # Define the virtual host configuration
@@ -81,43 +91,45 @@ VIRTUAL_HOST_CONF=$(cat <<EOF
     ProxyPass "/OnionRouting" "ws://localhost:$APP_PORT/OnionRouting"
     ProxyPassReverse "/OnionRouting" "ws://localhost:$APP_PORT/OnionRouting"
 
-    ErrorLog ${LOG_DIR}/aenigma-error.log
-    CustomLog ${LOG_DIR}/aenigma-access.log combined
+    ErrorLog ${LOG_DIR}/$SERVICE_NAME-error.log
+    CustomLog ${LOG_DIR}/$SERVICE_NAME-access.log combined
 </VirtualHost>
 EOF
 )
 
 # Update and install Apache if not already installed
-sudo apt update
-sudo apt install -y apache2
+apt update
+apt install -y apache2
 
 # Enable Apache modules required for reverse proxying and WebSockets
-sudo a2enmod rewrite
-sudo a2enmod proxy
-sudo a2enmod proxy_http
-sudo a2enmod proxy_wstunnel
+a2enmod rewrite
+a2enmod proxy
+a2enmod proxy_http
+a2enmod proxy_wstunnel
 
 # Create Apache virtual host configuration
 echo "Creating virtual host configuration for $DOMAIN..."
 echo "$VIRTUAL_HOST_CONF" | sudo tee $APACHE_CONF
 
 # Enable the new site configuration
-sudo a2ensite aenigma.conf
+a2ensite $SERVICE_NAME.conf
 
 # Disable the default Apache site, if necessary
-sudo a2dissite 000-default.conf
+a2dissite 000-default.conf
 
 # Restart Apache to apply changes
 echo "Restarting Apache..."
-sudo systemctl restart apache2
+systemctl restart apache2
 
 # Ensure Apache starts on boot
-sudo systemctl enable apache2
+systemctl enable apache2
 
 # Allow Apache through the firewall (if UFW is installed)
 if command -v ufw >/dev/null 2>&1; then
     echo "Configuring UFW to allow Apache traffic..."
-    sudo ufw allow 'Apache Full'
+    ufw allow 'Apache Full'
 fi
 
 echo "Apache reverse proxy setup completed for $DOMAIN with app port $APP_PORT"
+
+aenigma-set-config -p Hostname -v "http://$DOMAIN"

@@ -33,22 +33,30 @@ public class App
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-        .ConfigureAppConfiguration
-        ((hostingContext, config) =>
-        {
-            if(hostingContext.HostingEnvironment.IsProduction())
+            .ConfigureAppConfiguration((hostingContext, config) =>
             {
-                config.AddJsonFile(Common.Constants.ProductionConfigurationFileName, optional: false, reloadOnChange: true);
-            }
-        })
-        .UseSerilog((context, config) =>
-        {
-            config.ReadFrom.Configuration(context.Configuration);
-            config.WriteTo.Console();
-        })
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseKestrel();
-            webBuilder.UseStartup<StartupConfiguration>();
-        });
+                var builtConfig = config.Build();
+
+                var configPath = builtConfig["config"];
+
+                if (!string.IsNullOrWhiteSpace(configPath))
+                {
+                    config.AddJsonFile(
+                        path: configPath,
+                        optional: false,
+                        reloadOnChange: true
+                    );
+                }
+            })
+            .UseSerilog((context, loggerConfig) =>
+            {
+                loggerConfig
+                    .ReadFrom.Configuration(context.Configuration)
+                    .WriteTo.Console();
+            })
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseKestrel();
+                webBuilder.UseStartup<StartupConfiguration>();
+            });
 }

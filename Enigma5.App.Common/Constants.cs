@@ -50,8 +50,6 @@ public static class Constants
 
     public const string DashboardPageEndpoint = "Dashboard";
 
-    public const string ProductionConfigurationFileName = "/usr/local/etc/aenigma/appsettings.Production.json";
-
     public const string MessagesCleanupRecurringJob = "messages-cleanup";
 
     public const string SharedDataCleanupRecurringJob = "shared-data-cleanup";

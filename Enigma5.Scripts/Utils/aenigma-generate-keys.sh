@@ -20,12 +20,13 @@
 
 set -e
 
-APP_NAME="aenigma"
-SERVICE_USER=$APP_NAME
-KEYS_DIR="/usr/local/etc/$APP_NAME"
+SERVICE_USER="aenigma"
+KEYS_DIR="/usr/local/etc/$SERVICE_USER"
 PRIVATE_KEY_FILE="$KEYS_DIR/private-key.pem"
 PUBLIC_KEY_FILE="$KEYS_DIR/public-key.pem"
-KEY_SIZE="2048"
+KEY_SIZE="4096"
+
+mkdir -pv "$KEYS_DIR"
 
 # Generate the private key with the given size and file name
 echo "Generating private key ... "
@@ -43,6 +44,7 @@ echo "Public key: $PUBLIC_KEY_FILE"
 
 # Changing ownership for generated files
 echo "Changing keys ownership to $SERVICE_USER ..."
-sudo chown "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
-sudo chown "$SERVICE_USER":"$SERVICE_USER" "$PUBLIC_KEY_FILE"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$PUBLIC_KEY_FILE"
+
 echo "Done."

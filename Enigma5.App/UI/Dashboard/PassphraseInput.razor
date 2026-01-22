@@ -45,11 +45,12 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
     [Parameter] public EventCallback OnLockKey { get; set; } = default;
 
     private string Password { get; set; } = string.Empty;
-    private bool PrivateKeyUnlocked = false;
+    private bool PrivateKeyUnlocked;
 
     protected override Task OnInitializedAsync()
     {
         DashboardUIState.PrivateKeyUnlockedChanged += OnPrivateKeyUnlockedChanged;
+        PrivateKeyUnlocked = DashboardUIState.PrivateKeyUnlocked;
         return Task.CompletedTask;
     }
 

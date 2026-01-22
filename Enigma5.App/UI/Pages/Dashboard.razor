@@ -50,10 +50,13 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
     private IReadOnlyCollection<PeerDto> InboundPeers = new HashSet<PeerDto>();
     private IReadOnlyCollection<PeerDto> OutboundPeers = new HashSet<PeerDto>();
 
-    protected override void OnInitialized()
+    protected override Task OnInitializedAsync()
     {
         DashboardUIState.InboundPeersChanged += OnInboundPeersChanged;
         DashboardUIState.OutboundPeersChanged += OnOutboundPeersChanged;
+        InboundPeers = DashboardUIState.InboundPeers;
+        OutboundPeers = DashboardUIState.OutboundPeers;
+        return LoadPeers();
     }
 
     private Task OnInboundPeersChanged(IReadOnlyCollection<PeerDto> peers)
