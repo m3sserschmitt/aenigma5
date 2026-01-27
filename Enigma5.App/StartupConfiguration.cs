@@ -68,6 +68,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
+        services.AddTransient<NetworkGraphValidationPolicy>();
         services.AddRazorComponents().AddInteractiveServerComponents();
         services.SetupKeyReader(_configuration);
         services.SetupPassphraseReader(_configuration);

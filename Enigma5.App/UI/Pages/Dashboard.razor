@@ -46,6 +46,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 </div>
 
 @code {
+    private bool _disposed;
     private IEnumerable<PeerDto> Peers = [];
     private IReadOnlyCollection<PeerDto> InboundPeers = new HashSet<PeerDto>();
     private IReadOnlyCollection<PeerDto> OutboundPeers = new HashSet<PeerDto>();
@@ -115,7 +116,11 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     public void Dispose()
     {
-        DashboardUIState.InboundPeersChanged -= OnInboundPeersChanged;
-        DashboardUIState.OutboundPeersChanged -= OnOutboundPeersChanged;
+        if (!_disposed)
+        {
+            DashboardUIState.InboundPeersChanged -= OnInboundPeersChanged;
+            DashboardUIState.OutboundPeersChanged -= OnOutboundPeersChanged;
+            _disposed = true;
+        }
     }
 }

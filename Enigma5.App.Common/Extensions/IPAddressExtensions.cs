@@ -18,17 +18,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Hubs.Sessions.Contracts;
+using System.Net;
 
-public interface ISessionManager
+namespace Enigma5.App.Common.Extensions;
+
+public static class IPAddressExtensions
 {
-    string? AddPending(string connectionId);
-
-    bool Authenticate(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
-
-    bool Remove(string connectionId, out string? address);
-
-    bool TryGetConnectionId(string address, out string? connectionId);
-
-    bool TryGetAddress(string connectionId, out string? address);
+    public static IPAddress Normalize(this IPAddress ip) => ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip;
 }

@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
@@ -35,23 +34,23 @@ public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRe
 
     public async Task<CommandResult<PeerDto>> Handle(AddPeerCommand request, CancellationToken cancellationToken = default)
     {
-        if (!request.Address.IsValidAddress() || !request.Host.IsValidOnionAddress())
+        if (request.Address.IsValidAddress() && Uri.TryCreate(request.Host, UriKind.Absolute, out var parsedUri))
         {
-            // return CommandResult.CreateResultFailure<Peer>();
+            var peer = new Peer
+            {
+                Host = parsedUri.ToString(),
+                Address = request.Address
+            };
+            await _dbContext.AddAsync(peer, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
+            return CommandResult.CreateResultSuccess(new PeerDto
+            {
+                Id = peer.Id,
+                Host = peer.Host,
+                Address = peer.Address
+            });
         }
-        var peer = new Peer
-        {
-            Host = request.Host,
-            Address = request.Address
-        };
-        await _dbContext.AddAsync(peer, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-        return CommandResult.CreateResultSuccess(new PeerDto
-        {
-            Id = peer.Id,
-            Host = peer.Host,
-            Address = peer.Address
-        });
+        return CommandResult.CreateResultFailure<PeerDto>();
     }
 }

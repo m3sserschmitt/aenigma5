@@ -30,6 +30,8 @@ public sealed class SealProvider :
     IEnvelopeSigner,
     IEnvelopeVerifier
 {
+    private bool _disposed;
+
     private readonly CryptoContext _ctx;
 
     private SealProvider(CryptoContext ctx)
@@ -39,14 +41,14 @@ public sealed class SealProvider :
 
     ~SealProvider()
     {
-        _ctx.Dispose();
+        Dispose(false);
     }
 
     private delegate IntPtr NativeExecutor(IntPtr ctx, byte[] inputData, uint inputSize, out int outputSize);
 
     private byte[]? Execute(byte[] input, NativeExecutor executor)
     {
-        if(_ctx.IsNull || input.Length == 0)
+        if (_ctx.IsNull || input.Length == 0)
         {
             return null;
         }
@@ -67,7 +69,7 @@ public sealed class SealProvider :
 
     public bool UnsealOnion(string onion, ref string? next, ref byte[]? content)
     {
-        if(_ctx.IsNull || string.IsNullOrWhiteSpace(onion))
+        if (_ctx.IsNull || string.IsNullOrWhiteSpace(onion))
         {
             return false;
         }
@@ -76,7 +78,7 @@ public sealed class SealProvider :
         {
             var decodedOnion = Convert.FromBase64String(onion);
 
-            if(decodedOnion is null)
+            if (decodedOnion is null)
             {
                 return false;
             }
@@ -90,7 +92,7 @@ public sealed class SealProvider :
 
             var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
             next = null;
-            if(nextBytes is not null)
+            if (nextBytes is not null)
             {
                 next = HashProvider.ToHex(nextBytes);
             }
@@ -98,7 +100,7 @@ public sealed class SealProvider :
 
             return next is not null && content is not null;
         }
-        catch(Exception)
+        catch (Exception)
         {
             return false;
         }
@@ -125,7 +127,7 @@ public sealed class SealProvider :
 
         var managedBuffer = KeyUtil.CopyKeyFromNativeBuffer(data, outLen);
         KeyUtil.FreeKeyNativeBuffer(data, outLen);
-        
+
         return managedBuffer is not null ? Convert.ToBase64String(managedBuffer) : null;
     }
 
@@ -141,8 +143,21 @@ public sealed class SealProvider :
 
     public void Dispose()
     {
-        _ctx.Dispose();
+        Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _ctx.Dispose();
+            _disposed = true;
+        }
     }
 
     public static class Factory

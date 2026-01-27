@@ -22,13 +22,20 @@ using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.App.NetworkBridge;
 
-public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnectionsProxy)
+public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnectionsProxy) : IDisposable
 {
+    private bool _disposed;
+
     private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
     private readonly HubConnectionsProxy _connections = hubConnectionsProxy;
 
     private readonly IConfiguration _configuration = configuration;
+
+    ~Bridge()
+    {
+        Dispose(false);
+    }
 
     public async Task<bool> StartAsync()
     => await _connections.LoadConnections() &&
@@ -45,11 +52,11 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
 
     private async Task OnConnectionClosedAsync(Exception? ex)
     {
-        if(ex == null)
+        if (ex == null)
         {
             return;
         }
-        
+
         await _semaphoreSlim.WaitAsync();
 
         for (int i = 0; i < _configuration.GetConnectionRetriesCount(); i++)
@@ -71,5 +78,24 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
         }
 
         _semaphoreSlim.Release();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _connections.OnAnyTargetClosed -= OnConnectionClosedAsync;
+            _disposed = true;
+        }
     }
 }

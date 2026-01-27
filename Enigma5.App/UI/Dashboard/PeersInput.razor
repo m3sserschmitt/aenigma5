@@ -60,6 +60,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 </div>
 
 @code {
+    private bool _disposed;
     [Parameter] public IEnumerable<PeerDto> Items { get; set; } = [];
     [Parameter] public EventCallback<PeerDto> OnAddItem { get; set; } = default;
     [Parameter] public EventCallback<PeerDto> OnRemoveItem { get; set; } = default;
@@ -106,6 +107,10 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     public void Dispose()
     {
-        DashboardUIState.PrivateKeyUnlockedChanged -= PrivateKeyUnlockedChanged;
+        if (!_disposed)
+        {
+            DashboardUIState.PrivateKeyUnlockedChanged -= PrivateKeyUnlockedChanged;
+            _disposed = true;
+        }
     }
 }

@@ -29,7 +29,6 @@ using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Hubs.Sessions.Contracts;
-using Enigma5.App.Common;
 
 namespace Enigma5.App.Hubs;
 
@@ -78,6 +77,21 @@ public partial class RoutingHub(
         }
 
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
+    }
+
+    public async Task<InvocationResultDto<VertexDto>> GetLocalVertex()
+    {
+        var localAddress = await _certificateManager.GetAddressAsync();
+        if (string.IsNullOrWhiteSpace(localAddress))
+        {
+            return Error<VertexDto>(InvocationErrors.INTERNAL_ERROR);
+        }
+        var result = await _commandRouter.Send(new GetVertexQuery(localAddress));
+        if (!result.IsSuccessNotNullResultValue())
+        {
+            return Error<VertexDto>(InvocationErrors.INTERNAL_ERROR);
+        }
+        return Ok(result.Value!);
     }
 
     [Authenticated]
@@ -132,60 +146,18 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
-    public Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request)
+    public async Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request)
     {
-        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!, IsAuthorizedService);
+        var authenticated = await Authenticate(request.PublicKey!, request.Signature!);
 
         if (!authenticated)
         {
             _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
+            return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
         _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
-        return OkAsync(true);
-    }
-
-    [ValidateModel]
-    public async Task<InvocationResultDto<SignatureDto>> SignToken(SignatureRequestDto request)
-    {
-        var publicKey = await _certificateManager.GetPublicKeyAsync();
-        if (string.IsNullOrWhiteSpace(publicKey))
-        {
-            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-        var decodedNonce = Convert.FromBase64String(request.Nonce!);
-        if (decodedNonce is null)
-        {
-            _logger.LogDebug($"Could not base64 decode nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-
-        if (!IsAuthorizedService)
-        {
-            var tokenData = new byte[Constants.AuthTokenSize];
-            new Random().NextBytes(tokenData);
-            decodedNonce = [.. decodedNonce, .. tokenData];
-        }
-
-        using var signer = await _certificateManager.CreateSignerAsync();
-        var data = signer.Sign(decodedNonce);
-
-        if (data == null)
-        {
-            _logger.LogError($"Could not sign nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-
-        var encodedData = Convert.ToBase64String(data);
-
-        if (encodedData is null)
-        {
-            _logger.LogError($"Could not base64 encode signed nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return Error<SignatureDto>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-
-        return Ok<SignatureDto>(new(encodedData, publicKey));
+        return Ok(true);
     }
 
     [Authenticated]
@@ -268,5 +240,21 @@ public partial class RoutingHub(
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        var impersonateServiceHeader = Context.GetHttpContext()?.Request.Headers[Common.Constants.XImpersonateServiceHeader];
+        if (!impersonateServiceHeader.HasValue)
+        {
+            return;
+        }
+        var impersonateServiceHeaderString = impersonateServiceHeader.ToString();
+        if (string.IsNullOrWhiteSpace(impersonateServiceHeaderString))
+        {
+            return;
+        }
+        Context.Items[Common.Constants.XImpersonateServiceHeader] = impersonateServiceHeaderString;
+        await base.OnConnectedAsync();
     }
 }

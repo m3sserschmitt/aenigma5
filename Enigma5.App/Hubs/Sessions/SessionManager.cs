@@ -69,7 +69,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         return _connectionsMapper.Remove(connectionId, out address);
     }
 
-    public bool Authenticate(string connectionId, string publicKey, string signature, bool authorizedConnection)
+    public bool Authenticate(string connectionId, string publicKey, string signature, string? impersonateServiceAddress)
     {
         return ThreadSafeExecution.Execute(
             () =>
@@ -83,7 +83,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
                     return false;
                 }
 
-                var encodedToken = Convert.ToBase64String(authorizedConnection ? [.. token.Take(Common.Constants.AuthTokenSize)] : token);
+                var encodedToken = Convert.ToBase64String(token);
 
                 if (encodedToken is null)
                 {
@@ -99,7 +99,9 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
                     return false;
                 }
 
-                var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
+                var address = string.IsNullOrWhiteSpace(impersonateServiceAddress)
+                ? CertificateHelper.GetHexAddressFromPublicKey(publicKey)
+                : impersonateServiceAddress;
                 return _connectionsMapper.TryAdd(address, connectionId);
             },
             false,

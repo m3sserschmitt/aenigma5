@@ -35,6 +35,11 @@ public static partial class StringExtensions
         return OnionRegex.IsMatch(value);
     }
 
+    public static bool IsValidOnionUrl(this string? value)
+    => !string.IsNullOrWhiteSpace(value)
+    && Uri.TryCreate(value, UriKind.Absolute, out var sourceUri)
+    && sourceUri.Host.IsValidOnionAddress();
+
     public static string ToQrCode(this string text, int pixelsPerModule = 20)
     {
         using var generator = new QRCodeGenerator();

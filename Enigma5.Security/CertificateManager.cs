@@ -36,6 +36,8 @@ public sealed class CertificateManager(
     IKeyReader keysProvider,
     ILogger<CertificateManager> logger) : ICertificateManager, IDisposable
 {
+    private bool _disposed;
+
     private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = new();
 
     private readonly IKeyReader _keysProvider = keysProvider;
@@ -53,7 +55,29 @@ public sealed class CertificateManager(
         SealProvider.SetMasterPassphraseName(KERNEL_KEY_DESCRIPTION);
     }
 
-    public void Dispose() { _simpleSingleThreadRunner.Dispose(); }
+    ~CertificateManager()
+    {
+        Dispose(false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _simpleSingleThreadRunner.Dispose();
+            _disposed = true;
+        }
+    }
 
     public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
     => _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0, _logger);

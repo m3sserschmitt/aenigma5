@@ -32,6 +32,8 @@ public static class Constants
 
     public static readonly int MaxSharedDataSize = 1 * 1024 * 1024;
 
+    public const string XImpersonateServiceHeader = "X-Impersonate-Service";
+
     public const string OnionRoutingEndpoint = "OnionRouting";
 
     public const string InfoEndpoint = "Info";

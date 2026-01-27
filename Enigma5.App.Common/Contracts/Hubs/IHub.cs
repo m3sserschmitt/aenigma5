@@ -27,13 +27,13 @@ public interface IEnigmaHub
 {
     Task<InvocationResultDto<string>> GenerateToken();
 
+    Task<InvocationResultDto<VertexDto>> GetLocalVertex();
+
     Task<InvocationResultDto<List<PendingMessageDto>>> Pull();
 
     Task<InvocationResultDto<bool>> Cleanup();
 
     Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request);
-
-    Task<InvocationResultDto<SignatureDto>> SignToken(SignatureRequestDto request);
 
     Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto request);
 

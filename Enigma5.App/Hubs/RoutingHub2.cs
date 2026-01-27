@@ -27,6 +27,7 @@ using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
+using Enigma5.Crypto;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs;
@@ -46,6 +47,16 @@ public partial class RoutingHub
             return Context.GetHttpContext()?.Connection.LocalPort == parsedAuthorizedLocalAddress.Port;
         }
     }
+
+    protected async Task<bool> IsLocalAddress(string publicKey)
+    => await _certificateManager.GetAddressAsync() == CertificateHelper.GetHexAddressFromPublicKey(publicKey);
+
+    protected async Task<bool> Authenticate(string publicKey, string signature)
+    => _sessionManager.Authenticate(
+            Context.ConnectionId,
+            publicKey!,
+            signature!,
+            await IsLocalAddress(publicKey!) ? Context.Items[Common.Constants.XImpersonateServiceHeader] as string : null);
 
     protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
@@ -94,8 +105,8 @@ public partial class RoutingHub
     {
         var tasks = new List<Task<bool>>();
         var result = await _commandRouter.Send(new GetNeighborAddresses());
-        
-        if(!result.IsSuccessNotNullResultValue())
+
+        if (!result.IsSuccessNotNullResultValue())
         {
             return tasks;
         }

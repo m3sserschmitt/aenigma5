@@ -27,6 +27,8 @@ public sealed class SimpleSingleThreadRunner : IDisposable
 {
     private const string EXCEPTION_MESSAGE = "Exception encountered while doing work on single thread executor";
 
+    private bool _disposed;
+
     readonly Thread _thread;
 
     readonly BlockingCollection<Func<Task>> _queue = [];
@@ -35,6 +37,11 @@ public sealed class SimpleSingleThreadRunner : IDisposable
     {
         _thread = new Thread(ThreadLoop) { IsBackground = true };
         _thread.Start();
+    }
+
+    ~SimpleSingleThreadRunner()
+    {
+        Dispose(false);
     }
 
     void ThreadLoop()
@@ -78,7 +85,21 @@ public sealed class SimpleSingleThreadRunner : IDisposable
 
     public void Dispose()
     {
-        _queue.CompleteAdding();
-        _thread.Join();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _queue.CompleteAdding();
+            _thread.Join();
+            _disposed = true;
+        }
     }
 }

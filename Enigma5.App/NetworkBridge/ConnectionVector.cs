@@ -20,15 +20,20 @@
 
 using Enigma5.App.Common;
 using Enigma5.App.Common.Contracts.Hubs;
+using Enigma5.App.Common.Extensions;
+using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.Security.Contracts;
+using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.Net;
 
 namespace Enigma5.App.NetworkBridge;
 
-internal class ConnectionVector
+internal class ConnectionVector : IDisposable
 {
-    private readonly object _locker = new();
+    private bool _disposed;
 
     private bool _isReversed;
 
@@ -36,113 +41,64 @@ internal class ConnectionVector
 
     private bool _targetAuthenticated;
 
-    private string? _sourcePublicKey;
+    private string? _sourceAddress;
 
-    private string? _targetPublicKey;
+    private string? _targetAddress;
 
-    internal readonly string SourceHubHost;
+    private readonly string? _impersonateServiceAddress;
 
-    internal readonly string TargetHubHost;
+    private readonly string _sourceHubHost;
+
+    private readonly string _targetHubHost;
 
     private readonly HubConnection _source;
 
     private readonly HubConnection _target;
 
-    internal string? SourcePublicKey
+    private readonly NetworkGraphValidationPolicy _networkGraphValidationPolicy;
+
+    private readonly ICertificateManager _certificateManager;
+
+    public string? SourceAddress
     {
-        get
-        {
-            lock (_locker)
-            {
-                return _sourcePublicKey;
-            }
-        }
-        private set
-        {
-            lock (_locker)
-            {
-                _sourcePublicKey = value;
-            }
-        }
+        get => _sourceAddress;
+        private set => _sourceAddress = value;
     }
 
-    internal string? TargetPublicKey
+    public string? TargetAddress
     {
-        get
-        {
-            lock (_locker)
-            {
-                return _targetPublicKey;
-            }
-        }
-        private set
-        {
-            lock (_locker)
-            {
-                _targetPublicKey = value;
-            }
-        }
+        get => _targetAddress;
+        private set => _targetAddress = value;
     }
 
-    internal bool IsReversed
+    public string? ImpersonateServiceAddress
     {
-        get
-        {
-            lock (_locker)
-            {
-                return _isReversed;
-            }
-        }
-        set
-        {
-            lock (_locker)
-            {
-                _isReversed = value;
-            }
-        }
+        get => _impersonateServiceAddress;
     }
 
-    internal bool SourceAuthenticated
+    public bool IsReversed
     {
-        get
-        {
-            lock (_locker)
-            {
-                return _sourceAuthenticated;
-            }
-        }
-        set
-        {
-            lock (_locker)
-            {
-                _sourceAuthenticated = value;
-            }
-        }
+        get => _isReversed;
+        private set => _isReversed = value;
     }
 
-    internal bool TargetAuthenticated
+    public bool SourceAuthenticated
     {
-        get
-        {
-            lock (_locker)
-            {
-                return _targetAuthenticated;
-            }
-        }
-        set
-        {
-            lock (_locker)
-            {
-                _targetAuthenticated = value;
-            }
-        }
+        get => _sourceAuthenticated;
+        private set => _sourceAuthenticated = value;
     }
 
-    internal bool Authenticated => Connected && SourceAuthenticated && TargetAuthenticated;
+    public bool TargetAuthenticated
+    {
+        get => _targetAuthenticated;
+        private set => _targetAuthenticated = value;
+    }
 
-    internal bool Connected => _source.State == HubConnectionState.Connected && _target.State == HubConnectionState.Connected;
+    public bool Authenticated => Connected && SourceAuthenticated && TargetAuthenticated;
 
-    internal event Func<Exception?, Task>? TargetClosed
+    public bool Connected => _source.State == HubConnectionState.Connected && _target.State == HubConnectionState.Connected;
+
+    public event Func<Exception?, Task>? TargetClosed
     {
         add
         {
@@ -155,7 +111,7 @@ internal class ConnectionVector
         }
     }
 
-    internal event Func<Exception?, Task>? SourceClosed
+    public event Func<Exception?, Task>? SourceClosed
     {
         add
         {
@@ -168,45 +124,93 @@ internal class ConnectionVector
         }
     }
 
-    private ConnectionVector(HubConnection source, HubConnection target, string sourceUrl, string targetUrl)
+    private ConnectionVector(
+        string sourceUrl,
+        string targetUrl,
+        string? impersonateServiceAddress,
+        NetworkGraphValidationPolicy networkGraphValidationPolicy,
+        ICertificateManager certificateManager,
+        IConfiguration configuration)
     {
-        _source = source;
-        _target = target;
+        _source = CreateHubConnection(sourceUrl, options =>
+        {
+            if (!string.IsNullOrWhiteSpace(impersonateServiceAddress))
+            {
+                options.Headers.Add(Constants.XImpersonateServiceHeader, impersonateServiceAddress);
+            }
+        });
+        _target = CreateHubConnection(targetUrl, options =>
+        {
+            if (targetUrl.IsValidOnionUrl())
+            {
+                var socks5ProxyAddress = configuration.GetSocks5Proxy();
+                if (string.IsNullOrWhiteSpace(socks5ProxyAddress))
+                {
+                    return;
+                }
+                var handler = new HttpClientHandler
+                {
+                    Proxy = new WebProxy(socks5ProxyAddress),
+                    UseProxy = true
+                };
+                options.HttpMessageHandlerFactory = _ => handler;
+                options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+            }
+        });
+        _certificateManager = certificateManager;
+        _networkGraphValidationPolicy = networkGraphValidationPolicy;
 
         var sourceUri = new Uri(sourceUrl);
-        SourceHubHost = $"{sourceUri.Host}:{sourceUri.Port}";
+        _sourceHubHost = $"{sourceUri.Host}:{sourceUri.Port}";
         var targetUri = new Uri(targetUrl);
-        TargetHubHost = $"{targetUri.Host}:{targetUri.Port}";
+        _targetHubHost = $"{targetUri.Host}:{targetUri.Port}";
 
         _source.Closed += OnSourceClosed;
         _target.Closed += OnTargetClosed;
     }
 
-    internal void TargetOn<T>(string method, Func<T, Task> handler)
+    private ConnectionVector(ConnectionVector connectionVector, bool reversed)
+    {
+        _source = reversed ? connectionVector._target : connectionVector._source;
+        _target = reversed ? connectionVector._source : connectionVector._target;
+        _sourceHubHost = reversed ? connectionVector._targetHubHost : connectionVector._sourceHubHost;
+        _targetHubHost = reversed ? connectionVector._sourceHubHost : connectionVector._targetHubHost;
+        _isReversed = reversed;
+        _certificateManager = connectionVector._certificateManager;
+        _impersonateServiceAddress = connectionVector._impersonateServiceAddress;
+        _networkGraphValidationPolicy = connectionVector._networkGraphValidationPolicy;
+    }
+
+    ~ConnectionVector()
+    {
+        Dispose(false);
+    }
+
+    public void TargetOn<T>(string method, Func<T, Task> handler)
     => _target.On(method, handler);
 
-    internal void SourceOn<T>(string method, Func<T, Task> handler)
+    public void SourceOn<T>(string method, Func<T, Task> handler)
     => _source.On(method, handler);
 
-    internal async Task<bool> InvokeTargetAsync(string method, object? data, CancellationToken cancellationToken = default)
+    public async Task<bool> InvokeTargetAsync(string method, object? data, CancellationToken cancellationToken = default)
     => await InvokeAsync(_target, method, data, cancellationToken);
 
-    internal async Task<bool> InvokeSourceAsync(string method, object? data, CancellationToken cancellationToken = default)
+    public async Task<bool> InvokeSourceAsync(string method, object? data, CancellationToken cancellationToken = default)
     => await InvokeAsync(_source, method, data, cancellationToken);
 
-    internal async Task<bool> InvokeTargetAsync(string method, CancellationToken cancellationToken = default)
+    public async Task<bool> InvokeTargetAsync(string method, CancellationToken cancellationToken = default)
     => await InvokeAsync(_target, method, cancellationToken);
 
-    internal async Task<bool> InvokeSourceAsync(string method, CancellationToken cancellationToken = default)
+    public async Task<bool> InvokeSourceAsync(string method, CancellationToken cancellationToken = default)
     => await InvokeAsync(_source, method, cancellationToken);
 
-    internal async Task<bool> StopTargetAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StopTargetAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken);
 
-    internal async Task<bool> StopSourceAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StopSourceAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_source, cancellationToken);
 
-    internal async Task<bool> StartAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StartAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -228,10 +232,10 @@ internal class ConnectionVector
         }
     }
 
-    internal async Task<bool> StopAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
 
-    internal async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
     {
         if (Authenticated)
         {
@@ -247,13 +251,18 @@ internal class ConnectionVector
         {
             var reversedVector = Reversed();
             SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
-            TargetPublicKey = reversedVector.SourcePublicKey;
+            SourceAddress = reversedVector.TargetAddress;
 
             return Authenticated;
         }
 
         try
         {
+            if (!await RequestTargetVertex(cancellationToken))
+            {
+                return false;
+            }
+
             var nonce = await _target.InvokeAsync<InvocationResultDto<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
 
             if (!nonce.Success || nonce.Data is null)
@@ -261,23 +270,24 @@ internal class ConnectionVector
                 return false;
             }
 
-            var signature = await _source.InvokeAsync<InvocationResultDto<SignatureDto>>(nameof(IEnigmaHub.SignToken), new SignatureRequestDto(nonce.Data), cancellationToken: cancellationToken);
+            var signature = await SignToken(nonce.Data);
 
-            if (!signature.Success || signature.Data is null)
+            if (signature is null)
             {
                 return false;
             }
 
-            var authentication = await _target.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Authenticate), new AuthenticationRequestDto(signature.Data.PublicKey, signature.Data.SignedData), cancellationToken: cancellationToken);
-
+            var authentication = await _target.InvokeAsync<InvocationResultDto<bool>>(
+                nameof(IEnigmaHub.Authenticate),
+                new AuthenticationRequestDto(signature.PublicKey, signature.SignedData),
+                cancellationToken: cancellationToken);
             TargetAuthenticated = authentication.Success && authentication.Data;
-            SourcePublicKey = signature.Data.PublicKey;
 
             if (!IsReversed && TargetAuthenticated)
             {
                 var reversedVector = Reversed();
                 SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
-                TargetPublicKey = reversedVector.SourcePublicKey;
+                SourceAddress = reversedVector.TargetAddress;
 
                 return Authenticated;
             }
@@ -288,6 +298,59 @@ internal class ConnectionVector
         {
             return false;
         }
+    }
+
+    private async Task<SignatureDto?> SignToken(string nonce)
+    {
+        var publicKey = await _certificateManager.GetPublicKeyAsync();
+        if (string.IsNullOrWhiteSpace(publicKey))
+        {
+            return null;
+        }
+
+        var decodedNonce = Convert.FromBase64String(nonce);
+        if (decodedNonce is null)
+        {
+            return null;
+        }
+
+        using var signer = await _certificateManager.CreateSignerAsync();
+        var data = signer.Sign(decodedNonce);
+
+        if (data == null)
+        {
+            return null;
+        }
+
+        var encodedData = Convert.ToBase64String(data);
+
+        if (encodedData is null)
+        {
+            return null;
+        }
+
+        return new(encodedData, publicKey);
+    }
+
+    private async Task<bool> RequestTargetVertex(CancellationToken cancellationToken = default)
+    {
+        var response = await _target.InvokeAsync<InvocationResultDto<Vertex>>(nameof(IEnigmaHub.GetLocalVertex), cancellationToken);
+        var vertex = response.Data;
+        if (vertex == null || !response.Success)
+        {
+            return false;
+        }
+
+        TargetAddress = vertex?.Neighborhood?.Address;
+        if (!string.IsNullOrWhiteSpace(ImpersonateServiceAddress) && TargetAddress != ImpersonateServiceAddress)
+        {
+            if (TargetAddress != await _certificateManager.GetAddressAsync())
+            {
+                return false;
+            }
+        }
+
+        return vertex != null && _networkGraphValidationPolicy.Validate(vertex);
     }
 
     private Task OnSourceClosed(Exception? _)
@@ -302,7 +365,7 @@ internal class ConnectionVector
         return Task.CompletedTask;
     }
 
-    private ConnectionVector Reversed() => new(_target, _source, TargetHubHost, SourceHubHost) { IsReversed = true };
+    private ConnectionVector Reversed() => new(this, true);
 
     private static async Task<bool> InvokeAsync(HubConnection connection, string method, object? data, CancellationToken cancellationToken = default)
     {
@@ -347,23 +410,78 @@ internal class ConnectionVector
         }
     }
 
-    public static bool operator ==(ConnectionVector vector1, ConnectionVector vector2)
-    => vector1.SourceHubHost == vector2.SourceHubHost && vector1.TargetHubHost == vector2.TargetHubHost;
+    public static bool operator ==(ConnectionVector? vector1, ConnectionVector? vector2)
+    {
+        if (ReferenceEquals(vector1, vector2))
+        {
+            return true;
+        }
+
+        if (vector1 is null || vector2 is null)
+        {
+            return false;
+        }
+
+        return vector1._sourceHubHost == vector2._sourceHubHost && vector1._targetHubHost == vector2._targetHubHost;
+    }
 
     public static bool operator !=(ConnectionVector vector1, ConnectionVector vector2) => !(vector1 == vector2);
 
-    public override int GetHashCode() => HashCode.Combine(SourceHubHost, TargetHubHost);
+    public override int GetHashCode() => HashCode.Combine(_sourceHubHost, _targetHubHost);
 
-    public override bool Equals(object? obj) => obj is ConnectionVector vector && this == vector;
+    public override bool Equals(object? obj) => Equals(obj as ConnectionVector);
 
-    internal static ConnectionVector Create(string sourceHubUrl, string targetHubUrl)
-    => new(CreateHubConnection(sourceHubUrl), CreateHubConnection(targetHubUrl), sourceHubUrl, targetHubUrl);
+    public bool Equals(ConnectionVector? other) => this == other;
 
-    internal static HubConnection CreateHubConnection(string baseUrl)
-    => new HubConnectionBuilder()
-        .WithUrl($"{baseUrl.Trim('/')}/{Constants.OnionRoutingEndpoint}")
-        .Build();
+    public static ConnectionVector Create(
+        string sourceHubUrl,
+        PeerDto peer,
+        NetworkGraphValidationPolicy networkGraphValidationPolicy,
+        ICertificateManager certificateManager,
+        IConfiguration configuration)
+    => new(
+        sourceHubUrl,
+        (string.IsNullOrWhiteSpace(peer.Host) ? null : peer.Host)
+        ?? throw new ArgumentException("Peer host could not be null or white spaces."),
+        peer.Address,
+        networkGraphValidationPolicy,
+        certificateManager,
+        configuration);
 
-    internal static HashSet<ConnectionVector> CreateConnections(string sourceHubUrl, List<string> targetUrls)
-    => targetUrls.Select(item => Create(sourceHubUrl, item)).ToHashSet();
+    private static HubConnection CreateHubConnection(string baseUrl, Action<HttpConnectionOptions> httpOptions)
+    => new HubConnectionBuilder().WithUrl(
+        $"{baseUrl.Trim('/')}/{Constants.OnionRoutingEndpoint}",
+        options => httpOptions(options)).Build();
+
+    public static HubConnection CreateHubConnection(string baseUrl) => CreateHubConnection(baseUrl, x => { });
+
+    public static HashSet<ConnectionVector> CreateConnections(
+        string sourceUrl,
+        List<PeerDto> peers,
+        NetworkGraphValidationPolicy networkGraphValidationPolicy,
+        ICertificateManager certificateManager,
+        IConfiguration configuration)
+    => [.. peers.Where(item => !string.IsNullOrWhiteSpace(item.Host))
+    .Select(item => Create(sourceUrl, item, networkGraphValidationPolicy, certificateManager, configuration))
+    ];
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _source.Closed += OnSourceClosed;
+            _target.Closed += OnTargetClosed;
+            _disposed = true;
+        }
+    }
 }

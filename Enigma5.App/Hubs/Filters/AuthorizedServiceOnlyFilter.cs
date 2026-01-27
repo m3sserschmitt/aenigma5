@@ -21,28 +21,36 @@
 using Enigma5.App.Attributes;
 using Enigma5.App.Common.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.App.Hubs.Adapters;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class AuthorizedServiceOnlyFilter(ILogger<AuthorizedServiceOnlyFilter> logger) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
+public class AuthorizedServiceOnlyFilter(IConfiguration configuration, ILogger<AuthorizedServiceOnlyFilter> logger) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
 {
+    private readonly IConfiguration _configuration = configuration;
+
     private readonly ILogger<AuthorizedServiceOnlyFilter> _logger = logger;
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        if (new AuthorizedServiceHubAdapter(invocationContext.Hub).IsAuthorizedService)
+        var httpContext = invocationContext.Context.GetHttpContext();
+        if (httpContext == null)
         {
-            _logger.LogDebug($"{{{nameof(invocationContext.HubMethodName)}}} invocation authorized for {{{nameof(invocationContext.Context.ConnectionId)}}}.",
-            invocationContext.HubMethodName, invocationContext.Context.ConnectionId);
-            return await next(invocationContext);
+            _logger.LogError($"Invocation context has null HttpContext.");
+            return false;
         }
 
-        _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+        if (_configuration.IsAuthorizedHttpInvocation(httpContext))
+        {
+            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+            invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
+            return await next(invocationContext);
+        }
+        _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
         invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-        return EmptyErrorResultDto.Create(InvocationErrors.NOT_AUTHORIZED);
+        return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
     }
 }

@@ -27,7 +27,7 @@ public static class VertexExtensions
     public static VertexBroadcastRequestDto ToVertexBroadcast(this Vertex? vertex)
     => new(vertex?.PublicKey ?? string.Empty, vertex?.SignedData ?? string.Empty);
 
-    public static bool IsExpired(this Vertex? vertex, TimeSpan lifetime)
+    public static bool LastUpdateExceeded(this Vertex? vertex, TimeSpan lifetime)
     => vertex is not null && DateTimeOffset.Now - vertex.Neighborhood.LastUpdate > lifetime;
 
     public static bool ShouldReplace(this Vertex vertex, Vertex previous)

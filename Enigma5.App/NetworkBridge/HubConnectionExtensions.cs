@@ -39,42 +39,42 @@ internal static class HubConnectionExtensions
         }
     }
 
-    internal static void Forward<T>(this ConnectionVector connectionVector, string method)
+    public static void Forward<T>(this ConnectionVector connectionVector, string method)
     where T : class
     {
         connectionVector.SourceOn<T>(method, async data => await connectionVector.InvokeTargetAsync(method, data, CancellationToken.None));
         connectionVector.TargetOn<T>(method, async data => await connectionVector.InvokeSourceAsync(method, data, CancellationToken.None));
     }
 
-    internal static void ForwardMessageRouting(this ConnectionVector connection)
+    public static void ForwardMessageRouting(this ConnectionVector connection)
     {
         connection.Forward<RoutingRequestDto>(nameof(IEnigmaHub.RouteMessage));
     }
 
-    internal static void ForwardBroadcasts(this ConnectionVector connection)
+    public static void ForwardBroadcasts(this ConnectionVector connection)
     {
         connection.Forward<VertexBroadcastRequestDto>(nameof(IEnigmaHub.Broadcast));
     }
 
-    internal static void ForwardCloseSignal(this ConnectionVector connection)
+    public static void ForwardCloseSignal(this ConnectionVector connection)
     {
         connection.SourceClosed += async _ => { try { await connection.StopTargetAsync(CancellationToken.None); } catch (Exception) { /* TODO: log exception */ } };
         connection.TargetClosed += async _ => { try { await connection.StopSourceAsync(CancellationToken.None); } catch (Exception) { /* TODO: log exception */ } };
     }
 
-    internal static async Task<bool> StartAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    public static async Task<bool> StartAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
     {
         var results = await Task.WhenAll(connections.Select(async connection => await connection.StartAsync(cancellationToken)));
         return results.All(result => result);
     }
 
-    internal static async Task<bool> StopAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    public static async Task<bool> StopAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
     {
         var results = await Task.WhenAll(connections.Select(async connection => await connection.StopAsync(cancellationToken)));
         return results.All(result => result);
     }
 
-    internal static async Task<bool> StartAuthenticationAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    public static async Task<bool> StartAuthenticationAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
     {
         var results = await Task.WhenAll(connections.Select(async connection => await connection.StartAuthenticationAsync(cancellationToken)));
         return results.All(result => result);

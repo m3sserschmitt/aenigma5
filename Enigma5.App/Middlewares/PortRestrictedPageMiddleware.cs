@@ -34,21 +34,12 @@ public sealed class AuthorizedPortRestrictedPageMiddleware(RequestDelegate next,
     {
         if (context.Request.Path.StartsWithSegments(_path))
         {
-            var port = context.Connection.LocalPort;
-            var authorizedLocalListenAddress = _configuration.GetAuthorizedLocalListenAddress();
-            if (authorizedLocalListenAddress == null)
-            {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
-            var parsedAuthorizedLocalAddress = new Uri(authorizedLocalListenAddress);
-            if (port != parsedAuthorizedLocalAddress.Port)
+            if (!_configuration.IsAuthorizedHttpInvocation(context))
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
             }
         }
-
         await _next(context);
     }
 }

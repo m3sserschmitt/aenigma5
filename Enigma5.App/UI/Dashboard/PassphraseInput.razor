@@ -41,6 +41,7 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 </div>
 
 @code {
+    private bool _disposed;
     [Parameter] public EventCallback<char[]> OnUnlockKey { get; set; } = default;
     [Parameter] public EventCallback OnLockKey { get; set; } = default;
 
@@ -74,6 +75,10 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
     public void Dispose()
     {
-        DashboardUIState.PrivateKeyUnlockedChanged -= OnPrivateKeyUnlockedChanged;
+        if (!_disposed)
+        {
+            DashboardUIState.PrivateKeyUnlockedChanged -= OnPrivateKeyUnlockedChanged;
+            _disposed = true;
+        }
     }
 }

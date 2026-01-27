@@ -20,12 +20,11 @@
 
 using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
-using Enigma5.Crypto;
-using Enigma5.Crypto.Extensions;
 using Enigma5.Security.Contracts;
 using Enigma5.Security.Extensions;
 using MediatR;
@@ -34,11 +33,14 @@ using Microsoft.AspNetCore.SignalR.Client;
 namespace Enigma5.App.NetworkBridge;
 
 public class HubConnectionsProxy(
+    NetworkGraphValidationPolicy networkGraphValidationPolicy,
     IConfiguration configuration,
     ICertificateManager certificateManager,
     IServiceScopeFactory serviceScopeFactory)
 {
     private readonly IConfiguration _configuration = configuration;
+
+    private readonly NetworkGraphValidationPolicy _networkGraphValidationPolicy = networkGraphValidationPolicy;
 
     private HashSet<ConnectionVector> _connections = [];
 
@@ -48,7 +50,7 @@ public class HubConnectionsProxy(
 
     private HubConnection? _localHubConnection;
 
-    internal event Func<Exception?, Task>? OnAnyTargetClosed
+    public event Func<Exception?, Task>? OnAnyTargetClosed
     {
         add
         {
@@ -66,7 +68,7 @@ public class HubConnectionsProxy(
         }
     }
 
-    internal async Task<bool> LoadConnections()
+    public async Task<bool> LoadConnections()
     {
         if (_connections.Count > 0)
         {
@@ -89,13 +91,17 @@ public class HubConnectionsProxy(
             return false;
         }
 
-        var urls = result.Value!.Select(peer => peer.Host ?? string.Empty).ToList();
-        if (urls.Count == 0)
+        if (result.Value?.Count == 0)
         {
             return true;
         }
 
-        _connections = ConnectionVector.CreateConnections(localAddress, urls);
+        _connections = ConnectionVector.CreateConnections(
+            localAddress,
+            result.Value ?? [],
+            _networkGraphValidationPolicy,
+            _certificateManager,
+            _configuration);
 
         foreach (var connection in _connections)
         {
@@ -106,13 +112,13 @@ public class HubConnectionsProxy(
         return true;
     }
 
-    internal Task<bool> StartAsync(CancellationToken cancellationToken = default) => _connections.StartAsync(cancellationToken);
+    public Task<bool> StartAsync(CancellationToken cancellationToken = default) => _connections.StartAsync(cancellationToken);
 
-    internal Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default) => _connections.StartAuthenticationAsync(cancellationToken);
+    public Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default) => _connections.StartAuthenticationAsync(cancellationToken);
 
-    internal Task<bool> StopAsync(CancellationToken cancellationToken = default) => _connections.StopAsync(cancellationToken);
+    public Task<bool> StopAsync(CancellationToken cancellationToken = default) => _connections.StopAsync(cancellationToken);
 
-    internal async Task<bool> TriggerBroadcast(CancellationToken cancellationToken = default)
+    public async Task<bool> TriggerBroadcast(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -123,8 +129,8 @@ public class HubConnectionsProxy(
             }
 
             var newAddresses = _connections
-            .Where(item => item.TargetPublicKey.IsValidPublicKey())
-            .Select(item => CertificateHelper.GetHexAddressFromPublicKey(item.TargetPublicKey)).ToList();
+            .Where(item => !string.IsNullOrWhiteSpace(item.TargetAddress) && item.Authenticated)
+            .Select(item => item.TargetAddress ?? string.Empty).ToList();
             var result = _localHubConnection != null ?
             await _localHubConnection.InvokeAsync<InvocationResultDto<bool>>(
                 nameof(IEnigmaHub.TriggerBroadcast), new TriggerBroadcastRequestDto(newAddresses), cancellationToken: cancellationToken
@@ -142,7 +148,7 @@ public class HubConnectionsProxy(
     {
         try
         {
-            var newProxy = new HubConnectionsProxy(_configuration, _certificateManager, _scopeFactory);
+            var newProxy = new HubConnectionsProxy(_networkGraphValidationPolicy, _configuration, _certificateManager, _scopeFactory);
             await newProxy.LoadConnections();
 
             var connectionsToBeRemoved = _connections.Except(newProxy._connections).ToList();

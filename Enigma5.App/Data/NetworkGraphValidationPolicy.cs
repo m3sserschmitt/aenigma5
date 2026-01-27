@@ -22,19 +22,22 @@ using Enigma5.Crypto;
 using System.Text.Json;
 using Enigma5.Crypto.Extensions;
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Data.Extensions;
 
 namespace Enigma5.App.Data;
 
-public static partial class NetworkGraphValidationPolicy
+public class NetworkGraphValidationPolicy(IConfiguration configuration)
 {
+    private readonly IConfiguration _configuration = configuration;
+
     private static readonly JsonSerializerOptions _neighborhoodDeserializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public static bool ValidateSignature(this Vertex vertex)
+    public static bool ValidateSignature(Vertex vertex)
     {
-        if(vertex.SignedData is null || vertex.PublicKey is null)
+        if (vertex.SignedData is null || vertex.PublicKey is null)
         {
             return false;
         }
@@ -45,14 +48,14 @@ public static partial class NetworkGraphValidationPolicy
             var plaintext = decodedSignature.GetStringDataFromSignature(vertex.PublicKey);
             var canonicalJsonNeighborhood = vertex.Neighborhood.CanonicallySerialize();
 
-            if(plaintext != canonicalJsonNeighborhood)
+            if (plaintext != canonicalJsonNeighborhood)
             {
                 return false;
             }
 
             var expectedNeighborhood = JsonSerializer.Deserialize<Neighborhood>(plaintext, _neighborhoodDeserializerOptions);
 
-            if(vertex.Neighborhood != expectedNeighborhood)
+            if (vertex.Neighborhood != expectedNeighborhood)
             {
                 return false;
             }
@@ -67,23 +70,26 @@ public static partial class NetworkGraphValidationPolicy
         }
     }
 
-    public static bool CheckCycles(this Vertex vertex)
+    public static bool HasNoCycles(Vertex vertex)
     => !string.IsNullOrWhiteSpace(vertex.Neighborhood.Address) && !vertex.Neighborhood.Neighbors.Contains(vertex.Neighborhood.Address);
 
-    public static bool ValidatePublicKey(this Vertex vertex)
+    public static bool ValidatePublicKey(Vertex vertex)
     => vertex.PublicKey.IsValidPublicKey();
 
-    public static bool ValidateAddress(this Vertex vertex)
+    public static bool ValidateAddress(Vertex vertex)
     => vertex.Neighborhood.Address.IsValidAddress()
     && CertificateHelper.GetHexAddressFromPublicKey(vertex.PublicKey) == vertex.Neighborhood.Address;
 
-    public static bool ValidateNeighborsAddresses(this Vertex vertex)
+    public static bool ValidateNeighborsAddresses(Vertex vertex)
     => vertex.Neighborhood.Neighbors.All(address => address.IsValidAddress());
 
-    public static bool ValidatePolicy(this Vertex vertex)
-    => vertex.ValidatePublicKey()
-    && vertex.ValidateAddress()
-    && vertex.CheckCycles()
-    && vertex.ValidateNeighborsAddresses()
-    && vertex.ValidateSignature();
+    public bool IsNotExpired(Vertex vertex) => !vertex.LastUpdateExceeded(_configuration.GetVertexLifetime());
+
+    public bool Validate(Vertex vertex)
+    => IsNotExpired(vertex)
+    && ValidatePublicKey(vertex)
+    && ValidateAddress(vertex)
+    && HasNoCycles(vertex)
+    && ValidateNeighborsAddresses(vertex)
+    && ValidateSignature(vertex);
 }

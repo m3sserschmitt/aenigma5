@@ -31,11 +31,15 @@ namespace Enigma5.App.Data;
 
 public class NetworkGraph : IDisposable
 {
+    private bool _disposed;
+
     private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
 
     private readonly ICertificateManager _certificateManager;
 
     private readonly IConfiguration _configuration;
+
+    private readonly NetworkGraphValidationPolicy _networkGraphValidationPolicy;
 
     private readonly ILogger<NetworkGraph> _logger;
 
@@ -45,7 +49,12 @@ public class NetworkGraph : IDisposable
 
     private readonly DashboardUIState _dashboardUIState;
 
-    public NetworkGraph(ICertificateManager certificateManager, IConfiguration configuration, ILogger<NetworkGraph> logger, DashboardUIState dashboardUIState)
+    public NetworkGraph(
+        ICertificateManager certificateManager,
+        NetworkGraphValidationPolicy networkGraphValidationPolicy,
+        IConfiguration configuration,
+        ILogger<NetworkGraph> logger,
+        DashboardUIState dashboardUIState)
     {
         _certificateManager = certificateManager;
         _configuration = configuration;
@@ -53,6 +62,12 @@ public class NetworkGraph : IDisposable
         _vertices = [_localVertex];
         _logger = logger;
         _dashboardUIState = dashboardUIState;
+        _networkGraphValidationPolicy = networkGraphValidationPolicy;
+    }
+
+    ~NetworkGraph()
+    {
+        Dispose(false);
     }
 
     public Task<Vertex?> GetVertexAsync(string address) => _singleThreadRunner.RunAsync(() =>
@@ -95,7 +110,7 @@ public class NetworkGraph : IDisposable
     => _singleThreadRunner.RunAsync(async () =>
         {
             var newVertex = await Vertex.Factory.Prototype.AddNeighborsAsync(_localVertex, addresses, _certificateManager);
-            if (newVertex?.ValidatePolicy() ?? false)
+            if (newVertex != null && _networkGraphValidationPolicy.Validate(newVertex))
             {
                 ReplaceLocalVertex(newVertex!);
                 await NotifyPeersChangedAsync();
@@ -125,7 +140,7 @@ public class NetworkGraph : IDisposable
 
     public Task<List<Vertex>> UpdateAsync(Vertex vertex) => _singleThreadRunner.RunAsync(async () =>
     {
-        if (!vertex.ValidatePolicy())
+        if (!_networkGraphValidationPolicy.Validate(vertex))
         {
             return [];
         }
@@ -237,7 +252,7 @@ public class NetworkGraph : IDisposable
     }
 
     private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan vertexLifetime)
-    => !IsLocalVertex(vertex) && (vertex.IsExpired(vertexLifetime) || !neighborhoodsUnion.TryGetValue(vertex, out var _));
+    => !IsLocalVertex(vertex) && (vertex.LastUpdateExceeded(vertexLifetime) || !neighborhoodsUnion.TryGetValue(vertex, out var _));
 
     private void CleanupGraph()
     {
@@ -258,7 +273,20 @@ public class NetworkGraph : IDisposable
 
     public void Dispose()
     {
-        _singleThreadRunner.Dispose();
+        Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _singleThreadRunner.Dispose();
+            _disposed = true;
+        }
     }
 }
