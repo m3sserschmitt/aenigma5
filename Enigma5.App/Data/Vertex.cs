@@ -50,7 +50,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
                 {
                     return null;
                 }
-                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname, onionService, DateTimeOffset.Now);
+                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname, onionService, DateTimeOffset.UtcNow);
                 var serializedNeighborhood = Encoding.ASCII.GetBytes(neighborhood.CanonicallySerialize());
                 using var signer = await certificateManager.CreateSignerAsync();
                 var signature = signer.Sign(serializedNeighborhood);

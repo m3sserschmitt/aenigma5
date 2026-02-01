@@ -85,8 +85,6 @@ cp -v $POSTRM_SCRIPT $PKG_DIR/DEBIAN/postrm
 cp -v $CONFIG_DIR/* $PKG_DIR/usr/local/$SERVICE_NAME
 chmod -v +x $PKG_DIR/DEBIAN/postinst
 chmod -v +x $PKG_DIR/DEBIAN/postrm
-chmod -v +x $PKG_DIR/usr/local/$SERVICE_NAME/launcher.sh
-chmod -v +x $PKG_DIR/usr/local/$SERVICE_NAME/Utils/*.sh
 
 # Step 5: Create control file
 echo "Creating DEBIAN/control file" 
@@ -96,7 +94,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: $ARCH
-Depends: openssl (>= 3.0.0), jq
+Depends: openssl (>= 3.0.0), jq, basez
 Maintainer: Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 Description: Federal messaging system
 EOF

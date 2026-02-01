@@ -23,7 +23,7 @@ set -e
 SERVICE_NAME="aenigma"
 SERVICE_USER="aenigma"
 APP_INSTALL_DIR="/usr/local/$SERVICE_NAME"
-APP_EXEC="$APP_INSTALL_DIR/launcher.sh"
+LAUNCHER_FILE="/usr/local/bin/$SERVICE_NAME-launcher"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 LOG_DIR="/var/log/$SERVICE_NAME"
 CONFIGS_DIR="/usr/local/etc/$SERVICE_NAME"
@@ -55,44 +55,46 @@ mkdir -pv "$DATABASE_DIR"
 mkdir -pv "$UPLOADS_DIR"
 mkdir -pv "$CONFIGS_DIR"
 
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
 chmod -v 700 "$LOG_DIR"
 
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
 chmod -v 700 "$APP_INSTALL_DIR"
 
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
 chmod -v 700 "$DATABASE_DIR"
 
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
 chmod -v 700 "$UPLOADS_DIR"
 
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$CONFIGS_DIR"
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$CONFIGS_DIR"
 chmod -v 700 "$CONFIGS_DIR"
 
 chown -v "$SERVICE_USER":"$SERVICE_USER" $CONFIG_FILE
 
 # Step 3: Create the systemd service file
-echo "Creating service file: $SERVICE_FILE..."
-cat <<EOF | tee $SERVICE_FILE > /dev/null
-[Unit]
-Description=$SERVICE_NAME Service
-After=network.target
+if [ ! -f "$SERVICE_FILE" ]; then
+    echo "Creating service file: $SERVICE_FILE..."
+    cat <<EOF | tee $SERVICE_FILE > /dev/null
+    [Unit]
+    Description=$SERVICE_NAME Service
+    After=network.target
 
-[Service]
-WorkingDirectory=$APP_INSTALL_DIR
-ExecStart=$APP_EXEC
-Restart=always
-RestartSec=10
-User=$SERVICE_USER
-Group=$SERVICE_USER
+    [Service]
+    WorkingDirectory=$APP_INSTALL_DIR
+    ExecStart=$LAUNCHER_FILE
+    Restart=always
+    RestartSec=10
+    User=$SERVICE_USER
+    Group=$SERVICE_USER
 
-[Install]
-WantedBy=multi-user.target
+    [Install]
+    WantedBy=multi-user.target
 EOF
+fi
 
 #Step 4: Create symbolic links for utilities scripts
-for f in "$APP_INSTALL_DIR"/Utils/*.sh; do
+for f in "$APP_INSTALL_DIR"/Scripts/*.sh; do
     [ -e "$f" ] || continue
     chmod -v +x "$f"
 

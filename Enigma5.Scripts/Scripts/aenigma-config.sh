@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+set -Eeuo pipefail
 
 SERVICE_USER="aenigma"
 SERVICE_NAME="aenigma"
@@ -27,23 +27,36 @@ CONFIG_FILE="$CONFIGS_DIR/appsettings.json"
 
 # Usage function
 usage() {
-    echo "Usage: $0 -p <PROPERTY> -v <PROPERTY_VALUE>"
+    echo "Usage: $0 -p PROPERTY -v PROPERTY_VALUE"
+    echo ""
     echo "Example: $0 -p OnionService -v \"o33eowc56dw2os5qehojnqcdwdqmobmgj76y67b6b3xgc47oedmde4yd.onion\""
     exit 1
 }
 
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: Please run the script as root."
+    exit 1
+fi
+
 # Parse options
-while getopts "p:v:t:h" opt; do
+while getopts "p:v:h" opt; do
     case "$opt" in
-        p) PROPERTY="$OPTARG" ;;
-        v) NEW_VALUE="$OPTARG" ;;
+        p) PROPERTY=$OPTARG ;;
+        v) NEW_VALUE=$OPTARG ;;
+        h) usage ;;
         *) usage ;;
     esac
 done
 
-# Check that required options are provided
-if [ -z "$PROPERTY" ] || [ -z "$NEW_VALUE" ]; then
+if [ "$#" -lt 4 ]; then
     usage
+    exit 1
+fi
+
+# Check that required options are provided
+if [[ ! -v PROPERTY || ! -v NEW_VALUE ]]; then
+    usage
+    exit 1
 fi
 
 # Check file exists
@@ -81,3 +94,4 @@ mv "$TEMPFILE" "$CONFIG_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" $CONFIG_FILE
 
 echo "Updated property '$PROPERTY' in '$CONFIG_FILE' to '$NEW_VALUE' ($TYPE)"
+exit 0

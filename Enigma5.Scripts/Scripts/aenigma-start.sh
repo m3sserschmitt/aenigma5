@@ -18,4 +18,20 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-/usr/local/aenigma/Enigma5.App --config /usr/local/etc/aenigma/appsettings.json
+set -Eeuo pipefail
+
+SERVICE_NAME="aenigma"
+
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: Please run the script as root."
+    exit 1
+fi
+
+echo "Enabling $SERVICE_NAME service ... "
+systemctl enable "$SERVICE_NAME"
+echo "Done."
+
+echo "Starting $SERVICE_NAME service ..."
+systemctl start "$SERVICE_NAME"
+echo "Done."
+exit 0

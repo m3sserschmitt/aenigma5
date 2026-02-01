@@ -18,13 +18,18 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+set -Eeuo pipefail
 
 SERVICE_USER="aenigma"
 KEYS_DIR="/usr/local/etc/$SERVICE_USER"
 PRIVATE_KEY_FILE="$KEYS_DIR/private-key.pem"
 PUBLIC_KEY_FILE="$KEYS_DIR/public-key.pem"
 KEY_SIZE="4096"
+
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: Please run the script as root."
+    exit 1
+fi
 
 mkdir -pv "$KEYS_DIR"
 
@@ -48,3 +53,4 @@ chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" "$PUBLIC_KEY_FILE"
 
 echo "Done."
+exit 0

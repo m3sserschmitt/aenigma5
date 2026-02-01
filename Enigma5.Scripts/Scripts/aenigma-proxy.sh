@@ -18,22 +18,27 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+set -Eeuo pipefail
 
 SERVICE_NAME="aenigma"
 
 # Function to display usage/help message
 show_help() {
-    echo "Usage: $0 -d DOMAIN -p APP_PORT"
+    echo "Usage: $0 -d DOMAIN -l LOCAL_ADDRESS"
     echo ""
     echo "Options:"
-    echo "  -d DOMAIN     The domain name for the reverse proxy (e.g., example.com)"
-    echo "  -p APP_PORT   The port on which the ASP.NET application is running (e.g., 8080)"
+    echo "  -d DOMAIN           The domain name for the reverse proxy (e.g., example.com)"
+    echo "  -l LOCAL_ADDRESS    Local address on which the ASP.NET application is listening (e.g., 127.0.0.1:8080)"
     echo ""
     echo "Example:"
-    echo "  sudo $0 -d example.com -p 8080"
+    echo "  sudo $0 -d example.com -l 127.0.0.1:8080"
     exit 1
 }
+
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: Please run the script as root."
+    exit 1
+fi
 
 # Check if the script is run with sufficient arguments
 if [ "$#" -lt 4 ]; then
@@ -41,26 +46,19 @@ if [ "$#" -lt 4 ]; then
 fi
 
 # Parse command line arguments
-while getopts "d:p:h" opt; do
+while getopts "d:l:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
-        p) APP_PORT=$OPTARG ;;
+        l) LOCAL_ADDRESS=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
 done
 
 # Check if DOMAIN and APP_PORT are provided
-if [ -z "$DOMAIN" ] || [ -z "$APP_PORT" ]; then
-    echo "Error: Both domain and application port are required."
+if [[ ! -v DOMAIN || ! -v LOCAL_ADDRESS ]]; then
+    echo "Error: Both domain and local application address are required."
     show_help
-fi
-
-# ------------------------------
-# 1. Check root
-# ------------------------------
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
     exit 1
 fi
 
@@ -79,17 +77,17 @@ VIRTUAL_HOST_CONF=$(cat <<EOF
     # allow for upgrading to websockets
     RewriteEngine On
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
-    RewriteRule /(.*)           ws://localhost:$APP_PORT/\$1 [P,L]
+    RewriteRule /(.*)           ws://$LOCAL_ADDRESS/\$1 [P,L]
     RewriteCond %{HTTP:Upgrade} !=websocket [NC]
-    RewriteRule /(.*)           http://localhost:$APP_PORT/\$1 [P,L]
+    RewriteRule /(.*)           http://$LOCAL_ADDRESS/\$1 [P,L]
 
     # Proxy for HTTP requests
-    ProxyPass "/" "http://localhost:$APP_PORT/"
-    ProxyPassReverse "/" "http://localhost:$APP_PORT/"
+    ProxyPass "/" "http://$LOCAL_ADDRESS/"
+    ProxyPassReverse "/" "http://$LOCAL_ADDRESS/"
 
     # Proxy for WebSocket (SignalR) requests
-    ProxyPass "/OnionRouting" "ws://localhost:$APP_PORT/OnionRouting"
-    ProxyPassReverse "/OnionRouting" "ws://localhost:$APP_PORT/OnionRouting"
+    ProxyPass "/OnionRouting" "ws://$LOCAL_ADDRESS/OnionRouting"
+    ProxyPassReverse "/OnionRouting" "ws://$LOCAL_ADDRESS/OnionRouting"
 
     ErrorLog ${LOG_DIR}/$SERVICE_NAME-error.log
     CustomLog ${LOG_DIR}/$SERVICE_NAME-access.log combined
@@ -130,6 +128,7 @@ if command -v ufw >/dev/null 2>&1; then
     ufw allow 'Apache Full'
 fi
 
-echo "Apache reverse proxy setup completed for $DOMAIN with app port $APP_PORT"
+echo "Apache reverse proxy setup completed for $DOMAIN with local address $LOCAL_ADDRESS"
 
-aenigma-set-config -p Hostname -v "http://$DOMAIN"
+aenigma-config -p Hostname -v "http://$DOMAIN"
+exit 0

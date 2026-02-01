@@ -28,7 +28,7 @@ public static class VertexExtensions
     => new(vertex?.PublicKey ?? string.Empty, vertex?.SignedData ?? string.Empty);
 
     public static bool LastUpdateExceeded(this Vertex? vertex, TimeSpan lifetime)
-    => vertex is not null && DateTimeOffset.Now - vertex.Neighborhood.LastUpdate > lifetime;
+    => vertex is not null && DateTimeOffset.UtcNow - vertex.Neighborhood.LastUpdate > lifetime;
 
     public static bool ShouldReplace(this Vertex vertex, Vertex previous)
     {
