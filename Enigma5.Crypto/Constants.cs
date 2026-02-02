@@ -24,11 +24,11 @@ public static class Constants
 {
     public static readonly int AddressSize;
 
-    public static readonly int KeynelKeyMaxSize;
+    public static readonly int KernelKeyMaxSize;
 
     static Constants()
     {
         AddressSize = Native.GetAddressSize();
-        KeynelKeyMaxSize = Native.GetKernelKeyMaxSize();
+        KernelKeyMaxSize = Native.GetKernelKeyMaxSize();
     }
 }

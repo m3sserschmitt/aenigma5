@@ -21,12 +21,13 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
+using Enigma5.App.Common.Utils;
 
 namespace Enigma5.Crypto;
 
 internal static partial class Native
 {
-    private static readonly List<string> Libs = ["libaenigma"];
+    private static readonly List<string> Libs = [App.Common.Constants.Libaenigma];
 
     static Native()
     {
@@ -34,66 +35,62 @@ internal static partial class Native
     }
 
     private static IntPtr ImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
-    {
-        IntPtr libHandle = IntPtr.Zero;
-        if (Libs.Contains(libraryName))
-        {
-            NativeLibrary.TryLoad(libraryName, assembly, DllImportSearchPath.AssemblyDirectory, out libHandle);
-        }
-        return libHandle;
-    }
+    => Libs.Contains(libraryName)
+    && NativeLibrary.TryLoad(RuntimeHelpers.ResolveNativeLibraryPath(libraryName) ?? App.Common.Constants.Libaenigma, out nint libHandle)
+    ? libHandle
+    : IntPtr.Zero;
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool SetMasterPassphraseName([MarshalAs(UnmanagedType.LPStr)] string name);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial int CreateMasterPassphrase([In] byte[] passphrase);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool RemoveMasterPassphrase();
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial int GetPKeySize([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial int GetAddressSize();
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial int GetKernelKeyMaxSize();
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr CreateAsymmetricEncryptionContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr CreateAsymmetricDecryptionContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr CreateAsymmetricDecryptionContextFromFile([MarshalAs(UnmanagedType.LPStr)] string path, [In] byte[]? passphrase);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr CreateSignatureContext([MarshalAs(UnmanagedType.LPStr)] string privateKey, [In] byte[]? passphrase);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr CreateSignatureContextFromFile([MarshalAs(UnmanagedType.LPStr)] string path, [In] byte[]? passphrase);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr CreateVerificationContext([MarshalAs(UnmanagedType.LPStr)] string publicKey);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial void FreeContext(IntPtr ctx);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr Run(IntPtr ctx, [In] byte[] inData, uint inLen, out int outLen);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool RunVerification(IntPtr ctx, [In] byte[] ciphertext, uint ciphertextLen);
 
-    [LibraryImport("libaenigma")]
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr UnsealOnion(IntPtr ctx, [In] byte[] onion, out int outLen);
 
-    [LibraryImport("libaenigma", StringMarshallingCustomType = typeof(Utf8StringMarshaller))]
+    [LibraryImport(App.Common.Constants.Libaenigma, StringMarshallingCustomType = typeof(Utf8StringMarshaller))]
     internal static partial IntPtr SealOnion([In] byte[] plaintext, uint plaintextLen, [In] string[] keys, [In] string[] addresses, uint count, out int outLen);
 }

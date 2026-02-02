@@ -67,4 +67,8 @@ public static class Constants
     public const string FilesCleanupJobInterval = "*/5 * * * *";
 
     public const string InvokeNetworkBridgeJobInterval = "*/5 * * * *";
+
+    public const string NativeLibsRelativePathTemplate = "runtimes/{0}/native/{1}";
+
+    public const string Libaenigma = "libaenigma.so";
 }

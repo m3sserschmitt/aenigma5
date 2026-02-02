@@ -23,39 +23,40 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT_DIR="$SCRIPT_DIR/Deb"
 SERVICE_NAME="aenigma"
-ARCH="amd64"
 EXECUTABLE_NAME="Enigma5.App"
 POSTINST_SCRIPT="$SCRIPT_DIR/postinst"
 POSTRM_SCRIPT="$SCRIPT_DIR/postrm"
 
 # Function to display usage/help message
 show_help() {
-    echo "Usage: $0 -v VERSION -c CONFIG"
+    echo "Usage: $0 -v VERSION -c CONFIG -a ARCH"
     echo ""
     echo "Options:"
     echo "  -v VERSION  The version of the application (e.g., 1.0.0)"
     echo "  -c CONFIG   The config used for this package ("azure", "ubuntu")"
+    echo "  -c ARCH     The config used for this package ("amd64", "arm64")"
     echo ""
     echo "Example:"
-    echo "  $0 -v 1.0.0 -c ubuntu"
+    echo "  $0 -v 1.0.0 -c ubuntu -a amd64"
     exit 1
 }
 
 # Parse command line arguments
-while getopts "v:c:h" opt; do
+while getopts "v:c:a:h" opt; do
     case $opt in
         v) VERSION=$OPTARG ;;
         c) CONFIG=$OPTARG ;;
+        a) ARCH=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
 done
 
 # Check if version argument is provided
-if [ -z "$VERSION" ] || [ -z "$CONFIG" ];
-then
-    echo "Error: Both version is config are required."
+if [[ ! -v VERSION || ! -v CONFIG || ! -v ARCH ]]; then
+    echo "Error: VERSION, CONFIG, ARCH are required."
     show_help
+    exit 1
 fi
 
 PKG_DIR="$OUT_DIR/${SERVICE_NAME}_${VERSION}-${CONFIG}_${ARCH}"
@@ -77,7 +78,7 @@ mkdir -pv $PKG_DIR/DEBIAN
 mkdir -pv $PKG_DIR/usr/local/$SERVICE_NAME
 
 # Step 3: Publish the .NET app
-dotnet publish $SCRIPT_DIR/../$EXECUTABLE_NAME/$EXECUTABLE_NAME.csproj -c Release -r linux-x64 --self-contained true -o $PKG_DIR/usr/local/$SERVICE_NAME
+dotnet publish $SCRIPT_DIR/../$EXECUTABLE_NAME/$EXECUTABLE_NAME.csproj -c Release -r linux-$ARCH --self-contained true -o $PKG_DIR/usr/local/$SERVICE_NAME
 
 # Step 4: Copy application files to /usr/local/APP_NAME
 cp -v $POSTINST_SCRIPT $PKG_DIR/DEBIAN/postinst
