@@ -21,12 +21,12 @@
 using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Attributes;
 using Enigma5.App.Hubs.Extensions;
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Hubs.Adapters;
 using Enigma5.Structures;
 using Enigma5.App.Models;
-using Microsoft.Extensions.Logging;
 using Enigma5.App.Models.HubInvocation;
+using Enigma5.App.Models.Extensions;
+using Enigma5.App.Models.Contracts.Hubs;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -38,30 +38,47 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
     private readonly ILogger<OnionParsingFilter> _logger = logger;
 
     protected override bool CheckArguments(HubInvocationContext invocationContext)
-     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is RoutingRequest;
+     => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is RoutingRequestDto;
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        var request = invocationContext.MethodInvocationArgument<RoutingRequest>(0);
+        var request = invocationContext.MethodInvocationArgument<RoutingRequestDto>(0);
         if (request != null)
         {
-            if (_parser.Parse(request.Payload!))
+            object? successResult = null;
+            var errors = new HashSet<ErrorDto>();
+            foreach (var item in request.Payloads!)
             {
-                _ = new OnionParsingHubAdapter(invocationContext.Hub)
+                if (await _parser.ParseAsync(item!))
                 {
-                    Content = _parser.Content,
-                    Next = _parser.NextAddress
-                };
-
-                _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
-                return await next(invocationContext);
+                    _ = new OnionParsingHubAdapter(invocationContext.Hub)
+                    {
+                        Content = _parser.Content,
+                        Next = _parser.NextAddress
+                    };
+                    dynamic? nextResult = await next(invocationContext);
+                    var nextErrors = nextResult?.Errors as HashSet<ErrorDto>;
+                    if (nextErrors is not null)
+                    {
+                        errors.AddErrors(nextErrors);
+                    }
+                    successResult ??= (nextResult?.Success ?? false) ? nextResult : null;
+                    _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
+                }
+                else
+                {
+                    _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
+                    errors.AddError(InvocationErrors.ONION_PARSING_FAILED);
+                }
             }
-
-            _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
-            return EmptyErrorResult.Create(InvocationErrors.ONION_PARSING_FAILED);
+            if(errors.Count == 0 && successResult is null)
+            {
+                errors.AddError(InvocationErrors.INTERNAL_ERROR);
+            }
+            return errors.Count > 0 ? new EmptyErrorResultDto(errors) : successResult;
         }
 
         _logger.LogDebug($"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} method: {{@{nameof(invocationContext.HubMethodArguments)}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
-        return EmptyErrorResult.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+        return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
     }
 }

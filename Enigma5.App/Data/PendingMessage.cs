@@ -22,7 +22,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Enigma5.App.Data;
 
-public class PendingMessage
+public class PendingMessage : Entity
 {
     [Key]
     public long Id { get; set; }
@@ -34,12 +34,11 @@ public class PendingMessage
     public string? Content { get; set; }
 
     [Required]
-    public DateTimeOffset DateReceived { get; set; } = DateTimeOffset.Now;
-
-    [Required]
     public bool Sent { get; set; } = false;
 
     public DateTimeOffset? DateSent { get; set; } = null;
 
     public string Uuid { get; set; } = Guid.NewGuid().ToString();
+
+    public long? SentTimestamp { get; set; } = null;
 }

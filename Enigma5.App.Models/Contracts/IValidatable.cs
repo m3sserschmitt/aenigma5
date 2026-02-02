@@ -22,5 +22,5 @@ namespace Enigma5.App.Models.Contracts;
 
 public interface IValidatable
 {
-    public HashSet<Error> Validate();
+    public HashSet<ErrorDto> Validate();
 }

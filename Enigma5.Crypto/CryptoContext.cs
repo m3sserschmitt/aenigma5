@@ -18,7 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Crypto.Extensions;
+using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.Crypto;
 
@@ -71,11 +71,18 @@ internal sealed class CryptoContext : IDisposable
         public static CryptoContext CreateAsymmetricEncryptionContext(string publicKey)
         => new(publicKey.IsValidPublicKey() ? Native.CreateAsymmetricEncryptionContext(publicKey) : IntPtr.Zero);
 
-        public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, string passphrase)
+        public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, byte[]? passphrase)
         => new(privateKey.IsValidPrivateKey() ? Native.CreateAsymmetricDecryptionContext(privateKey, passphrase) : IntPtr.Zero);
 
-        public static CryptoContext CreateSignatureContext(string privateKey, string passphrase)
+        public static CryptoContext CreateAsymmetricDecryptionContextFromFile(string path, byte[]? passphrase)
+        => new(Native.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
+
+        public static CryptoContext CreateSignatureContext(string privateKey, byte[]? passphrase)
         => new(privateKey.IsValidPrivateKey() ? Native.CreateSignatureContext(privateKey, passphrase) : IntPtr.Zero);
+
+        public static CryptoContext CreateSignatureContextFromFile(string path, byte[]? passphrase)
+        => new(Native.CreateSignatureContextFromFile(path, passphrase));
+
 
         public static CryptoContext CreateSignatureVerificationContext(string publicKey)
         => new(publicKey.IsValidPublicKey() ? Native.CreateVerificationContext(publicKey) : IntPtr.Zero);

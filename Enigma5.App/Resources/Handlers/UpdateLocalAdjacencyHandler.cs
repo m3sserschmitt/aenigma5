@@ -18,13 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
-using Enigma5.Crypto.Extensions;
 using Enigma5.Security.Contracts;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -32,7 +31,7 @@ public class UpdateLocalAdjacencyHandler(
     NetworkGraph networkGraph,
     ICertificateManager certificateManager,
     ILogger<UpdateLocalAdjacencyHandler> logger)
-: IRequestHandler<UpdateLocalAdjacencyCommand, CommandResult<VertexBroadcastRequest>>
+: IRequestHandler<UpdateLocalAdjacencyCommand, CommandResult<VertexBroadcastRequestDto>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
@@ -40,28 +39,24 @@ public class UpdateLocalAdjacencyHandler(
 
     private readonly ILogger<UpdateLocalAdjacencyHandler> _logger = logger;
 
-    public async Task<CommandResult<VertexBroadcastRequest>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<VertexBroadcastRequestDto>> Handle(UpdateLocalAdjacencyCommand request, CancellationToken cancellationToken = default)
     {
         if(request.Addresses.Any(item => !item.IsValidAddress()))
         {
-            return CommandResult.CreateResultFailure<VertexBroadcastRequest>();
+            return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        var (newLocalVertex, updated) = request.Add ?
-        await _networkGraph.AddAdjacencyAsync(request.Addresses, cancellationToken)
-        : await _networkGraph.RemoveAdjacencyAsync(request.Addresses, cancellationToken);
+        await _networkGraph.GenerateLocalVertexAsync();
+        var localVertex = request.Add ?
+        await _networkGraph.AddAdjacencyAsync(request.Addresses)
+        : await _networkGraph.RemoveAdjacencyAsync(request.Addresses);
 
-        if(!updated)
-        {
-            return CommandResult.CreateResultSuccess<VertexBroadcastRequest>();
-        }
-
-        if(newLocalVertex.SignedData is null)
+        if(localVertex.SignedData is null)
         {
             _logger.LogError("Local vertex has null signed data!");
-            return CommandResult.CreateResultFailure<VertexBroadcastRequest>();
+            return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        return CommandResult.CreateResultSuccess(new VertexBroadcastRequest(_certificateManager.PublicKey, newLocalVertex.SignedData));
+        return CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto(await _certificateManager.GetPublicKeyAsync(), localVertex.SignedData));
     }
 }

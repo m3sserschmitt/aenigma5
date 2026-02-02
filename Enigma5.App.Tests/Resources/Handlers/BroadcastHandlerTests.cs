@@ -56,7 +56,7 @@ public class BroadcastHandlerTests : AppTestBase
         var broadcasts = result.Value;
         broadcasts.Should().NotBeNull();
         localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
-        broadcasts.Should().AllBeOfType<VertexBroadcastRequest>();
+        broadcasts.Should().AllBeOfType<VertexBroadcastRequestDto>();
         localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
         broadcasts.Should().HaveCount(2);
         var broadcastLocal = broadcasts!.Single(item => item.PublicKey == localVertex.PublicKey);

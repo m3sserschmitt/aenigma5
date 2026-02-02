@@ -23,19 +23,21 @@ using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
 using MediatR;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Enigma5.App;
 
 public static class Api
 {
-    public static async Task<IResult> GetInfo(IMediator commandRouter)
+    public static async Task<IResult> GetInfo([FromServices] IMediator commandRouter)
     {
         var result = await commandRouter.Send(new GetServerInfoQuery());
         return result.CreateGetResponse();
     }
-    
-    public static async Task<IResult> PostShare(SharedDataCreate sharedDataCreate, IMediator commandRouter)
+
+    public static async Task<IResult> PostShare(
+        [FromBody] SharedDataCreateDto sharedDataCreate,
+        [FromServices] IMediator commandRouter)
     {
         var errors = sharedDataCreate.Validate();
         if (errors.Count > 0)
@@ -47,34 +49,95 @@ public static class Api
         return result.CreatePostResponse();
     }
 
-    public static async Task<IResult> GetShare(string tag, IMediator commandRouter)
+    public static async Task<IResult> GetShare(
+        [FromQuery] string? tag,
+        [FromServices] IMediator commandRouter)
     {
+        if (tag is null)
+        {
+            return Results.BadRequest();
+        }
+
         var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
-
-        if (!sharedData.IsSuccessNotNullResultValue())
-        {
-            return Results.NotFound();
-        }
-
-        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(sharedData.Value!.Tag!));
-
-        if (result.IsSuccessNotNullResultValue() && result.Value!.AccessCount >= result.Value.MaxAccessCount)
-        {
-            await commandRouter.Send(new RemoveSharedDataCommand(sharedData.Value.Tag!));
-        }
-
-        return sharedData.CreateGetResponse();
+        return sharedData.IsSuccessNotNullResultValue() ? sharedData.CreateGetResponse() : Results.NotFound();
     }
 
-    public static async Task<IResult> GetVertex(string address, IMediator commandRouter)
+    public static async Task<IResult> IncrementSharedDataAccessCount(
+        [FromQuery] string? tag,
+        [FromServices] IMediator commandRouter)
     {
+        if (tag is null)
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(tag));
+        return result.CreatePutResponse();
+    }
+
+    public static async Task<IResult> GetVertex(
+        [FromQuery] string? address,
+        [FromServices] IMediator commandRouter)
+    {
+        if (address is null)
+        {
+            return Results.BadRequest();
+        }
+
         var result = await commandRouter.Send(new GetVertexQuery(address));
         return result.CreateGetResponse();
     }
 
-    public static async Task<IResult> GetVertices(IMediator commandRouter)
+    public static async Task<IResult> GetVertices([FromServices] IMediator commandRouter)
     {
         var result = await commandRouter.Send(new GetVerticesQuery());
         return result.CreateGetResponse();
+    }
+
+    public static async Task<IResult> PostFile(
+        [FromForm] IFormFile file,
+        [FromForm] int maxAccessCount,
+        [FromServices] IMediator commandRouter)
+    {
+        if (file == null || file.Length == 0)
+            return Results.BadRequest();
+
+        var result = await commandRouter.Send(new CreateFileCommand(file, maxAccessCount));
+        return result.CreatePostResponse();
+    }
+
+    public static async Task<IResult> GetFile(
+        [FromQuery] string? tag,
+        [FromServices] IMediator commandRouter)
+    {
+        if (tag is null)
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await commandRouter.Send(new GetFileQuery(tag));
+
+        if (!result.IsSuccessNotNullResultValue() || result.Value?.File is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.File(
+            fileStream: result.Value!.File,
+            fileDownloadName: result.Value.Tag
+        );
+    }
+
+    public static async Task<IResult> IncrementFileAccessCount(
+        [FromQuery] string? tag,
+        [FromServices] IMediator commandRouter)
+    {
+        if (tag is null)
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await commandRouter.Send(new IncrementFileAccessCountCommand(tag));
+        return result.CreatePutResponse();
     }
 }

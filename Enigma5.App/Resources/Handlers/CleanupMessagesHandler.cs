@@ -21,7 +21,6 @@
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -32,12 +31,11 @@ public class CleanupMessagesHandler(EnigmaDbContext context)
 
     public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken = default)
     {
-        // TODO: refactor this query
-        var time = DateTimeOffset.Now - request.TimeSpan;
-        var deliveredTime = DateTime.Now - request.DeliveredTimeSpan;
-        var messages = await _context.Messages.ToListAsync(cancellationToken: cancellationToken);
-        _context.Messages.RemoveRange(messages.Where(item =>
-        (!item.Sent && time > item.DateReceived) || (item.Sent && item.DateSent != null && deliveredTime > item.DateSent)));
+        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        var deliveredTime = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
+        _context.Messages.RemoveRange(_context.Messages.Where(item =>
+            (!item.Sent && time > item.Timestamp) || (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp))
+        );
         return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
     }
 }

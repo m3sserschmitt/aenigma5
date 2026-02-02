@@ -18,10 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models;
+
 namespace Enigma5.App.Data.Extensions;
 
 public static class AdjacencyListExtensions
 {
-    public static Neighborhood ToNeighborhood(this Models.Neighborhood adjacencyList)
-    => new(adjacencyList.Neighbors ?? [ ], adjacencyList.Address ?? string.Empty, adjacencyList.Hostname);
+    public static Neighborhood ToNeighborhood(this NeighborhoodDto adjacencyList)
+    => new(adjacencyList.Neighbors ?? [ ], adjacencyList.Address ?? string.Empty, adjacencyList.Hostname, adjacencyList.OnionService, adjacencyList.LastUpdate);
 }

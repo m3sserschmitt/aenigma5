@@ -19,60 +19,46 @@
 */
 
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Enigma5.Security.Contracts;
-using Enigma5.Crypto.Contracts;
 using Enigma5.Crypto;
+using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.App.Data;
 
 [method: JsonConstructor]
-public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData, bool isLeaf = false)
+public class Vertex(Neighborhood neighborhood, string? publicKey, string? signedData)
 {
-    public DateTimeOffset LastUpdate { get; private set; } = DateTimeOffset.Now;
-
-    public bool IsLeaf { get; private set; } = isLeaf;
-
-    public bool PossibleLeaf => Neighborhood.Neighbors.Count == 1 && Neighborhood.Hostname is null;
-
     public string? PublicKey { get; private set; } = publicKey;
 
     public string? SignedData { get; private set; } = signedData;
 
     public Neighborhood Neighborhood { get; private set; } = neighborhood;
 
-    public bool TryAsLeaf(out Vertex? leafVertex)
-    {
-        if (!PossibleLeaf)
-        {
-            leafVertex = null;
-            return false;
-        }
-
-        var neighborhood = new Neighborhood([.. Neighborhood.Neighbors], Neighborhood.Address, null);
-        leafVertex = new Vertex(neighborhood, null, SignedData, true);
-
-        return true;
-    }
-
-    public void RefreshLastUpdate() => LastUpdate = DateTimeOffset.Now;
-
     public static class Factory
     {
-        public static Vertex? Create(
-        string publicKey,
-        IEnvelopeSigner signer,
+        public static async Task<Vertex?> CreateAsync(
+        ICertificateManager certificateManager,
         HashSet<string> neighbors,
-        string? hostname = null)
+        string? hostname = null,
+        string? onionService = null)
         {
             try
             {
-                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname);
-                var serializedNeighborhood = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(neighborhood));
+                var publicKey = await certificateManager.GetPublicKeyAsync();
+                if (string.IsNullOrWhiteSpace(publicKey))
+                {
+                    return null;
+                }
+                var neighborhood = new Neighborhood(neighbors, CertificateHelper.GetHexAddressFromPublicKey(publicKey), hostname, onionService, DateTimeOffset.UtcNow);
+                var serializedNeighborhood = Encoding.ASCII.GetBytes(neighborhood.CanonicallySerialize());
+                using var signer = await certificateManager.CreateSignerAsync();
                 var signature = signer.Sign(serializedNeighborhood);
-
-                return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature!));
+                if (signature == null)
+                {
+                    return null;
+                }
+                return new Vertex(neighborhood, publicKey, Convert.ToBase64String(signature));
             }
             catch (Exception)
             {
@@ -80,22 +66,18 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             }
         }
 
-        public static Vertex? Create(IEnvelopeSigner signer, ICertificateManager certificateManager, HashSet<string> neighbors, string? hostname = null)
-        => Create(
-            certificateManager.PublicKey,
-            signer,
-            neighbors,
-            hostname);
+        public static Task<Vertex?> CreateAsync(ICertificateManager certificateManager, Vertex vertex)
+        => CreateAsync(certificateManager, vertex.Neighborhood.Neighbors, vertex.Neighborhood.Hostname, vertex.Neighborhood.OnionService);
 
-        public static Vertex? CreateWithEmptyNeighborhood(IEnvelopeSigner signer, ICertificateManager certificateManager, string? hostname = null)
-        => Create(signer, certificateManager, [], hostname);
+        public static Task<Vertex?> CreateAsync(ICertificateManager certificateManager, string? hostname = null, string? onionService = null)
+        => CreateAsync(certificateManager, [], hostname, onionService);
 
-        public static Vertex? Create(string address)
-        => new(new([], address, null), string.Empty, null);
+        public static Vertex Create(string? address)
+        => new(new([], address, null, null, DateTimeOffset.Now), null, null);
 
         public static class Prototype
         {
-            public static bool AddNeighbors(Vertex vertex, List<string> addresses, IEnvelopeSigner signer, ICertificateManager certificateManager, out Vertex? newVertex)
+            public static async Task<Vertex?> AddNeighborsAsync(Vertex vertex, List<string> addresses, ICertificateManager certificateManager)
             {
                 var previousCount = vertex.Neighborhood.Neighbors.Count;
                 var neighborsToBeAdded = new HashSet<string>(addresses);
@@ -103,21 +85,24 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
                 if (previousCount != newNeighborsSet.Count)
                 {
-                    newVertex = Create(signer, certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname);
-                    return true;
+                    return await CreateAsync(certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname, vertex.Neighborhood.OnionService);;
                 }
 
-                newVertex = null;
-                return false;
+                return null;
             }
 
-            public static bool AddNeighbor(Vertex vertex, string address, IEnvelopeSigner signer, ICertificateManager certificateManager, out Vertex? newVertex)
-            => AddNeighbors(vertex, [address], signer, certificateManager, out newVertex);
+            public static Task<Vertex?> AddNeighborAsync(Vertex vertex, string address, ICertificateManager certificateManager)
+            => AddNeighborsAsync(vertex, [address], certificateManager);
 
-            public static bool AddNeighbor(Vertex vertex, Vertex newNeighbor, IEnvelopeSigner signer, ICertificateManager certificateManager, out Vertex? newVertex)
-            => AddNeighbors(vertex, [newNeighbor.Neighborhood.Address], signer, certificateManager, out newVertex);
-
-            public static bool RemoveNeighbors(Vertex vertex, List<string> addresses, IEnvelopeSigner signer, ICertificateManager certificateManager, out Vertex? newVertex)
+            public static async Task<Vertex?> AddNeighborAsync(Vertex vertex, Vertex newNeighbor, ICertificateManager certificateManager)
+            {
+                if (string.IsNullOrWhiteSpace(newNeighbor.Neighborhood.Address))
+                {
+                    return null;
+                }
+                return await AddNeighborsAsync(vertex, [newNeighbor.Neighborhood.Address], certificateManager);
+            }
+            public static async Task<Vertex?> RemoveNeighborsAsync(Vertex vertex, List<string> addresses, ICertificateManager certificateManager)
             {
                 var previousCount = vertex.Neighborhood.Neighbors.Count;
                 var neighborsToBeRemoved = new HashSet<string>(addresses);
@@ -125,19 +110,23 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
 
                 if (previousCount != newNeighborsSet.Count)
                 {
-                    newVertex = Create(signer, certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname);
-                    return true;
+                    return await CreateAsync(certificateManager, newNeighborsSet, vertex.Neighborhood.Hostname, vertex.Neighborhood.OnionService);
                 }
 
-                newVertex = null;
-                return false;
+                return null;
             }
 
-            public static bool RemoveNeighbor(Vertex vertex, string address, IEnvelopeSigner signer, ICertificateManager certificateManager, out Vertex? newVertex)
-            => RemoveNeighbors(vertex, [address], signer, certificateManager, out newVertex);
+            public static Task<Vertex?> RemoveNeighborAsync(Vertex vertex, string address, ICertificateManager certificateManager)
+            => RemoveNeighborsAsync(vertex, [address], certificateManager);
 
-            public static bool RemoveNeighbor(Vertex vertex, Vertex neighbor, IEnvelopeSigner signer, ICertificateManager certificateManager, out Vertex? newVertex)
-            => RemoveNeighbors(vertex, [neighbor.Neighborhood.Address], signer, certificateManager, out newVertex);
+            public static async Task<Vertex?> RemoveNeighborAsync(Vertex vertex, Vertex neighbor, ICertificateManager certificateManager)
+            {
+                if (string.IsNullOrWhiteSpace(neighbor.Neighborhood.Address))
+                {
+                    return null;
+                }
+                return await RemoveNeighborsAsync(vertex, [neighbor.Neighborhood.Address], certificateManager);
+            }
         }
     }
 
@@ -153,20 +142,14 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
             return false;
         }
 
-        if (obj1.IsLeaf || obj2.IsLeaf)
-        {
-            return obj1.Neighborhood.Address == obj2.Neighborhood.Address
-            && obj1.Neighborhood.Neighbors.SetEquals(obj2.Neighborhood.Neighbors);
-        }
-
-        return obj1.PublicKey == obj2.PublicKey
-        && obj1.SignedData == obj2.SignedData
-        && obj1.Neighborhood == obj2.Neighborhood;
+        return obj1.Neighborhood.Address == obj2.Neighborhood.Address;
     }
 
     public static bool operator !=(Vertex? obj1, Vertex? obj2) => !(obj1 == obj2);
 
-    public override bool Equals(object? obj) => obj is Vertex other && Neighborhood.Address == other.Neighborhood.Address;
+    public override bool Equals(object? obj) => Equals(obj as Vertex);
 
-    public override int GetHashCode() => Neighborhood.Address.GetHashCode();
+    public bool Equals(Vertex? vertex) => this == vertex;
+
+    public override int GetHashCode() => Neighborhood.Address?.GetHashCode() ?? 0;
 }

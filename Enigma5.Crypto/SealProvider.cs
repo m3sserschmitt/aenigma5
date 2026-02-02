@@ -18,8 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Extensions;
 using Enigma5.Crypto.Contracts;
-using Enigma5.Crypto.Extensions;
 
 namespace Enigma5.Crypto;
 
@@ -30,6 +30,8 @@ public sealed class SealProvider :
     IEnvelopeSigner,
     IEnvelopeVerifier
 {
+    private bool _disposed;
+
     private readonly CryptoContext _ctx;
 
     private SealProvider(CryptoContext ctx)
@@ -39,14 +41,14 @@ public sealed class SealProvider :
 
     ~SealProvider()
     {
-        _ctx.Dispose();
+        Dispose(false);
     }
 
     private delegate IntPtr NativeExecutor(IntPtr ctx, byte[] inputData, uint inputSize, out int outputSize);
 
     private byte[]? Execute(byte[] input, NativeExecutor executor)
     {
-        if(_ctx.IsNull || input.Length == 0)
+        if (_ctx.IsNull || input.Length == 0)
         {
             return null;
         }
@@ -61,13 +63,13 @@ public sealed class SealProvider :
         return KeyUtil.CopyKeyFromNativeBuffer(outputPtr, outputSize);
     }
 
-    public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.EncryptData);
+    public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.Run);
 
-    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.DecryptData);
+    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.Run);
 
     public bool UnsealOnion(string onion, ref string? next, ref byte[]? content)
     {
-        if(_ctx.IsNull || string.IsNullOrWhiteSpace(onion))
+        if (_ctx.IsNull || string.IsNullOrWhiteSpace(onion))
         {
             return false;
         }
@@ -76,7 +78,7 @@ public sealed class SealProvider :
         {
             var decodedOnion = Convert.FromBase64String(onion);
 
-            if(decodedOnion is null)
+            if (decodedOnion is null)
             {
                 return false;
             }
@@ -90,7 +92,7 @@ public sealed class SealProvider :
 
             var nextBytes = KeyUtil.CopyKeyFromNativeBuffer(data, Constants.AddressSize);
             next = null;
-            if(nextBytes is not null)
+            if (nextBytes is not null)
             {
                 next = HashProvider.ToHex(nextBytes);
             }
@@ -98,7 +100,7 @@ public sealed class SealProvider :
 
             return next is not null && content is not null;
         }
-        catch(Exception)
+        catch (Exception)
         {
             return false;
         }
@@ -125,36 +127,67 @@ public sealed class SealProvider :
 
         var managedBuffer = KeyUtil.CopyKeyFromNativeBuffer(data, outLen);
         KeyUtil.FreeKeyNativeBuffer(data, outLen);
-        
+
         return managedBuffer is not null ? Convert.ToBase64String(managedBuffer) : null;
     }
 
-    public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.SignData) : null;
+    public static bool SetMasterPassphraseName(string name) => Native.SetMasterPassphraseName(name);
 
-    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.VerifySignature(_ctx, ciphertext, (uint)ciphertext.Length);
+    public static int CreateMasterPassphrase(byte[] passphrase) => Native.CreateMasterPassphrase(passphrase);
+
+    public static bool RemoveMasterPassphrase() => Native.RemoveMasterPassphrase();
+
+    public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.Run) : null;
+
+    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.RunVerification(_ctx, ciphertext, (uint)ciphertext.Length);
 
     public void Dispose()
     {
-        _ctx.Dispose();
+        Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+
+            }
+            _ctx.Dispose();
+            _disposed = true;
+        }
     }
 
     public static class Factory
     {
-        public static IEnvelopeSigner CreateSigner(string key, string passphrase)
+        public static IEnvelopeSigner CreateSigner(string key, byte[]? passphrase)
         => new SealProvider(CryptoContext.Factory.CreateSignatureContext(key, passphrase));
 
+        public static IEnvelopeSigner CreateSignerFromFile(string path, byte[]? passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateSignatureContextFromFile(path, passphrase));
+
         public static IEnvelopeSigner CreateSigner(string key)
-        => CreateSigner(key, string.Empty);
+        => CreateSigner(key, null);
+
+        public static IEnvelopeSigner CreateSignerFromFile(string path)
+        => CreateSignerFromFile(path, null);
 
         public static IEnvelopeVerifier CreateVerifier(string key)
         => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key));
 
-        public static IEnvelopeUnsealer CreateUnsealer(string key, string passphrase)
+        public static IEnvelopeUnsealer CreateUnsealer(string key, byte[]? passphrase)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase));
 
+        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path, byte[]? passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
+
         public static IEnvelopeUnsealer CreateUnsealer(string key)
-        => CreateUnsealer(key, string.Empty);
+        => CreateUnsealer(key, null);
+
+        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path)
+        => CreateUnsealerFromFile(path, null);
 
         public static IEnvelopeSealer CreateSealer(string key)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));

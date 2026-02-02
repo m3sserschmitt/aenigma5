@@ -22,7 +22,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Enigma5.App.Data;
 
-public class SharedData
+public class SharedData: Entity
 {
     [Key]
     public string Tag { get; set; } = Guid.NewGuid().ToString();
@@ -38,7 +38,4 @@ public class SharedData
 
     [Required]
     public int MaxAccessCount { get; set; } = 1;
-
-    [Required]
-    public DateTimeOffset DateCreated { get; set; } = DateTimeOffset.Now;
 }

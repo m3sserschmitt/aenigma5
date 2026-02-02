@@ -31,7 +31,7 @@ public class TriggerBroadcastRequestTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new TriggerBroadcastRequest
+        var request = new TriggerBroadcastRequestDto
         {
             NewAddresses = [PKey.Address1, PKey.Address2]
         };
@@ -47,7 +47,7 @@ public class TriggerBroadcastRequestTests
     public void ShouldNotValidateForInvalidAddress()
     {
         // Arrange
-        var request = new TriggerBroadcastRequest
+        var request = new TriggerBroadcastRequestDto
         {
             NewAddresses = [PKey.Address1, "invalid-address"]
         };
@@ -58,7 +58,7 @@ public class TriggerBroadcastRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.NewAddresses));
     }

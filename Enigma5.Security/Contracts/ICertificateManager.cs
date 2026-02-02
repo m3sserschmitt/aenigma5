@@ -18,13 +18,30 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models;
+using Enigma5.Crypto.Contracts;
+
 namespace Enigma5.Security.Contracts;
 
 public interface ICertificateManager
 {
-    public string PublicKey { get; }
+    Task<string?> GetPublicKeyAsync();
 
-    public string PrivateKey { get; }
+    Task<string?> GetPrivateKeyAsync();
 
-    public string Address { get; }
+    Task<string?> GetAddressAsync();
+
+    Task<bool> GenerateKeysAsync(char[] passphrase);
+
+    Task<bool> CreateMasterPassphraseAsync(byte[] passphrase);
+
+    Task<bool> RemoveMasterPassphraseAsync();
+
+    Task<bool> SetupAsync(char[]? passphrase);
+
+    Task<IEnvelopeUnsealer> CreateUnsealerAsync();
+
+    Task<IEnvelopeSigner> CreateSignerAsync();
+
+    Task<ExportedContactDataDto> GetExportedContactDataAsync();
 }

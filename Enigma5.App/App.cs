@@ -19,9 +19,6 @@
 */
 
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
 using Serilog;
 
 namespace Enigma5.App;
@@ -36,14 +33,30 @@ public class App
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-        .UseSerilog((context, config) =>
-        {
-            config.ReadFrom.Configuration(context.Configuration);
-            config.WriteTo.Console();
-        })
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseKestrel();
-            webBuilder.UseStartup<StartupConfiguration>();
-        });
+            .ConfigureAppConfiguration((hostingContext, config) =>
+            {
+                var builtConfig = config.Build();
+
+                var configPath = builtConfig["config"];
+
+                if (!string.IsNullOrWhiteSpace(configPath))
+                {
+                    config.AddJsonFile(
+                        path: configPath,
+                        optional: false,
+                        reloadOnChange: true
+                    );
+                }
+            })
+            .UseSerilog((context, loggerConfig) =>
+            {
+                loggerConfig
+                    .ReadFrom.Configuration(context.Configuration)
+                    .WriteTo.Console();
+            })
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseKestrel();
+                webBuilder.UseStartup<StartupConfiguration>();
+            });
 }

@@ -25,7 +25,7 @@ using MediatR;
 namespace Enigma5.App.Resources.Queries;
 
 public class GetPendingMessagesByDestinationQuery(string destination)
-: IRequest<CommandResult<List<PendingMessage>>>
+: IRequest<CommandResult<List<PendingMessageDto>>>
 {
     public string Destination { get; private set; } = destination;
 }

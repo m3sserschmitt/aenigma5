@@ -18,41 +18,56 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Generators;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.OpenSsl;
+using System.Diagnostics;
 
 namespace Enigma5.Security;
 
 public static class KeysGenerator
 {
-    public static (string PublicKey, string PrivateKey) GenerateKeys(int keySizeBits)
+    private const int KeySizeBits = 4096;
+
+    private const string GenerateKeyCommand = "openssl";
+
+    private const string GenerateKeyArguments = "genrsa -aes256 -out {0} -passout stdin {1}";
+
+    private const string ExportPublicKeyCommand = GenerateKeyCommand;
+
+    private const string ExportPublicKeyArguments = "rsa -in {0} -outform PEM -pubout -out {1} -passin stdin";
+
+    public static Task<bool> Generate(string privatePemPath, char[] passphrase, int keySize = KeySizeBits)
+    => LaunchProcess(GenerateKeyCommand, string.Format(GenerateKeyArguments, privatePemPath, keySize), passphrase);
+
+    public static Task<bool> ExportPublicKey(string privatePemPath, string publicPemPath, char[] passphrase)
+    => LaunchProcess(ExportPublicKeyCommand, string.Format(ExportPublicKeyArguments, privatePemPath, publicPemPath), passphrase);
+
+    private static async Task<bool> LaunchProcess(string command, string arguments, char[] passphrase)
     {
-        var keyPair = GenerateRsaKeyPair(keySizeBits);
-
-        string publicKeyPem = ExportToPem(keyPair.Public);
-        string privateKeyPem = ExportToPem(keyPair.Private);
-
-        return (publicKeyPem, privateKeyPem);
-    }
-
-    private static AsymmetricCipherKeyPair GenerateRsaKeyPair(int keySizeBits)
-    {
-        var generator = new RsaKeyPairGenerator();
-        var keyGenParam = new KeyGenerationParameters(
-            new SecureRandom(),
-            keySizeBits
-        );
-        generator.Init(keyGenParam);
-        return generator.GenerateKeyPair();
-    }
-
-    private static string ExportToPem(AsymmetricKeyParameter key)
-    {
-        using var stringWriter = new StringWriter();
-        var pemWriter = new PemWriter(stringWriter);
-        pemWriter.WriteObject(key);
-        return stringWriter.ToString();
+        try
+        {
+            using var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = command,
+                    Arguments = arguments,
+                    RedirectStandardInput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            if (!process.Start())
+            {
+                return false;
+            }
+            await process.StandardInput.WriteAsync(passphrase);
+            await process.StandardInput.FlushAsync();
+            process.StandardInput.Close();
+            await process.WaitForExitAsync();
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 }

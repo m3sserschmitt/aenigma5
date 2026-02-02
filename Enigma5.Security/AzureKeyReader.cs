@@ -18,9 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Security.Contracts;
 using Microsoft.Extensions.Configuration;
-using Enigma5.App.Common.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
@@ -28,47 +26,43 @@ namespace Enigma5.Security;
 public class AzureKeysReader(
     IConfiguration configuration,
     AzureClient azureClient,
-    ILogger<AzureKeysReader> logger) : IKeysReader
+    ILogger<AzureKeysReader> logger) : KeyReader(configuration)
 {
-    private static readonly string PUBLIC_KEY_SECRET_NAME_NOT_PROVIDED = "Public key secret name not provided.";
-
-    private static readonly string PRIVATE_KEY_SECRET_NAME_NOT_PROVIDED = "Private key secret name not provided.";
-
-    private readonly IConfiguration _configuration = configuration;
-
     private readonly ILogger<AzureKeysReader> _logger = logger;
 
     private readonly AzureClient _azureClient = azureClient;
 
-    public string PrivateKey => ReadPrivateKey();
-
-    public string PublicKey => ReadPublicKey();
-
-    private string ReadPublicKey()
+    public override async Task<string?> ReadPublicKeyAsync()
     {
         try
         {
-            var publicKeyPath = _configuration.GetPublicKeyPath() ?? throw new Exception(PUBLIC_KEY_SECRET_NAME_NOT_PROVIDED);
-            return _azureClient.GetSecret(publicKeyPath);
+            if(string.IsNullOrWhiteSpace(PublicKeyPath))
+            {
+                throw new Exception("Public key path is null or empty.");
+            }
+            return await _azureClient.GetSecretAsync(PublicKeyPath);
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error occurred while reading public key.");
-            throw;
+            return null;
         }
     }
 
-    private string ReadPrivateKey()
+    public override async Task<string?> ReadPrivateKeyAsync()
     {
         try
         {
-            var publicKeyPath = _configuration.GetPrivateKeyPath() ?? throw new Exception(PRIVATE_KEY_SECRET_NAME_NOT_PROVIDED);
-            return _azureClient.GetSecret(publicKeyPath);
+            if(string.IsNullOrWhiteSpace(PrivateKeyPath))
+            {
+                throw new Exception("Private key path is null or empty.");
+            }
+            return await _azureClient.GetSecretAsync(PrivateKeyPath);
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error occurred while reading private key.");
-            throw;
+            return null;
         }
     }
 }

@@ -20,7 +20,6 @@
 
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -59,7 +58,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );
-            return EmptyErrorResult.Create(InvocationErrors.INTERNAL_ERROR);
+            return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
         }
 
         if (!result.Success)

@@ -18,24 +18,27 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
 using Enigma5.App.Models;
 
 namespace Enigma5.App.Data.Extensions;
 
 public static class VertexExtensions
 {
-    public static VertexBroadcastRequest ToVertexBroadcast(this Vertex? vertex)
+    public static VertexBroadcastRequestDto ToVertexBroadcast(this Vertex? vertex)
     => new(vertex?.PublicKey ?? string.Empty, vertex?.SignedData ?? string.Empty);
 
-    public static bool IsExpired(this Vertex? vertex, TimeSpan lifetime)
-    => vertex is not null && DateTimeOffset.Now - vertex.LastUpdate > lifetime;
+    public static bool LastUpdateExceeded(this Vertex? vertex, TimeSpan lifetime)
+    => vertex is not null && DateTimeOffset.UtcNow - vertex.Neighborhood.LastUpdate > lifetime;
 
-    public static bool IsLeafExpired(this Vertex? vertex, TimeSpan lifetime)
-    => vertex is not null && vertex.IsLeaf && vertex.IsExpired(lifetime);
-
-    public static bool IsRemovalCandidate(this Vertex? vertex, TimeSpan leafLifetime)
-    => (vertex is not null && !vertex.IsLeaf) || vertex.IsLeafExpired(leafLifetime);
-
-    public static bool ShallBeBroadcasted(this Vertex? vertex) => IsExpired(vertex, DataPersistencePeriod.VertexBroadcastMinimumPeriod);
+    public static bool ShouldReplace(this Vertex vertex, Vertex previous)
+    {
+        var timeInterval = vertex.Neighborhood.LastUpdate - previous.Neighborhood.LastUpdate;
+        var timeIntervalOk = timeInterval.HasValue && timeInterval.Value.Ticks > 0;
+        if(!timeIntervalOk)
+        {
+            return false;
+        }
+        var sameNeighborhood = vertex.Neighborhood == previous.Neighborhood;
+        return !sameNeighborhood || (sameNeighborhood && timeInterval > Common.Constants.VertexBroadcastMinimumPeriod);
+    }
 }

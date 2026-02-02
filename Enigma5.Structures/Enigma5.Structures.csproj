@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Enigma5.Crypto/Enigma5.Crypto.csproj" />
+    <ProjectReference Include="../Enigma5.Security/Enigma5.Security.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

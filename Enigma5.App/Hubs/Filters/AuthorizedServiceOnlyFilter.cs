@@ -19,26 +19,16 @@
 */
 
 using Enigma5.App.Attributes;
-using Enigma5.App.Common.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR;
-using Enigma5.App.Hubs.Sessions.Contracts;
-using Enigma5.App.Resources.Queries;
-using MediatR;
-using Microsoft.Extensions.Logging;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Models.Contracts.Hubs;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class AuthorizedServiceOnlyFilter(
-    ISessionManager sessionManager,
-    IMediator commandRouter,
-    ILogger<AuthorizedServiceOnlyFilter> logger
-    ) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
+public class AuthorizedServiceOnlyFilter(IConfiguration configuration, ILogger<AuthorizedServiceOnlyFilter> logger) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
 {
-    private readonly ISessionManager _sessionManager = sessionManager;
-
-    private readonly IMediator _commandRouter = commandRouter;
+    private readonly IConfiguration _configuration = configuration;
 
     private readonly ILogger<AuthorizedServiceOnlyFilter> _logger = logger;
 
@@ -46,25 +36,21 @@ public class AuthorizedServiceOnlyFilter(
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-#if DEBUG
-        _logger.LogDebug($"Authorization skipped for {{{nameof(invocationContext.HubMethodName)}}} invocation in debug mode.", invocationContext.HubMethodName);
-        return await next(invocationContext);
-#endif
-#pragma warning disable CS0162 // Unreachable code detected
-        if (!_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
+        var httpContext = invocationContext.Context.GetHttpContext();
+        if (httpContext == null)
         {
-            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-            return EmptyErrorResult.Create(InvocationErrors.NOT_AUTHORIZED);
-        }
-#pragma warning restore CS0162 // Unreachable code detected
-        var result = await _commandRouter.Send(new CheckAuthorizedServiceQuery(address!));
-        if (!result.IsSuccessResult() || !result.Value)
-        {
-            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.", invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-            return EmptyErrorResult.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
+            _logger.LogError($"Invocation context has null HttpContext.");
+            return false;
         }
 
-        _logger.LogDebug($"{{{nameof(invocationContext.HubMethodName)}}} invocation authorized for {{{nameof(invocationContext.Context.ConnectionId)}}}.", invocationContext.HubMethodName, invocationContext.Context.ConnectionId);
-        return await next(invocationContext);
+        if (_configuration.IsAuthorizedHttpInvocation(httpContext))
+        {
+            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+            invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
+            return await next(invocationContext);
+        }
+        _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+        invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
+        return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
     }
 }

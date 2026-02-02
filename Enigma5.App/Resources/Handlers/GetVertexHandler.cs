@@ -18,29 +18,38 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetVertexHandler(Data.NetworkGraph graph)
-: IRequestHandler<GetVertexQuery, CommandResult<Models.Vertex>>
+public class GetVertexHandler(NetworkGraph graph)
+: IRequestHandler<GetVertexQuery, CommandResult<VertexDto>>
 {
-    private readonly Data.NetworkGraph _graph = graph;
+    private readonly NetworkGraph _graph = graph;
 
-    public async Task<CommandResult<Models.Vertex>> Handle(GetVertexQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<VertexDto>> Handle(GetVertexQuery request, CancellationToken cancellationToken)
     {
-        var vertex = await _graph.GetVertexAsync(request.Address, cancellationToken);
+        var vertex = await _graph.GetVertexAsync(request.Address);
 
-        if(vertex is null)
+        if (vertex is null)
         {
-            return CommandResult.CreateResultSuccess<Models.Vertex>();
+            return CommandResult.CreateResultSuccess<VertexDto>();
         }
 
-        return CommandResult.CreateResultSuccess(new Models.Vertex {
+        return CommandResult.CreateResultSuccess(new VertexDto
+        {
             PublicKey = vertex.PublicKey,
             SignedData = vertex.SignedData,
-            Neighborhood = new(vertex.Neighborhood.Address, vertex.Neighborhood.Hostname, vertex.Neighborhood.Neighbors)
+            Neighborhood = new(
+                vertex.Neighborhood.Address,
+                vertex.Neighborhood.Hostname,
+                vertex.Neighborhood.OnionService,
+                vertex.Neighborhood.Neighbors,
+                vertex.Neighborhood.LastUpdate
+            )
         });
     }
 }

@@ -24,6 +24,6 @@ namespace Enigma5.App.Data.Extensions;
 
 public static class VertexBroadcastRequestExtensions
 {
-    public static Vertex ToVertex(this VertexBroadcastRequest vertexBroadcast)
+    public static Vertex ToVertex(this VertexBroadcastRequestDto vertexBroadcast)
     => new(vertexBroadcast.Neighborhood.ToNeighborhood(), vertexBroadcast.PublicKey, vertexBroadcast.SignedData);
 }

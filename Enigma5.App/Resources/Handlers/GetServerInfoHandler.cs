@@ -18,12 +18,10 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text;
-using System.Text.Json;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
-using Enigma5.Crypto;
 using Enigma5.Security.Contracts;
 using MediatR;
 
@@ -31,23 +29,24 @@ namespace Enigma5.App.Resources.Handlers;
 
 public class GetServerInfoHandler(
     NetworkGraph graph,
-    ICertificateManager certificateManager) : IRequestHandler<GetServerInfoQuery, CommandResult<ServerInfo>>
+    IConfiguration configuration,
+    ICertificateManager certificateManager) : IRequestHandler<GetServerInfoQuery, CommandResult<ServerInfoDto>>
 {
     private readonly NetworkGraph _graph = graph;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
-    public Task<CommandResult<ServerInfo>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
-    {
-        var serializedGraph = JsonSerializer.Serialize(_graph.Vertices);
-        var graphVersion = HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
+    private readonly IConfiguration _configuration = configuration;
 
-        return Task.FromResult(CommandResult.CreateResultSuccess(
-            new ServerInfo
-            {
-                PublicKey = _certificateManager.PublicKey,
-                Address = _certificateManager.Address,
-                GraphVersion = graphVersion
-            }));
-    }
+    public async Task<CommandResult<ServerInfoDto>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess(
+        new ServerInfoDto
+        {
+            PublicKey = await _certificateManager.GetPublicKeyAsync(),
+            Address = await _certificateManager.GetAddressAsync(),
+            GraphVersion = await _graph.GetGraphHashAsync(),
+            OnionService = _configuration.GetOnionService(),
+            Hostname = _configuration.GetHostname()
+        }
+    );
 }

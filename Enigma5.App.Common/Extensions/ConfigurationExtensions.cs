@@ -18,39 +18,102 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
+using Enigma5.App.Common.Enums;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
+using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Common.Extensions;
 
 public static class ConfigurationExtensions
 {
-    public static List<string> GetPeers(this IConfiguration configuration)
-    => configuration.GetSection("Peers").Get<List<string>>() ?? [];
+    private static string? GetStringValue(this IConfiguration configuration, string key)
+    {
+        var value = configuration.GetValue<string?>(key, null);
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
 
     public static string? GetLocalListenAddress(this IConfiguration configuration)
-    => configuration.GetValue<string?>("Kestrel:EndPoints:Http:Url", null);
+    => configuration.GetStringValue("Kestrel:EndPoints:Http:Url")?.Trim('/', ' ');
+
+    public static string? GetAuthorizedLocalListenAddress(this IConfiguration configuration)
+    => configuration.GetStringValue("Kestrel:EndPoints:HttpAuthorized:Url")?.Trim('/', ' ');
+
+    public static bool IsAuthorizedHttpInvocation(this IConfiguration configuration, HttpContext httpContext, ILogger? logger = null)
+    {
+        var authorizedLocalAddress = configuration.GetAuthorizedLocalListenAddress();
+        if (string.IsNullOrWhiteSpace(authorizedLocalAddress))
+        {
+            logger?.LogError($"Authorized local address not found into config.");
+            return false;
+        }
+
+        if (!Uri.TryCreate(authorizedLocalAddress, UriKind.Absolute, out var uri))
+        {
+            logger?.LogError($"Authorized local address could not be parsed.");
+            return false;
+        }
+
+        if (!IPAddress.TryParse(uri.Host, out var authorizedIp))
+        {
+            logger?.LogError($"Could not parse authorized IP.");
+            return false;
+        }
+
+        var connectionLocalPort = httpContext.Connection.LocalPort;
+
+        if (authorizedIp.Equals(IPAddress.Any))
+        {
+            return uri.Port == connectionLocalPort;
+        }
+
+        var connectionLocalIp = httpContext.Connection.LocalIpAddress;
+
+        if (connectionLocalIp == null)
+        {
+            logger?.LogError($"Local authorized IP resolved to null.");
+            return false;
+        }
+
+        return connectionLocalIp.Normalize().Equals(authorizedIp.Normalize()) && uri.Port == connectionLocalPort;
+    }
 
     public static string? GetHostname(this IConfiguration configuration)
-    => configuration.GetValue<string?>("Hostname", null)?.Trim('/', ' ');
+    => configuration.GetStringValue("Hostname")?.Trim('/', ' ');
 
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
-    => configuration.GetValue<string?>("PrivateKeyPath", null);
+    => configuration.GetStringValue("PrivateKeyPath");
 
     public static string? GetPublicKeyPath(this IConfiguration configuration)
-    => configuration.GetValue<string?>("PublicKeyPath", null);
+    => configuration.GetStringValue("PublicKeyPath");
+
+    public static string? GetWebContentDirectory(this IConfiguration configuration)
+    => configuration.GetStringValue("WebContentDirectory");
+
+    public static TimeSpan GetMessageRetentionPeriod(this IConfiguration condiguration)
+    => condiguration.GetTimeSpan("MessageRetentionPeriod", new(0));
+
+    public static TimeSpan GetSentMessageRetentionPeriod(this IConfiguration condiguration)
+    => condiguration.GetTimeSpan("SentMessageRetentionPeriod", new(0));
+
+    public static TimeSpan GetSharedDataRetentionPeriod(this IConfiguration condiguration)
+    => condiguration.GetTimeSpan("SharedDataRetentionPeriod", new(0));
+
+    public static TimeSpan GetFilesRetentionPeriod(this IConfiguration configuration)
+    => configuration.GetTimeSpan("FilesRetentionPeriod", new(0));
 
     public static string? GetPassphraseKeyPath(this IConfiguration configuration)
-    => configuration.GetValue<string?>("PassphrasePath", null);
+    => configuration.GetStringValue("PassphrasePath");
 
     public static bool GetRetryConnection(this IConfiguration configuration)
-    => configuration.GetValue("RetryConnection", false);
+    => configuration.GetValue("Network:RetryConnections", false);
 
     public static int GetConnectionRetriesCount(this IConfiguration configuration)
-    => configuration.GetValue("ConnectionRetriesCount", 0);
+    => configuration.GetValue("Network:ConnectionRetriesCount", 0);
 
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
-    => configuration.GetValue("DelayBetweenConnectionRetries", 0);
+    => configuration.GetValue("Network:DelayBetweenConnectionRetries", 0);
 
     private static TimeSpan GetTimeSpan(this IConfiguration configuration, string key, TimeSpan defaultValue)
     {
@@ -64,15 +127,31 @@ public static class ConfigurationExtensions
         return timeSpan;
     }
 
-    public static TimeSpan GetLeafsLifetime(this IConfiguration configuration)
-    => GetTimeSpan(configuration, "LeafsLifetime", DataPersistencePeriod.LeafsLifetimeDefault);
+    private static T GetEnum<T>(this IConfiguration configuration, string key, T defaultValue) where T : struct, Enum
+    {
+        var value = configuration.GetValue<string?>(key, null);
+        if (value is null || !Enum.TryParse(value, ignoreCase: true, out T result))
+        {
+            return defaultValue;
+        }
+        return result;
+    }
+
+    public static TimeSpan GetVertexLifetime(this IConfiguration configuration)
+    => configuration.GetTimeSpan("VertexLifetime", Constants.LeafsLifetimeDefault);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
-    => configuration.GetValue<string?>("AzureVaultUrl", null);
+    => configuration.GetStringValue("AzureVaultUrl");
 
-    public static bool UseAzureVaultForKeys(this IConfiguration configuration)
-    => configuration.GetValue("UseAzureVaultForKeys", false);
+    public static KeySource GetKeySource(this IConfiguration configuration)
+    => configuration.GetEnum("KeySource", KeySource.File);
 
-    public static bool UseAzureVaultForPassphrase(this IConfiguration configuration)
-    => configuration.GetValue("UseAzureVaultForPassphrase", false);
+    public static PassphraseSource GetPassphraseSource(this IConfiguration configuration)
+    => configuration.GetEnum("PassphraseSource", PassphraseSource.Dashboard);
+
+    public static string? GetOnionService(this IConfiguration configuration)
+    => configuration.GetStringValue("OnionService");
+
+    public static string? GetSocks5Proxy(this IConfiguration configuration)
+    => configuration.GetStringValue("Socks5Proxy");
 }

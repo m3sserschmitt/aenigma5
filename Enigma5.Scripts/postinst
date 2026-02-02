@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# Aenigma - Federal messaging system
+# Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+
+SERVICE_NAME="aenigma"
+SERVICE_USER="aenigma"
+APP_INSTALL_DIR="/usr/local/$SERVICE_NAME"
+LAUNCHER_FILE="/usr/local/bin/$SERVICE_NAME-launcher"
+SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
+LOG_DIR="/var/log/$SERVICE_NAME"
+CONFIGS_DIR="/usr/local/etc/$SERVICE_NAME"
+CONFIG_FILE="$CONFIGS_DIR/appsettings.json"
+UPLOADS_DIR="/srv/$SERVICE_NAME/uploads"
+DATABASE_DIR="/var/lib/$SERVICE_NAME/db"
+
+filename_without_ext() {
+    local fullpath="$1"
+    local filename="${fullpath##*/}"
+    echo "${filename%.*}"
+}
+
+# Step 1: Create a dedicated user for the service if it doesn't exist and setup default config file
+if ! id "$SERVICE_USER" &>/dev/null; then
+    echo "Creating user '$SERVICE_USER' for the service... "
+    useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Copying configuration file to $CONFIG_FILE..."
+    mkdir -pv $CONFIGS_DIR
+    cp -v $APP_INSTALL_DIR/appsettings.json $CONFIG_FILE
+fi
+
+# Step 2: Setting ownership for app files dir and logs
+mkdir -pv "$LOG_DIR"
+mkdir -pv "$DATABASE_DIR"
+mkdir -pv "$UPLOADS_DIR"
+mkdir -pv "$CONFIGS_DIR"
+
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
+chmod -v 700 "$LOG_DIR"
+
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
+chmod -v 700 "$APP_INSTALL_DIR"
+
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
+chmod -v 700 "$DATABASE_DIR"
+
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
+chmod -v 700 "$UPLOADS_DIR"
+
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$CONFIGS_DIR"
+chmod -v 700 "$CONFIGS_DIR"
+
+chown -v "$SERVICE_USER":"$SERVICE_USER" $CONFIG_FILE
+
+# Step 3: Create the systemd service file
+if [ ! -f "$SERVICE_FILE" ]; then
+    echo "Creating service file: $SERVICE_FILE..."
+    cat <<EOF | tee $SERVICE_FILE > /dev/null
+    [Unit]
+    Description=$SERVICE_NAME Service
+    After=network.target
+
+    [Service]
+    WorkingDirectory=$APP_INSTALL_DIR
+    ExecStart=$LAUNCHER_FILE
+    Restart=always
+    RestartSec=10
+    User=$SERVICE_USER
+    Group=$SERVICE_USER
+
+    [Install]
+    WantedBy=multi-user.target
+EOF
+fi
+
+#Step 4: Create symbolic links for utilities scripts
+for f in "$APP_INSTALL_DIR"/Scripts/*.sh; do
+    [ -e "$f" ] || continue
+    chmod -v +x "$f"
+
+    link_name="/usr/local/bin/$(filename_without_ext "$f")"
+    ln -sfv "$f" "$link_name"
+done
+
+echo "Done."

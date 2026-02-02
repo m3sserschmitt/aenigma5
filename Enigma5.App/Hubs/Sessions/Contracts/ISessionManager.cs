@@ -24,7 +24,7 @@ public interface ISessionManager
 {
     string? AddPending(string connectionId);
 
-    bool Authenticate(string connectionId, string publicKey, string signature);
+    bool Authenticate(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
 
     bool Remove(string connectionId, out string? address);
 

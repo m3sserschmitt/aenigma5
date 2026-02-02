@@ -19,12 +19,11 @@
 */
 
 using Enigma5.App.Attributes;
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Hubs.Extensions;
 using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Contracts.Hubs;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -48,10 +47,10 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
                 );
-            return EmptyErrorResult.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+            return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
         }
 
-        var errors = data.Validate().ToList();
+        var errors = data.Validate();
 
         if (errors.Count != 0)
         {
@@ -61,7 +60,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
                 );
-            return new EmptyErrorResult(errors);
+            return new EmptyErrorResultDto(errors);
         }
 
         _logger.LogDebug(

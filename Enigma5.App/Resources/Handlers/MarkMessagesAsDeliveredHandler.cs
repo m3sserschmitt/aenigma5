@@ -18,9 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
-using Enigma5.Crypto.Extensions;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
@@ -37,10 +37,11 @@ public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IReques
         }
 
         var messages = _dbContext.Messages.Where(item => item.Destination == request.Destination && !item.Sent);
-        foreach(var message in messages)
+        foreach (var message in messages)
         {
             message.Sent = true;
             message.DateSent = DateTimeOffset.Now;
+            message.SentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
         _dbContext.Messages.UpdateRange(messages);
 

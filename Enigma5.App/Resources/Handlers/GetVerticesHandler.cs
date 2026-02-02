@@ -18,22 +18,27 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<Models.Vertex>>>
+public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<VertexDto>>>
 {
     private readonly Data.NetworkGraph _graph = graph;
 
-    public Task<CommandResult<List<Models.Vertex>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
-    { 
-        var vertices = _graph.NonLeafVertices.Select(item => new Models.Vertex {
-            PublicKey = item.PublicKey,
-            SignedData = item.SignedData,
-            Neighborhood = new(item.Neighborhood.Address, item.Neighborhood.Hostname, item.Neighborhood.Neighbors)
-        }).ToList();
-        return Task.FromResult(CommandResult.CreateResultSuccess(vertices));
-    }
+    public async Task<CommandResult<List<VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
+    => CommandResult.CreateResultSuccess((await _graph.GetVerticesAsync()).Select(item => new VertexDto
+    {
+        PublicKey = item.PublicKey,
+        SignedData = item.SignedData,
+        Neighborhood = new(
+            item.Neighborhood.Address,
+            item.Neighborhood.Hostname,
+            item.Neighborhood.OnionService,
+            item.Neighborhood.Neighbors,
+            item.Neighborhood.LastUpdate
+            )
+    }).ToList());
 }

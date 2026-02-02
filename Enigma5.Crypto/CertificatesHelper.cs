@@ -18,7 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Crypto.Extensions;
+using Enigma5.App.Common.Extensions;
 
 namespace Enigma5.Crypto;
 

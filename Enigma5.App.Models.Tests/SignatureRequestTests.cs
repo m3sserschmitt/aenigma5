@@ -30,7 +30,7 @@ public class SignatureRequestTests
     public void ShouldValidate()
     {
         // Arrange
-        var request = new SignatureRequest("dGVzdC1zdHJpbmc=");
+        var request = new SignatureRequestDto("dGVzdC1zdHJpbmc=");
 
         // Act
         var result = request.Validate();
@@ -43,7 +43,7 @@ public class SignatureRequestTests
     public void ShouldNotValidateForNullNonce()
     {
         // Arrange
-        var request = new SignatureRequest(null);
+        var request = new SignatureRequestDto(null);
 
         // Act
         var result = request.Validate();
@@ -51,7 +51,7 @@ public class SignatureRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.Nonce));
     }
@@ -60,7 +60,7 @@ public class SignatureRequestTests
     public void ShouldNotValidateForInvalidNonce()
     {
         // Arrange
-        var request = new SignatureRequest("invalid-nonce");
+        var request = new SignatureRequestDto("invalid-nonce");
 
         // Act
         var result = request.Validate();
@@ -68,7 +68,7 @@ public class SignatureRequestTests
         // Assert
         result.Should().HaveCount(1);
         var error = result.Single();
-        error.Message.Should().Be(ValidationErrors.PROPERTIES_NOT_IN_CORRECT_FORMAT);
+        error.Message.Should().Be(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT);
         error.Properties.Should().HaveCount(1);
         error.Properties.Should().Contain(nameof(request.Nonce));
     }

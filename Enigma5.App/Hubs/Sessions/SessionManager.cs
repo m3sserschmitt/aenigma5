@@ -27,8 +27,6 @@ namespace Enigma5.App.Hubs.Sessions;
 
 public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManager
 {
-    private const int TOKEN_SIZE = 64;
-
     private readonly object _locker = new();
 
     private readonly Dictionary<string, string> _pending = [];
@@ -44,14 +42,17 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
     public IReadOnlyConnectionsMapper ConnectionsMapper => _connectionsMapper;
 
     private bool AddPending(string connectionId, string token)
-    => _pending.TryAdd(connectionId, token);
+    {
+        _pending.Remove(connectionId);
+        return _pending.TryAdd(connectionId, token);
+    }
 
     private bool Authenticate(string connectionId)
     => _pending.Remove(connectionId) && _authenticated.Add(connectionId);
 
     public string? AddPending(string connectionId)
     {
-        var tokenData = new byte[TOKEN_SIZE];
+        var tokenData = new byte[Common.Constants.AuthTokenSize];
         new Random().NextBytes(tokenData);
         var token = Convert.ToBase64String(tokenData);
 
@@ -68,7 +69,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         return _connectionsMapper.Remove(connectionId, out address);
     }
 
-    public bool Authenticate(string connectionId, string publicKey, string signature)
+    public bool Authenticate(string connectionId, string publicKey, string signature, string? impersonateServiceAddress)
     {
         return ThreadSafeExecution.Execute(
             () =>
@@ -98,7 +99,9 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
                     return false;
                 }
 
-                var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
+                var address = string.IsNullOrWhiteSpace(impersonateServiceAddress)
+                ? CertificateHelper.GetHexAddressFromPublicKey(publicKey)
+                : impersonateServiceAddress;
                 return _connectionsMapper.TryAdd(address, connectionId);
             },
             false,

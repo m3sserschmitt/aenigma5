@@ -18,10 +18,10 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
+using Enigma5.App.Models.Contracts.Hubs;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.Crypto;
+using Enigma5.Security.Contracts;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Enigma5.Security.Extensions;
@@ -30,30 +30,35 @@ public static class HubConnectionExtensions
 {
     public static async Task<bool> AuthenticateAsync(
         this HubConnection connection,
-        CertificateManager certificateManager,
-        CancellationToken cancellationToken = default
-    )
+        ICertificateManager certificateManager,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var nonce = await connection.InvokeAsync<InvocationResult<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
+            var publicKey = await certificateManager.GetPublicKeyAsync();
+            if(string.IsNullOrWhiteSpace(publicKey))
+            {
+                return false;
+            }
+
+            var nonce = await connection.InvokeAsync<InvocationResultDto<string>>(nameof(IEnigmaHub.GenerateToken), cancellationToken);
 
             if (!nonce.Success || nonce.Data is null)
             {
                 return false;
             }
 
-            using var signature = SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
-            var data = signature.Sign(Convert.FromBase64String(nonce.Data));
+            using var signer = await certificateManager.CreateSignerAsync();
+            var data = signer.Sign(Convert.FromBase64String(nonce.Data));
 
             if (data is null)
             {
                 return false;
             }
 
-            var authentication = await connection.InvokeAsync<InvocationResult<bool>>(
+            var authentication = await connection.InvokeAsync<InvocationResultDto<bool>>(
                 nameof(IEnigmaHub.Authenticate),
-                new AuthenticationRequest(certificateManager.PublicKey, Convert.ToBase64String(data)),
+                new AuthenticationRequestDto(publicKey, Convert.ToBase64String(data)),
                 cancellationToken);
 
             return authentication.Success && authentication.Data;

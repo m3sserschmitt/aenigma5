@@ -58,7 +58,7 @@ public class ValidateModelFilterTests : FiltersTestBase<ValidateModelFilter>
         var result = await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        var response = result as EmptyErrorResult;
+        var response = result as EmptyErrorResultDto;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         response.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_INVOCATION_DATA);
@@ -69,20 +69,20 @@ public class ValidateModelFilterTests : FiltersTestBase<ValidateModelFilter>
     public async Task ShouldReturnErrorsForInvalidRequest()
     {
         // Arrange
-        var request = new SignatureRequest { Nonce = null };
+        var request = new SignatureRequestDto { Nonce = null };
         _hubMethodArguments[0].Returns(request);
 
         // Act
         var result = await _filter.Handle(_hubInvocationContext, _next);
 
         // Assert
-        var response = result as EmptyErrorResult;
+        var response = result as EmptyErrorResultDto;
         response.Should().NotBeNull();
         response!.Errors.Should().HaveCount(1);
         var error = response.Errors.First();
-        error.Message.Should().Be(ValidationErrors.NULL_REQUIRED_PROPERTIES);
+        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
         error.Properties.Should().HaveCount(1);
-        error.Properties.Should().Contain(nameof(SignatureRequest.Nonce));
+        error.Properties.Should().Contain(nameof(SignatureRequestDto.Nonce));
         await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
     }
 }

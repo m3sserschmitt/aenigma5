@@ -14,10 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Enigma5.App.Common/Enigma5.App.Common.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Extensions/" />
+    <ProjectReference Include="../Enigma5.App.Models/Enigma5.App.Models.csproj" />
   </ItemGroup>
 
 </Project>

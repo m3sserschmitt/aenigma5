@@ -26,11 +26,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Enigma5.App.Resources.Handlers;
 
 public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
-: IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<SharedData>>
+: IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult<SharedData>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,
@@ -39,11 +39,19 @@ public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
         if (sharedData is not null)
         {
             sharedData.AccessCount += 1;
-            _context.Update(sharedData);
+            if (sharedData.AccessCount >= sharedData.MaxAccessCount)
+            {
+                _context.Remove(sharedData);
+            }
+            else
+            {
+                _context.Update(sharedData);
+            }
+            
             await _context.SaveChangesAsync(cancellationToken);
-            return CommandResult.CreateResultSuccess(sharedData);
+            return CommandResult.CreateResultSuccess();
         }
 
-        return CommandResult.CreateResultSuccess<SharedData>();
+        return CommandResult.CreateResultSuccess();
     }
 }

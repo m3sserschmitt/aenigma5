@@ -18,25 +18,26 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.Crypto.Contracts;
+using Enigma5.Security.Contracts;
 
 namespace Enigma5.Structures;
 
-public class OnionParser(IEnvelopeUnsealer envelopeUnseal)
+public class OnionParser(ICertificateManager certificateManager)
 {
-    private readonly IEnvelopeUnsealer _unsealService = envelopeUnseal;
+    private readonly ICertificateManager _certificateManager = certificateManager;
 
     public string? NextAddress { get; private set; }
 
     public byte[]? Content { get; private set; }
 
-    public bool Parse(string onion)
+    public async Task<bool> ParseAsync(string onion)
     {
         try
         {
             string? next = null;
             byte[]? content = null;
-            if(_unsealService.UnsealOnion(onion, ref next, ref content))
+            using var unsealer = await _certificateManager.CreateUnsealerAsync();
+            if(unsealer.UnsealOnion(onion, ref next, ref content))
             {
                 NextAddress = next;
                 Content = content;

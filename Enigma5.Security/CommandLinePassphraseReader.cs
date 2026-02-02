@@ -24,18 +24,12 @@ namespace Enigma5.Security;
 
 public class CommandLinePassphraseReader : IPassphraseProvider
 {
-#if DEBUG
-#else
     private static readonly int PASSPHRASE_MAX_LENGTH = 128;
-#endif
 
-    public char[] ProvidePassphrase() => ReadPassphrase();
+    public char[]? ProvidePassphrase() => ReadPassphrase();
 
-    private static char[] ReadPassphrase()
+    private static char[]? ReadPassphrase()
     {
-#if DEBUG
-        return ['1', '2', '3', '4'];
-#else
         var i = 0;
         var password = new char[PASSPHRASE_MAX_LENGTH];
         ConsoleKeyInfo key;
@@ -77,6 +71,7 @@ public class CommandLinePassphraseReader : IPassphraseProvider
         Array.Clear(password);
 
         return validChars;
-#endif
     }
+
+    public Task<char[]?> ProvidePassphraseAsync() => Task.Run(ReadPassphrase);
 }

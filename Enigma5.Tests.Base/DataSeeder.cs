@@ -33,11 +33,11 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
 
     public static class ModelsFactory
     {
-        private static readonly App.Models.VertexBroadcastRequest _vertexBroadcastRequest = new(PKey.PublicKey1, "eyJIb3N0bmFtZSI6ImFkamFjZW50LWhvc3RuYW1lIiwiQWRkcmVzcyI6ImNiZmYyZTEyZmIxZjc1MmNiMTcxODVmMDgwZjJiNDAzMDExNjVhMTA1MTUzMWNjMDYxNGU0OTVlZTI2MjBlZjkiLCJOZWlnaGJvcnMiOlsiYmEzMWQyM2UyODIwMDNjNjc4ZGNmZWM0OGMxN2QwNDQwNjFmMzQwZDNlNmU3ZjdhMTEwOWRkMWRiMzJkMWQ5NSJdfX3Pv7iVh2pHYp/wK8Qnre/apsDbTA6NZwBjSpPzBI8tgeK8VvLi5XvR9fRJV4XO3C51YnDVSIXRzDJ6vgDE3jMmLMF38ZzA4UJ5iNSlJ9r0kcLKUYx3Aq16EEEFKPaHBqCv+Cd4csIzviOIPBqBeFi7WiFyq+/hoyV9DtBfcyYgEh79Wo3On4zXh5lGoGWwuhORDTTPKRgu54TZs1DXubpdj+4fzDYhCrEiYgl3Cw752g5fgXwb//kC/awJYop/BHFdx6EWd5wP0qlYUrig6upj1Kk3WueXbMaQRmIlWFzwHH1/IkElpbc1lcrLy2b6vK0CssgF1uP4qSrDliScuMM=");
+        private static readonly App.Models.VertexBroadcastRequestDto _vertexBroadcastRequest = new(PKey.PublicKey1, "eyJIb3N0bmFtZSI6ImFkamFjZW50LWhvc3RuYW1lIiwiQWRkcmVzcyI6ImNiZmYyZTEyZmIxZjc1MmNiMTcxODVmMDgwZjJiNDAzMDExNjVhMTA1MTUzMWNjMDYxNGU0OTVlZTI2MjBlZjkiLCJOZWlnaGJvcnMiOlsiYmEzMWQyM2UyODIwMDNjNjc4ZGNmZWM0OGMxN2QwNDQwNjFmMzQwZDNlNmU3ZjdhMTEwOWRkMWRiMzJkMWQ5NSJdfX3Pv7iVh2pHYp/wK8Qnre/apsDbTA6NZwBjSpPzBI8tgeK8VvLi5XvR9fRJV4XO3C51YnDVSIXRzDJ6vgDE3jMmLMF38ZzA4UJ5iNSlJ9r0kcLKUYx3Aq16EEEFKPaHBqCv+Cd4csIzviOIPBqBeFi7WiFyq+/hoyV9DtBfcyYgEh79Wo3On4zXh5lGoGWwuhORDTTPKRgu54TZs1DXubpdj+4fzDYhCrEiYgl3Cw752g5fgXwb//kC/awJYop/BHFdx6EWd5wP0qlYUrig6upj1Kk3WueXbMaQRmIlWFzwHH1/IkElpbc1lcrLy2b6vK0CssgF1uP4qSrDliScuMM=");
 
-        public static App.Models.VertexBroadcastRequest VertexBroadcastRequest => _vertexBroadcastRequest.CopyBySerialization();
+        public static App.Models.VertexBroadcastRequestDto VertexBroadcastRequest => _vertexBroadcastRequest.CopyBySerialization();
 
-        public static App.Models.SharedDataCreate CreateSharedDataCreate()
+        public static App.Models.SharedDataCreateDto CreateSharedDataCreate()
         {
             var data = Encoding.UTF8.GetBytes("data to be shared");
             using var signer = SealProvider.Factory.CreateSigner(PKey.PrivateKey1, PKey.Passphrase);
@@ -47,7 +47,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             return new(PKey.PublicKey1, encodedData, 3);
         }
 
-        public static App.Models.AuthenticationRequest CreateAuthenticationRequest(string nonce)
+        public static App.Models.AuthenticationRequestDto CreateAuthenticationRequest(string nonce)
         {
             using var signature = SealProvider.Factory.CreateSigner(PKey.PrivateKey1, PKey.Passphrase);
             var decodedNonce = Convert.FromBase64String(nonce);
@@ -56,13 +56,14 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             return new(PKey.PublicKey1, Convert.ToBase64String(data!));
         }
 
-        public static App.Models.SignatureRequest CreateSignatureRequest()
+        public static App.Models.SignatureRequestDto CreateSignatureRequest()
         {
             var tokenData = new byte[64];
             new Random().NextBytes(tokenData);
             var token = Convert.ToBase64String(tokenData);
 
-            return new() {
+            return new()
+            {
                 Nonce = token
             };
         }
@@ -74,11 +75,11 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         }
 
         public static string? CreateOnion(byte[] data)
-        => SealProvider.SealOnion(data, [ PKey.PublicKey2, PKey.PublicKey3 ], [ PKey.Address1, PKey.Address2 ]);
+        => SealProvider.SealOnion(data, [PKey.PublicKey2, PKey.PublicKey3], [PKey.Address1, PKey.Address2]);
 
 
-        public static App.Models.RoutingRequest CreateRoutingRequest()
-        => new(CreateOnion("pending-message")!);
+        public static App.Models.RoutingRequestDto CreateRoutingRequest()
+        => new([CreateOnion("pending-message")!]);
     }
 
     public static class DataFactory
@@ -95,6 +96,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         {
             Tag = "acdeaddd-8c4c-4f0d-9d8a-162843c10355",
             DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(2),
+            Timestamp = (DateTimeOffset.UtcNow - TimeSpan.FromDays(2)).ToUnixTimeSeconds(),
             Data = "old-shared-data",
             PublicKey = PKey.PublicKey1,
             MaxAccessCount = 2
@@ -111,7 +113,8 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         private static readonly App.Data.PendingMessage _oldPendingMessage = new()
         {
             Id = 2,
-            DateReceived = DateTimeOffset.Now - TimeSpan.FromDays(5),
+            DateCreated = DateTimeOffset.Now - TimeSpan.FromDays(5),
+            Timestamp = (DateTimeOffset.UtcNow - TimeSpan.FromDays(5)).ToUnixTimeSeconds(),
             Destination = PKey.Address2,
             Content = "old-pending-message",
             Sent = false
@@ -124,7 +127,8 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
             Destination = PKey.Address2,
             Content = "delivered-pending-message",
             Sent = true,
-            DateSent = DateTimeOffset.Now - TimeSpan.FromDays(3)
+            DateSent = DateTimeOffset.Now - TimeSpan.FromDays(3),
+            SentTimestamp = (DateTimeOffset.UtcNow - TimeSpan.FromDays(3)).ToUnixTimeSeconds()
         };
 
         private static readonly App.Data.AuthorizedService _authorizedService = new()
@@ -142,7 +146,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         public static App.Data.PendingMessage OldPendingMessage => _oldPendingMessage.CopyBySerialization();
 
         public static App.Data.PendingMessage DeliveredPendingMessage => _deliveredPendingMessage.CopyBySerialization();
-        
+
         public static App.Data.AuthorizedService AuthorizedService => _authorizedService.CopyBySerialization();
     }
 
@@ -160,7 +164,7 @@ public class DataSeeder(App.Data.EnigmaDbContext dbContext)
         _dbContext.Messages.Add(DataFactory.OldPendingMessage);
         _dbContext.Messages.Add(DataFactory.DeliveredPendingMessage);
         _dbContext.AuthorizedServices.Add(DataFactory.AuthorizedService);
-        
+
         await _dbContext.SaveChangesAsync();
     }
 }

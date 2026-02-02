@@ -1,0 +1,126 @@
+@* Aenigma - Federal messaging system
+Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+This file is part of Aenigma project.
+
+Aenigma is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Aenigma is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
+
+@using Enigma5.App.Models
+@using Enigma5.App.Resources.Commands
+@using Enigma5.App.Resources.Handlers
+@using Enigma5.App.Resources.Queries
+@using Enigma5.App.UI.Common
+@using Enigma5.App.UI.Dashboard
+@using Enigma5.Security.Contracts
+@using System.Collections.Immutable
+@using System.Text
+@using MediatR
+@using System.Collections.ObjectModel
+
+@page "/Dashboard"
+@rendermode InteractiveServer
+@implements IDisposable
+
+@inject IMediator Mediator
+@inject DashboardUIState DashboardUIState
+
+<div class="row justify-content-center h-100">
+    <div class="d-flex flex-column justify-content-between col col-3 ">
+        <PassphraseInput OnUnlockKey="UnlockPrivateKey" OnLockKey="LockPrivateKey" />
+        <ExportContactDataQrCode />
+    </div>
+    <div class="col col-9">
+        <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" OnRetry="ReloadPeerConnections" />
+    </div>
+</div>
+
+@code {
+    private bool _disposed;
+    private IEnumerable<PeerDto> Peers = [];
+    private IReadOnlyCollection<PeerDto> InboundPeers = new HashSet<PeerDto>();
+    private IReadOnlyCollection<PeerDto> OutboundPeers = new HashSet<PeerDto>();
+
+    protected override Task OnInitializedAsync()
+    {
+        DashboardUIState.InboundPeersChanged += OnInboundPeersChanged;
+        DashboardUIState.OutboundPeersChanged += OnOutboundPeersChanged;
+        InboundPeers = DashboardUIState.InboundPeers;
+        OutboundPeers = DashboardUIState.OutboundPeers;
+        return LoadPeers();
+    }
+
+    private Task OnInboundPeersChanged(IReadOnlyCollection<PeerDto> peers)
+    => InvokeAsync(() =>
+    {
+        InboundPeers = peers;
+        return LoadPeers();
+    });
+
+    private Task OnOutboundPeersChanged(IReadOnlyCollection<PeerDto> peers)
+    => InvokeAsync(() =>
+    {
+        OutboundPeers = peers;
+        return LoadPeers();
+    });
+
+    private Task LoadPeers()
+    {
+        var result = new HashSet<PeerDto>(OutboundPeers);
+        foreach (var outboundPeer in OutboundPeers)
+        {
+            outboundPeer.Connected = InboundPeers.Contains(outboundPeer);
+            result.Add(outboundPeer);
+        }
+        Peers = result.Union(InboundPeers);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SubmitNewPeer(PeerDto peer)
+    {
+        if (string.IsNullOrWhiteSpace(peer.Host) || string.IsNullOrWhiteSpace(peer.Address))
+        {
+            return Task.CompletedTask;
+        }
+        return Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
+    }
+
+    private Task RemovePeer(PeerDto peer)
+    {
+        if (peer.Id == null)
+        {
+            return Task.CompletedTask;
+        }
+        return Mediator.Send(new RemovePeerCommand(peer.Id.Value));
+    }
+
+    private async Task UnlockPrivateKey(char[] passphrase)
+    {
+        await Mediator.Send(new SetMasterPassphraseCommand(passphrase));
+        Array.Clear(passphrase);
+    }
+
+    private Task LockPrivateKey() => Mediator.Send(new RemoveMasterPassphraseCommand());
+
+    private Task ReloadPeerConnections() => Mediator.Send(new InvokeNetworkBridgeCommand());
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            DashboardUIState.InboundPeersChanged -= OnInboundPeersChanged;
+            DashboardUIState.OutboundPeersChanged -= OnOutboundPeersChanged;
+            _disposed = true;
+        }
+    }
+}

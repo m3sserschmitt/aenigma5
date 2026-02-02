@@ -12,10 +12,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../Libaenigma7/build/libaenigma.so">
+    <ProjectReference Include="../Enigma5.App.Common/Enigma5.App.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="runtimes/linux-arm64/native/libaenigma.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="../Libaenigma7/build/libaenigma-kernelkeys.so">
+    <None Update="runtimes/linux-x64/native/libaenigma.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

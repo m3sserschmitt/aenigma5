@@ -24,4 +24,4 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetVerticesQuery : IRequest<CommandResult<List<Vertex>>> { }
+public class GetVerticesQuery : IRequest<CommandResult<List<VertexDto>>> { }

@@ -18,9 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Queries;
-using Enigma5.Crypto.Extensions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,5 +34,5 @@ public class CheckAuthorizedServiceHandler(EnigmaDbContext context)
     public async Task<CommandResult<bool>> Handle(CheckAuthorizedServiceQuery request, CancellationToken cancellationToken = default)
     => !request.Address.IsValidAddress() ?
     CommandResult.CreateResultFailure<bool>() :
-    CommandResult.CreateResultSuccess(await _context.AuthorizedServices.AnyAsync(item => item.Address == request.Address, cancellationToken));
+    CommandResult.CreateResultSuccess(await _context.Peers.AnyAsync(item => item.Address == request.Address, cancellationToken));
 }

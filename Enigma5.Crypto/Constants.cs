@@ -20,14 +20,15 @@
 
 namespace Enigma5.Crypto;
 
-public sealed class Constants
+public static class Constants
 {
+    public static readonly int AddressSize;
+
+    public static readonly int KernelKeyMaxSize;
+
     static Constants()
     {
-        KernelKeyMaxSize = (int)Native.GetKernelKeyMaxSize();
+        AddressSize = Native.GetAddressSize();
+        KernelKeyMaxSize = Native.GetKernelKeyMaxSize();
     }
-
-    public static readonly int AddressSize = 32;
-
-    public static int KernelKeyMaxSize { get; private set; }
 }

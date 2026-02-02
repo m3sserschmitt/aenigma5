@@ -24,39 +24,36 @@ using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Models;
 using Enigma5.Security.Contracts;
-using Enigma5.App.Common.Contracts.Hubs;
-using Enigma5.App.Data;
 using Microsoft.AspNetCore.SignalR;
-using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models.HubInvocation;
-using Microsoft.Extensions.Logging;
 using Enigma5.App.Resources.Handlers;
-using Enigma5.Crypto;
 using Enigma5.App.Hubs.Sessions.Contracts;
+using Enigma5.App.Models.Contracts.Hubs;
 
 namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub(
     ISessionManager sessionManager,
     ICertificateManager certificateManager,
-    NetworkGraph networkGraph,
     IMediator commandRouter,
+    IConfiguration configuration,
     ILogger<RoutingHub> logger) :
     Hub,
     IEnigmaHub,
     IOnionParsingHub,
     IOnionRoutingHub,
-    IIdentityHub
+    IIdentityHub,
+    IAuthorizedServiceHub
 {
     private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
-    private readonly NetworkGraph _networkGraph = networkGraph;
-
     private readonly IMediator _commandRouter = commandRouter;
 
     private readonly ILogger<RoutingHub> _logger = logger;
+
+    private readonly IConfiguration _configuration = configuration;
 
     public string? DestinationConnectionId { get; set; }
 
@@ -66,7 +63,7 @@ public partial class RoutingHub(
 
     public string? ClientAddress { get; set; }
 
-    public Task<InvocationResult<string>> GenerateToken()
+    public Task<InvocationResultDto<string>> GenerateToken()
     {
         var nonce = _sessionManager.AddPending(Context.ConnectionId);
 
@@ -82,15 +79,30 @@ public partial class RoutingHub(
         return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
+    public async Task<InvocationResultDto<VertexDto>> GetLocalVertex()
+    {
+        var localAddress = await _certificateManager.GetAddressAsync();
+        if (string.IsNullOrWhiteSpace(localAddress))
+        {
+            return Error<VertexDto>(InvocationErrors.INTERNAL_ERROR);
+        }
+        var result = await _commandRouter.Send(new GetVertexQuery(localAddress));
+        if (!result.IsSuccessNotNullResultValue())
+        {
+            return Error<VertexDto>(InvocationErrors.INTERNAL_ERROR);
+        }
+        return Ok(result.Value!);
+    }
+
     [Authenticated]
-    public async Task<InvocationResult<List<Models.PendingMessage>>> Pull()
+    public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull()
     {
         if (ClientAddress is null)
         {
             _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
             nameof(Pull),
             Context.ConnectionId);
-            return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
+            return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
         var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
@@ -105,11 +117,11 @@ public partial class RoutingHub(
         nameof(Pull),
         Context.ConnectionId,
         result);
-        return Error<List<Models.PendingMessage>>(InvocationErrors.INTERNAL_ERROR);
+        return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
     }
 
     [Authenticated]
-    public async Task<InvocationResult<bool>> Cleanup()
+    public async Task<InvocationResultDto<bool>> Cleanup()
     {
         if (ClientAddress is null)
         {
@@ -134,52 +146,23 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
-    public Task<InvocationResult<bool>> Authenticate(AuthenticationRequest request)
+    public async Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request)
     {
-        var authenticated = _sessionManager.Authenticate(Context.ConnectionId, request.PublicKey!, request.Signature!);
+        var authenticated = await Authenticate(request.PublicKey!, request.Signature!);
 
         if (!authenticated)
         {
             _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
+            return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
         _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
-        return OkAsync(true);
+        return Ok(true);
     }
 
+    [Authenticated]
     [ValidateModel]
-    public Task<InvocationResult<Signature>> SignToken(SignatureRequest request)
-    {
-        var decodedNonce = Convert.FromBase64String(request.Nonce!);
-        if (decodedNonce is null)
-        {
-            _logger.LogDebug($"Could not base64 decode nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-
-        var signer = SealProvider.Factory.CreateSigner(_certificateManager.PrivateKey);
-        var data = signer.Sign(decodedNonce);
-
-        if (data == null)
-        {
-            _logger.LogError($"Could not sign nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-
-        var encodedData = Convert.ToBase64String(data);
-
-        if (encodedData is null)
-        {
-            _logger.LogError($"Could not base64 encode signed nonce for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            return ErrorAsync<Signature>(InvocationErrors.NONCE_SIGNATURE_FAILED);
-        }
-
-        return OkAsync<Signature>(new(encodedData, _certificateManager.PublicKey));
-    }
-
-    [ValidateModel]
-    public async Task<InvocationResult<bool>> Broadcast(VertexBroadcastRequest broadcastAdjacencyList)
+    public async Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto broadcastAdjacencyList)
     {
         var result = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
 
@@ -196,19 +179,17 @@ public partial class RoutingHub(
     [ValidateModel]
     [Authenticated]
     [AuthorizedServiceOnly]
-    public async Task<InvocationResult<bool>> TriggerBroadcast(TriggerBroadcastRequest request)
+    public async Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request)
     {
-        var vertexBroadcastRequest = request.NewAddresses is null || request.NewAddresses.Count == 0
-        ? _networkGraph.LocalVertex.ToVertexBroadcast()
-        : (await AddNewAdjacencies(request.NewAddresses));
+        var localVertex = await AddNewAdjacencies(request.NewAddresses ?? []);
 
-        if (vertexBroadcastRequest is null)
+        if (localVertex is null)
         {
             _logger.LogWarning($"{nameof(TriggerBroadcast)} resulted in no changes to be broadcasted.");
             return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
 
-        return await SendBroadcast(vertexBroadcastRequest!)
+        return await SendBroadcast(localVertex!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
     }
@@ -217,13 +198,27 @@ public partial class RoutingHub(
     [OnionParsing]
     [OnionRouting]
     [Authenticated]
-    public async Task<InvocationResult<bool>> RouteMessage(RoutingRequest request)
+    public async Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request)
     {
-        var result = await CreatePendingMessage();
-        var success = result.IsSuccessNotNullResultValue();
-        if (DestinationConnectionId != null && Content != null)
+        bool success = false;
+        var vertex = await _commandRouter.Send(new GetVertexQuery(Next!));
+        var notLeaf = vertex.IsSuccessNotNullResultValue() && vertex.Value!.PublicKey is not null;
+        if (notLeaf && DestinationConnectionId != null && Content != null)
         {
-            success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
+            success = await RouteMessage(DestinationConnectionId, Content, null);
+            if (!success)
+            {
+                success = (await CreatePendingMessage()).IsSuccessNotNullResultValue();
+            }
+        }
+        else if (Content is not null)
+        {
+            var result = await CreatePendingMessage();
+            success = result.IsSuccessNotNullResultValue();
+            if (DestinationConnectionId != null)
+            {
+                success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
+            }
         }
         return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
@@ -245,5 +240,21 @@ public partial class RoutingHub(
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        var impersonateServiceHeader = Context.GetHttpContext()?.Request.Headers[Common.Constants.XImpersonateServiceHeader];
+        if (!impersonateServiceHeader.HasValue)
+        {
+            return;
+        }
+        var impersonateServiceHeaderString = impersonateServiceHeader.ToString();
+        if (string.IsNullOrWhiteSpace(impersonateServiceHeaderString))
+        {
+            return;
+        }
+        Context.Items[Common.Constants.XImpersonateServiceHeader] = impersonateServiceHeaderString;
+        await base.OnConnectedAsync();
     }
 }

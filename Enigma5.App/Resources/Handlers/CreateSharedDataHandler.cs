@@ -18,63 +18,59 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Constants;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Crypto;
 using Enigma5.Crypto.Extensions;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class CreateSharedDataHandler(
     Data.EnigmaDbContext context,
     IConfiguration configuration)
-    : IRequestHandler<CreateSharedDataCommand, CommandResult<Models.SharedData>>
+    : IRequestHandler<CreateSharedDataCommand, CommandResult<Models.SharedDataDto>>
 {
     private readonly Data.EnigmaDbContext _context = context;
 
     private readonly IConfiguration _configuration = configuration;
 
-    public async Task<CommandResult<Models.SharedData>> Handle(CreateSharedDataCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<Models.SharedDataDto>> Handle(CreateSharedDataCommand request, CancellationToken cancellationToken)
     {
         if (!request.SharedDataCreate.PublicKey.IsValidPublicKey() || !request.SharedDataCreate.SignedData.IsValidBase64())
         {
-            return CommandResult.CreateResultFailure<Models.SharedData>();
+            return CommandResult.CreateResultFailure<Models.SharedDataDto>();
         }
 
         using var signatureVerification = SealProvider.Factory.CreateVerifier(request.SharedDataCreate.PublicKey!);
 
         if (signatureVerification is null)
         {
-            return CommandResult.CreateResultFailure<Models.SharedData>();
+            return CommandResult.CreateResultFailure<Models.SharedDataDto>();
         }
 
         var decodedSignature = Convert.FromBase64String(request.SharedDataCreate.SignedData!);
 
         if (decodedSignature is null || decodedSignature.Length == 0 || !signatureVerification.Verify(decodedSignature))
         {
-            return CommandResult.CreateResultFailure<Models.SharedData>();
+            return CommandResult.CreateResultFailure<Models.SharedDataDto>();
         }
 
         var sharedData = new Data.SharedData
         {
             Data = request.SharedDataCreate.SignedData,
             PublicKey = request.SharedDataCreate.PublicKey,
-            MaxAccessCount = request.SharedDataCreate.AccessCount
+            MaxAccessCount = request.SharedDataCreate.AccessCount ?? 1
         };
         await _context.AddAsync(sharedData, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         var hostname = _configuration.GetHostname();
 
-        return CommandResult.CreateResultSuccess(new Models.SharedData
+        return CommandResult.CreateResultSuccess(new Models.SharedDataDto
         {
             Tag = sharedData.Tag,
-            ResourceUrl = hostname is not null ? $"{hostname}/{Endpoints.ShareEndpoint}?Tag={sharedData.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + DataPersistencePeriod.SharedDataPersistencePeriod,
-            Data = sharedData.Data,
-            PublicKey = sharedData.PublicKey
+            ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.ShareEndpoint}?Tag={sharedData.Tag}" : null,
+            ValidUntil = DateTimeOffset.Now + _configuration.GetSharedDataRetentionPeriod()
         });
     }
 }

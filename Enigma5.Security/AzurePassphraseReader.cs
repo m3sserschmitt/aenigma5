@@ -30,7 +30,7 @@ public class AzurePassphraseReader(
     AzureClient azureClient,
     ILogger<AzurePassphraseReader> logger) : IPassphraseProvider
 {
-    private static readonly string PASSPHRASE_NAME_NOT_PROVIDED = "Passphrase name not provided";
+    private static readonly string PASSPHRASE_NAME_NOT_PROVIDED = "Vault Passphrase Name is null or empty.";
 
     private readonly IConfiguration _configuration = configuration;
 
@@ -38,12 +38,16 @@ public class AzurePassphraseReader(
 
     private readonly AzureClient _azureClient = azureClient;
 
-    public char[] ProvidePassphrase()
+    public async Task<char[]?> ProvidePassphraseAsync()
     {
         try
         {
-            var passphrasePath = _configuration.GetPassphraseKeyPath() ?? throw new Exception(PASSPHRASE_NAME_NOT_PROVIDED);
-            return _azureClient.GetSecret(passphrasePath).ToCharArray();
+            var passphrasePath = _configuration.GetPassphraseKeyPath();
+            if(string.IsNullOrWhiteSpace(passphrasePath))
+            {
+                throw new Exception(PASSPHRASE_NAME_NOT_PROVIDED);
+            }
+            return (await _azureClient.GetSecretAsync(passphrasePath))?.ToCharArray();
         }
         catch (Exception ex)
         {
@@ -51,4 +55,6 @@ public class AzurePassphraseReader(
             throw;
         }
     }
+
+    public char[]? ProvidePassphrase() => ProvidePassphraseAsync().GetAwaiter().GetResult();
 }

@@ -1,0 +1,84 @@
+﻿@* Aenigma - Federal messaging system
+Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+This file is part of Aenigma project.
+
+Aenigma is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Aenigma is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
+
+@implements IDisposable
+@inject DashboardUIState DashboardUIState
+
+<div class="card shadow">
+    <div class="card-body">
+        <h4 class="card-title mb-3 text-center">Aenigma</h4>
+        <div class="form-group mb-3">
+            <label for="passwordInput">Password (max. @Crypto.Constants.KernelKeyMaxSize chars)</label>
+            <InputText type="password" id="passwordInput" class="form-control" @bind-Value="@Password"
+                placeholder="Enter key passphrase here..." disabled="@(PrivateKeyUnlocked)" />
+        </div>
+        <div class="d-flex justify-content-center align-items center">
+            @if (PrivateKeyUnlocked)
+            {
+                <button class="btn btn-primary rounded-pill" @onclick="LockKey">Lock Private Key</button>
+            }
+            else
+            {
+                <button class="btn btn-primary rounded-pill" @onclick="UnlockKey">Unlock Private Key</button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _disposed;
+    [Parameter] public EventCallback<char[]> OnUnlockKey { get; set; } = default;
+    [Parameter] public EventCallback OnLockKey { get; set; } = default;
+
+    private string Password { get; set; } = string.Empty;
+    private bool PrivateKeyUnlocked;
+
+    protected override Task OnInitializedAsync()
+    {
+        DashboardUIState.PrivateKeyUnlockedChanged += OnPrivateKeyUnlockedChanged;
+        PrivateKeyUnlocked = DashboardUIState.PrivateKeyUnlocked;
+        return Task.CompletedTask;
+    }
+
+    private Task OnPrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
+    {
+        PrivateKeyUnlocked = unlocked;
+    });
+
+    private Task UnlockKey()
+    {
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            return Task.CompletedTask;
+        }
+        var passphraseChars = Password.ToCharArray();
+        Password = string.Empty;
+        return OnUnlockKey.InvokeAsync(passphraseChars);
+    }
+
+    private Task LockKey() => OnLockKey.InvokeAsync();
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            DashboardUIState.PrivateKeyUnlockedChanged -= OnPrivateKeyUnlockedChanged;
+            _disposed = true;
+        }
+    }
+}

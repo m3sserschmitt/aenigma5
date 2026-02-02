@@ -18,84 +18,124 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
+using Enigma5.App.Models;
 using Enigma5.Crypto;
+using Enigma5.Crypto.Contracts;
 using Enigma5.Security.Contracts;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
 
-public class CertificateManager : ICertificateManager
+public sealed class CertificateManager(
+    IConfiguration configuration,
+    IPassphraseProvider passphraseProvider,
+    IKeyReader keysProvider,
+    ILogger<CertificateManager> logger) : ICertificateManager, IDisposable
 {
-    private readonly IKeysReader _keysProvider;
+    private bool _disposed;
 
-    private readonly SingleThreadExecutor<string> _kernelQueryExecutor = new();
+    private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = new();
 
-    private readonly object _locker = new();
+    private readonly IKeyReader _keysProvider = keysProvider;
 
-    private const string PRIVATE_KEY_READING_ERROR_MESSAGE = "Could not read Private Key from Kernel.";
+    private readonly IPassphraseProvider _passphraseProvider = passphraseProvider;
 
-    private const string PRIVATE_KEY_CACHING_ERROR = "Could not cache Private Key into Kernel.";
+    private readonly IConfiguration _configuration = configuration;
 
-    private const string KERNEL_KEY_NAME = "ENIGMA_PRIVATE_KEY";
+    private readonly ILogger _logger = logger;
 
     private const string KERNEL_KEY_DESCRIPTION = "enigma5key: Key used for cryptographic operations.";
 
-    private const string KERNEL_KEY_NOT_FOUND_ERROR_MESSAGE = "Key not found into Kernel.";
-
-    private const KernelKeyring THREAD_KEYRING = KernelKeyring.ThreadKeyring;
-
-    public string PublicKey { get => ThreadSafeExecution.Execute(() => _keysProvider.PublicKey, string.Empty, _locker); }
-
-    public string PrivateKey { get => ReadKeyFromKernel(); }
-
-    public string Address { get => ThreadSafeExecution.Execute(() => CertificateHelper.GetHexAddressFromPublicKey(PublicKey), string.Empty, _locker); }
-
-    public CertificateManager(IKeysReader keysProvider)
+    static CertificateManager()
     {
-        _keysProvider = keysProvider;
-        _kernelQueryExecutor.StartLooper();
-        ReadPrivateKeyFromFile();
+        SealProvider.SetMasterPassphraseName(KERNEL_KEY_DESCRIPTION);
     }
 
-    private Action CacheKeyIntoKernelAction => () =>
+    ~CertificateManager()
     {
-        if (KernelKey.Create(KERNEL_KEY_NAME, _keysProvider.PrivateKey, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING) < 0)
+        Dispose(false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
         {
-            throw new Exception(PRIVATE_KEY_CACHING_ERROR);
+            if (disposing)
+            {
+
+            }
+            _simpleSingleThreadRunner.Dispose();
+            _disposed = true;
         }
+    }
+
+    public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0, _logger);
+
+    public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(SealProvider.RemoveMasterPassphrase, _logger);
+
+    public Task<IEnvelopeUnsealer> CreateUnsealerAsync()
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
+
+    public Task<IEnvelopeSigner> CreateSignerAsync()
+    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
+
+    public async Task<bool> SetupAsync(char[]? passphrase)
+    {
+        var passphraseChars = passphrase ?? await _passphraseProvider.ProvidePassphraseAsync();
+        if (passphraseChars == null)
+        {
+            return false;
+        }
+        var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
+        var ok = passphraseChars.Length != 0 && await GenerateKeysAsync(passphraseChars) && await CreateMasterPassphraseAsync(passphraseBytes);
+        Array.Clear(passphraseBytes);
+        Array.Clear(passphraseChars);
+        return ok;
+    }
+
+    public async Task<bool> GenerateKeysAsync(char[] passphrase)
+    {
+        var publicKeyPath = _keysProvider.PublicKeyPath;
+        var privateKeyPath = _keysProvider.PrivateKeyPath;
+        if (string.IsNullOrWhiteSpace(publicKeyPath) || string.IsNullOrWhiteSpace(privateKeyPath))
+        {
+            return false;
+        }
+        if (!File.Exists(privateKeyPath))
+        {
+            return await KeysGenerator.Generate(privateKeyPath, passphrase) &&
+            await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+        }
+        else if (!File.Exists(publicKeyPath))
+        {
+            return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+        }
+        return true;
+    }
+
+    public Task<string?> GetPublicKeyAsync() => _keysProvider.ReadPublicKeyAsync();
+
+    public Task<string?> GetPrivateKeyAsync() => _keysProvider.ReadPrivateKeyAsync();
+
+    public async Task<ExportedContactDataDto> GetExportedContactDataAsync() => new()
+    {
+        Host = _configuration.GetHostname(),
+        OnionService = _configuration.GetOnionService(),
+        Address = await GetAddressAsync(),
+        PublicKey = await GetPublicKeyAsync()
     };
 
-    private static Func<string> ReadKeyFromKernelAction => () =>
-    {
-        var privateKeyId = KernelKey.SearchKey(KERNEL_KEY_NAME, KERNEL_KEY_DESCRIPTION, THREAD_KEYRING);
-
-        if (privateKeyId < 0)
-        {
-            throw new Exception(KERNEL_KEY_NOT_FOUND_ERROR_MESSAGE);
-        }
-
-        return KernelKey.ReadKey(privateKeyId) ?? throw new Exception(PRIVATE_KEY_READING_ERROR_MESSAGE);
-    };
-
-    private void ReadPrivateKeyFromFile()
-    {
-        var exception = _kernelQueryExecutor.Execute(CacheKeyIntoKernelAction);
-
-        if (exception is not null)
-        {
-            throw exception;
-        }
-    }
-
-    private string ReadKeyFromKernel()
-    {
-        var result = _kernelQueryExecutor.Execute(ReadKeyFromKernelAction);
-
-        if (result.Exception is not null)
-        {
-            throw result.Exception;
-        }
-
-        return result.Value!;
-    }
+    public async Task<string?> GetAddressAsync()
+    => CertificateHelper.GetHexAddressFromPublicKey(await GetPublicKeyAsync());
 }

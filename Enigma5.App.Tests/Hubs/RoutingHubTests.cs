@@ -58,7 +58,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<string>>();
+        result.Should().BeOfType<SuccessResultDto<string>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().Be(_testNonce1);
@@ -76,7 +76,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<string>>();
+        result.Should().BeOfType<ErrorResultDto<string>>();
         result.Success.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
         result.Errors.Single().Message.Should().Be(InvocationErrors.NONCE_GENERATION_ERROR);
@@ -100,7 +100,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<List<PendingMessage>>>();
+        result.Should().BeOfType<SuccessResultDto<List<PendingMessageDto>>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().NotBeNull();
@@ -108,19 +108,19 @@ public class RoutingHubTests : AppTestBase
         result.Data.FirstOrDefault(item =>
         item.Destination == pendingMessage.Destination
         && item.Content == pendingMessage.Content
-        && item.DateReceived == pendingMessage.DateReceived
+        && item.DateReceived == pendingMessage.DateCreated
         && !item.Sent
         && item.Uuid == pendingMessage.Uuid).Should().NotBeNull();
         result.Data.FirstOrDefault(item =>
         item.Destination == oldPendingMessage.Destination
         && item.Content == oldPendingMessage.Content
-        && item.DateReceived == oldPendingMessage.DateReceived
+        && item.DateReceived == oldPendingMessage.DateCreated
         && !item.Sent
         && item.Uuid == oldPendingMessage.Uuid).Should().NotBeNull();
         result.Data.FirstOrDefault(item =>
         item.Destination == deliveredPendingMessage.Destination
         && item.Content == deliveredPendingMessage.Content
-        && item.DateReceived == deliveredPendingMessage.DateReceived
+        && item.DateReceived == deliveredPendingMessage.DateCreated
         && item.Sent
         && item.Uuid == deliveredPendingMessage.Uuid).Should().NotBeNull();
         var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
@@ -139,7 +139,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<List<PendingMessage>>>();
+        result.Should().BeOfType<ErrorResultDto<List<PendingMessageDto>>>();
         result.Success.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
         result.Data.Should().BeNull();
@@ -152,7 +152,7 @@ public class RoutingHubTests : AppTestBase
         // Arrange
         var mediator = Substitute.For<IMediator>();
         var logger = Substitute.For<ILogger<RoutingHub>>();
-        mediator.Send(Arg.Any<GetPendingMessagesByDestinationQuery>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<List<PendingMessage>>()));
+        mediator.Send(Arg.Any<GetPendingMessagesByDestinationQuery>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<List<PendingMessageDto>>()));
         var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, mediator, logger)
         {
             ClientAddress = PKey.Address2
@@ -250,14 +250,14 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldAuthenticate()
     {
         // Arrange
-        var request = new AuthenticationRequest(PKey.PublicKey1, "test-signature");
+        var request = new AuthenticationRequestDto(PKey.PublicKey1, "test-signature");
 
         // Act
         var result = await _hub.Authenticate(request);
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<bool>>();
+        result.Should().BeOfType<SuccessResultDto<bool>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
@@ -268,7 +268,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldReturnErrorWhenAuthenticationFails()
     {
         // Arrange
-        var request = new AuthenticationRequest(PKey.PublicKey1, "test-signature");
+        var request = new AuthenticationRequestDto(PKey.PublicKey1, "test-signature");
         _sessionManager.Authenticate("", "", "").ReturnsForAnyArgs(false);
 
         // Act
@@ -276,7 +276,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Should().BeOfType<ErrorResultDto<bool>>();
         result.Success.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
         result.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_NONCE_SIGNATURE);
@@ -297,7 +297,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<Signature>>();
+        result.Should().BeOfType<SuccessResultDto<SignatureDto>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().NotBeNull();
@@ -322,7 +322,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<bool>>();
+        result.Should().BeOfType<SuccessResultDto<bool>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
@@ -341,14 +341,14 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var vertex = _container.ResolveAdjacentVertex();
-        var request = new VertexBroadcastRequest("invalid-key", vertex.SignedData!);
+        var request = new VertexBroadcastRequestDto("invalid-key", vertex.SignedData!);
 
         // Act
         var result = await _hub.Broadcast(request);
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Should().BeOfType<ErrorResultDto<bool>>();
         result.Success.Should().BeFalse();
         result.Data.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
@@ -362,14 +362,14 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldNotBroadcastWithInvalidSignedData()
     {
         // Arrange
-        var request = new VertexBroadcastRequest(PKey.PublicKey1, "invalid-signed-data");
+        var request = new VertexBroadcastRequestDto(PKey.PublicKey1, "invalid-signed-data");
 
         // Act
         var result = await _hub.Broadcast(request);
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Should().BeOfType<ErrorResultDto<bool>>();
         result.Success.Should().BeFalse();
         result.Data.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
@@ -393,7 +393,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Should().BeOfType<ErrorResultDto<bool>>();
         result.Success.Should().BeFalse();
         result.Data.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
@@ -408,7 +408,7 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldTriggerBroadcast()
     {
         // Arrange
-        var request = new TriggerBroadcastRequest {
+        var request = new TriggerBroadcastRequestDto {
             NewAddresses = [ PKey.Address1 ]
         };
 
@@ -417,7 +417,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<bool>>();
+        result.Should().BeOfType<SuccessResultDto<bool>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
@@ -432,14 +432,14 @@ public class RoutingHubTests : AppTestBase
     public async Task ShouldTriggerBroadcastWithoutNewAddress()
     {
         // Arrange
-        var request = new TriggerBroadcastRequest();
+        var request = new TriggerBroadcastRequestDto();
 
         // Act
         var result = await _hub.TriggerBroadcast(request);
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<bool>>();
+        result.Should().BeOfType<SuccessResultDto<bool>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
@@ -455,11 +455,11 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<UpdateLocalAdjacencyCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<VertexBroadcastRequest>()));
+        mediator.Send(Arg.Any<UpdateLocalAdjacencyCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<VertexBroadcastRequestDto>()));
         var logger = Substitute.For<ILogger<RoutingHub>>();
         var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, mediator, logger);
         ConfigureSignalRHub(hub);
-        var request = new TriggerBroadcastRequest {
+        var request = new TriggerBroadcastRequestDto {
             NewAddresses = [ PKey.Address1 ]
         };
 
@@ -468,7 +468,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Should().BeOfType<ErrorResultDto<bool>>();
         result.Success.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
         result.Errors.Single().Message.Should().Be(InvocationErrors.BROADCAST_TRIGGERING_WARNING);
@@ -498,7 +498,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<bool>>();
+        result.Should().BeOfType<SuccessResultDto<bool>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
@@ -521,7 +521,7 @@ public class RoutingHubTests : AppTestBase
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResult<bool>>();
+        result.Should().BeOfType<SuccessResultDto<bool>>();
         result.Success.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Data.Should().BeTrue();
@@ -541,7 +541,7 @@ public class RoutingHubTests : AppTestBase
         var result = await _hub.RouteMessage(new());
 
         result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResult<bool>>();
+        result.Should().BeOfType<ErrorResultDto<bool>>();
         result.Success.Should().BeFalse();
         result.Errors.Should().HaveCount(1);
         result.Errors.Single().Message.Should().Be(InvocationErrors.ONION_ROUTING_FAILED);
@@ -576,7 +576,7 @@ public class RoutingHubTests : AppTestBase
     {
         // Arrange
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<UpdateLocalAdjacencyCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultSuccess(new VertexBroadcastRequest())));
+        mediator.Send(Arg.Any<UpdateLocalAdjacencyCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto())));
         var graph = Substitute.For<Enigma5.App.Data.NetworkGraph>(_container.Resolve<IEnvelopeSigner>(), _certificateManager, _configuration, Substitute.For<ILogger<Enigma5.App.Data.NetworkGraph>>());
         graph.NeighboringAddresses.Returns([PKey.Address1]);
         var hub = new RoutingHub(_sessionManager, _certificateManager, graph, mediator, Substitute.For<ILogger<RoutingHub>>());

@@ -21,25 +21,24 @@
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Hubs.Sessions;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Extensions;
 using Enigma5.App.Hangfire;
 using Enigma5.App.Data;
-using Enigma5.App.Common.Constants;
 using Enigma5.Security.Contracts;
 using Enigma5.App.Common.Extensions;
 using Enigma5.Security;
 using Hangfire;
-using Enigma5.Crypto;
 using Enigma5.Structures;
 using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs.Sessions.Contracts;
-using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
+using Enigma5.App.Common;
+using Enigma5.App.NetworkBridge;
+using Enigma5.App.UI;
+using System.Text.Json.Serialization;
+using Enigma5.App.Middlewares;
 
 namespace Enigma5.App;
 
@@ -50,88 +49,96 @@ public class StartupConfiguration(IConfiguration configuration)
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddSignalR()
-        .AddHubOptions<RoutingHub>(
-            options =>
-                {
-                    options.AddFilter<LogFilter>();
-                    options.AddFilter<AuthenticatedFilter>();
-                    options.AddFilter<AuthorizedServiceOnlyFilter>();
-                    options.AddFilter<ValidateModelFilter>();
-                    options.AddFilter<OnionParsingFilter>();
-                    options.AddFilter<OnionRoutingFilter>();
-                });
-
+        services.AddSignalR().AddHubOptions<RoutingHub>(options =>
+        {
+            options.AddFilter<LogFilter>();
+            options.AddFilter<AuthenticatedFilter>();
+            options.AddFilter<AuthorizedServiceOnlyFilter>();
+            options.AddFilter<ValidateModelFilter>();
+            options.AddFilter<OnionParsingFilter>();
+            options.AddFilter<OnionRoutingFilter>();
+        });
         services.AddSingleton<ConnectionsMapper>();
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<ICertificateManager, CertificateManager>();
         services.AddSingleton<NetworkGraph>();
-
-        services.AddTransient(typeof(IKeysReader), _configuration.UseAzureVaultForKeys() ? typeof(AzureKeysReader) : typeof(KeysReader));
-        services.AddTransient(typeof(IPassphraseProvider), _configuration.UseAzureVaultForPassphrase() ? typeof(AzurePassphraseReader) : typeof(CommandLinePassphraseReader));
-        services.AddTransient(provider =>
-        {
-            var certificateManager = provider.GetRequiredService<ICertificateManager>();
-            return SealProvider.Factory.CreateUnsealer(certificateManager.PrivateKey);
-        });
-        services.AddTransient(provider =>
-        {
-            var certificateManager = provider.GetRequiredService<ICertificateManager>();
-            return SealProvider.Factory.CreateSigner(certificateManager.PrivateKey);
-        });
+        services.AddSingleton<DashboardUIState>();
+        services.AddSingleton<Bridge>();
+        services.AddSingleton<HubConnectionsProxy>();
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
-
+        services.AddTransient<NetworkGraphValidationPolicy>();
+        services.AddRazorComponents().AddInteractiveServerComponents();
+        services.SetupKeyReader(_configuration);
+        services.SetupPassphraseReader(_configuration);
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
         services.SetupMediatR();
-
-        services.BuildServiceProvider();
+        services.AddAntiforgery();
+        services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        });
     }
 
-    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider)
+    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IConfiguration configuration)
     {
         app.UseRouting();
-
+        app.UseAntiforgery();
+        app.UseStaticFiles();
+        app.UseMiddleware<AuthorizedPortRestrictedPageMiddleware>($"/{Constants.DashboardPageEndpoint}");
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapHub<RoutingHub>(Endpoints.OnionRoutingEndpoint);
-            endpoints.MapGet(Endpoints.InfoEndpoint, Api.GetInfo);
-            endpoints.MapPost(Endpoints.ShareEndpoint, Api.PostShare);
-            endpoints.MapGet(Endpoints.ShareEndpoint, Api.GetShare);
-            endpoints.MapGet(Endpoints.VerticesEndpoint, Api.GetVertices);
-            endpoints.MapGet(Endpoints.VertexEndpoint, Api.GetVertex);
+            endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
+            endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint);
+            endpoints.MapGet(Constants.InfoEndpoint, Api.GetInfo);
+            endpoints.MapPost(Constants.ShareEndpoint, Api.PostShare)
+                .WithMetadata(new RequestSizeLimitAttribute(Constants.MaxSharedDataSize));
+            endpoints.MapGet(Constants.ShareEndpoint, Api.GetShare);
+            endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
+            endpoints.MapGet(Constants.VerticesEndpoint, Api.GetVertices);
+            endpoints.MapGet(Constants.VertexEndpoint, Api.GetVertex);
+            endpoints.MapPost(Constants.FileEndpoint, Api.PostFile)
+                .Accepts<IFormFile>("multipart/form-data")
+                .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
+                .WithMetadata(new RequestSizeLimitAttribute(Constants.MaxSharedFileSize))
+                .WithMetadata(new RequestFormLimitsAttribute
+                {
+                    MultipartBodyLengthLimit = Constants.MaxSharedFileSize
+                }).DisableAntiforgery();
+            endpoints.MapGet(Constants.FileEndpoint, Api.GetFile);
+            endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
         });
-
         serviceProvider.UseAsHangfireActivator();
+        serviceProvider.MigrateDatabase();
+        serviceProvider.SetupMasterPassphrase();
 
+        StartJobs(configuration);
+    }
+
+    private static void StartJobs(IConfiguration configuration)
+    {
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "pending-messages-cleanup",
+            Constants.MessagesCleanupRecurringJob,
             bridge => bridge.Send(
-                new CleanupMessagesCommand(DataPersistencePeriod.PendingMessagePersistencePeriod, DataPersistencePeriod.DeliveredMessagePersistencePeriod)
+                new CleanupMessagesCommand(configuration.GetMessageRetentionPeriod(), configuration.GetSentMessageRetentionPeriod())
             ),
-            "*/15 * * * *"
+            Constants.MessagesCleanupJobInterval
         );
         RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
-            "shared-data-cleanup",
+            Constants.SharedDataCleanupRecurringJob,
             bridge => bridge.Send(
-                new CleanupSharedDataCommand(DataPersistencePeriod.SharedDataPersistencePeriod)
+                new CleanupSharedDataCommand(configuration.GetSharedDataRetentionPeriod())
             ),
-            "*/5 * * * *"
+            Constants.SharedDataCleanupJobInterval
         );
-
-        using var scope = app.ApplicationServices.CreateScope();
-        try
-        {
-            var context = scope.ServiceProvider.GetRequiredService<EnigmaDbContext>();
-            context.Database.Migrate();
-        }
-        catch (Exception ex)
-        {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<StartupConfiguration>>();
-            logger.LogError(ex, "An error occurred while creating the database.");
-            throw;
-        }
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            Constants.FilesCleanupRecurringJob,
+            bridge => bridge.Send(
+                new CleanupFilesCommand(configuration.GetFilesRetentionPeriod())
+            ),
+            Constants.FilesCleanupJobInterval
+        );
     }
 }
