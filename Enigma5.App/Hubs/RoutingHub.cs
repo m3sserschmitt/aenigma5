@@ -24,11 +24,11 @@ using MediatR;
 using Enigma5.App.Resources.Queries;
 using Enigma5.App.Models;
 using Enigma5.Security.Contracts;
-using Enigma5.App.Common.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Hubs.Sessions.Contracts;
+using Enigma5.App.Models.Contracts.Hubs;
 
 namespace Enigma5.App.Hubs;
 

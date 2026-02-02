@@ -18,8 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Models;
+using Enigma5.App.Models.Contracts.Hubs;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Enigma5.App.NetworkBridge;

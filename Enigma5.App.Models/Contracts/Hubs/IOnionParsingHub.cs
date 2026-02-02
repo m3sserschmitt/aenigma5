@@ -18,7 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Common.Contracts.Hubs;
+namespace Enigma5.App.Models.Contracts.Hubs;
 
 public interface IOnionParsingHub
 {

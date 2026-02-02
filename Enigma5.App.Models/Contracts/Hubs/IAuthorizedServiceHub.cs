@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,15 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text.RegularExpressions;
+namespace Enigma5.App.Models.Contracts.Hubs;
 
-namespace Enigma5.Crypto.Extensions;
-
-public static partial class AddressExtensions
+public interface IAuthorizedServiceHub
 {
-    public static bool IsValidAddress(this string? address)
-    => !string.IsNullOrWhiteSpace(address) && AddressRegex().IsMatch(address);
-
-    [GeneratedRegex(@"^[a-f0-9]{64}$")]
-    private static partial Regex AddressRegex();
+    bool IsAuthorizedService { get; }
 }

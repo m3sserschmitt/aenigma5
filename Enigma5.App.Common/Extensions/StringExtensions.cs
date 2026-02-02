@@ -20,6 +20,7 @@
 
 using System.Text.RegularExpressions;
 using QRCoder;
+using System.Buffers.Text;
 
 namespace Enigma5.App.Common.Extensions;
 
@@ -50,6 +51,53 @@ public static partial class StringExtensions
 
         return $"data:image/png;base64,{Convert.ToBase64String(pngBytes)}";
     }
+
+    public static bool IsValidAddress(this string? address)
+    => !string.IsNullOrWhiteSpace(address) && AddressRegex().IsMatch(address);
+
+        private static bool IsValidKey(this string? key, Func<Regex> regex)
+    => key.GetKeyBase64Content(regex).IsValidBase64();
+
+    private static string? GetKeyBase64Content(this string? key, Func<Regex> regex)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return null;
+            }
+
+            var matches = regex.Invoke().Match(key);
+
+            if (matches.Success)
+            {
+                return matches.Groups[1].Value.Replace("\n", string.Empty).Replace("\r", string.Empty).Replace(" ", string.Empty);
+            }
+
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public static bool IsValidPublicKey(this string? publicKey) => publicKey.IsValidKey(PublicKeyRegex);
+
+    public static bool IsValidPrivateKey(this string? privateKey) => privateKey.IsValidKey(PrivateKeyRegex);
+
+    public static string? GetPublicKeyBase64(this string? publicKey) => publicKey.GetKeyBase64Content(PublicKeyRegex);
+
+    [GeneratedRegex(@"^-----BEGIN(?: [A-Z]+)* PRIVATE KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PRIVATE KEY-----$", RegexOptions.Multiline)]
+    private static partial Regex PrivateKeyRegex();
+
+    [GeneratedRegex(@"^-----BEGIN(?: [A-Z]+)* PUBLIC KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PUBLIC KEY-----$", RegexOptions.Multiline)]
+    private static partial Regex PublicKeyRegex();
+
+    public static bool IsValidBase64(this string? data) => !string.IsNullOrWhiteSpace(data) && Base64.IsValid(data);
+
+    [GeneratedRegex(@"^[a-f0-9]{64}$")]
+    private static partial Regex AddressRegex();
 
     [GeneratedRegex(@"^(?:[a-z2-7]{16}|[a-z2-7]{56})\.onion$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
     private static partial Regex OnionAddressRegex();

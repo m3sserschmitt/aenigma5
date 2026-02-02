@@ -19,9 +19,9 @@
 */
 
 using Enigma5.App.Attributes;
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Hubs.Adapters;
 using Enigma5.App.Hubs.Sessions.Contracts;
+using Enigma5.App.Models.Contracts.Hubs;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR;
 

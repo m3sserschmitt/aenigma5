@@ -18,10 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 
-namespace Enigma5.App.Common.Contracts.Hubs;
+namespace Enigma5.App.Models.Contracts.Hubs;
 
 public interface IEnigmaHub
 {

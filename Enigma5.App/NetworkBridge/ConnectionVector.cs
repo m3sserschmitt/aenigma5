@@ -19,10 +19,10 @@
 */
 
 using Enigma5.App.Common;
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
+using Enigma5.App.Models.Contracts.Hubs;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.Security.Contracts;
 using Microsoft.AspNetCore.Http.Connections.Client;
