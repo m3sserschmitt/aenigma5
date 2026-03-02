@@ -99,10 +99,11 @@ public class NetworkGraph : IDisposable
                 new Vertex(
                     new(v.Neighborhood.Neighbors, v.Neighborhood.Address, v.Neighborhood.Hostname, v.Neighborhood.OnionService, null),
                     v.PublicKey,
-                    v.SignedData
-                    )
-                ).ToList().CanonicallySerialize();
-            return HashProvider.Sha256Hex(Encoding.UTF8.GetBytes(serializedGraph));
+                    v.SignedData)
+                ).OrderBy(v => v.Neighborhood.Address)
+                .ToList()
+                .CanonicallySerialize();
+            return HashProvider.Sha256Hex(serializedGraph);
         }, _logger
     );
 
