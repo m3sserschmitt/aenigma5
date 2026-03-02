@@ -150,7 +150,7 @@ fi
 ONION_SERVICE_ADDRESS="$(cat "$ONION_SERVICE_ADDRESS_FILE")"
 echo -e "\e[31mOnion service address\e[0m: $ONION_SERVICE_ADDRESS"
 if [[ -v CONFIG_ADDRESS && ${CONFIG_ADDRESS} -eq 1 ]]; then
-aenigma-config -p "OnionService" -v "$ONION_SERVICE_ADDRESS"
+aenigma-config -p "OnionService" -v "http://$ONION_SERVICE_ADDRESS"
 fi
 
 exit 0
