@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ro.aenigma",
+      "sha256_cert_fingerprints": [
+        "45:59:B4:5B:94:2C:EF:7F:E6:93:71:BE:ED:E6:7B:1B:9A:82:2F:36:42:8B:B7:B4:9A:BB:B9:DC:37:01:55:94"
+      ]
+    }
+  }
+]

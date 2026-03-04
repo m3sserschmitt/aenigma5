@@ -69,13 +69,13 @@ LOG_DIR="/var/log/apache2"
 # Define the virtual host configuration
 VIRTUAL_HOST_CONF=$(cat <<EOF
 <VirtualHost *:80>
+    ServerName $DOMAIN
+
     RewriteEngine On
     ProxyPreserveHost On
     ProxyRequests Off
-    ServerName $DOMAIN
 
     # allow for upgrading to websockets
-    RewriteEngine On
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
     RewriteRule /(.*)           ws://$LOCAL_ADDRESS/\$1 [P,L]
     RewriteCond %{HTTP:Upgrade} !=websocket [NC]

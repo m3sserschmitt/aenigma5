@@ -97,6 +97,10 @@ public sealed class CertificateManager(
         {
             return false;
         }
+        else if (passphraseChars.Length == 0)
+        {
+            return true;
+        }
         var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
         var ok = passphraseChars.Length != 0 && await GenerateKeysAsync(passphraseChars) && await CreateMasterPassphraseAsync(passphraseBytes);
         Array.Clear(passphraseBytes);

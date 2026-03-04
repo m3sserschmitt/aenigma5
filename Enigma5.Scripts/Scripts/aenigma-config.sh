@@ -92,6 +92,7 @@ esac
 
 mv "$TEMPFILE" "$CONFIG_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" $CONFIG_FILE
+chmod -R 700 "$CONFIGS_DIR"
 
 echo "Updated property '$PROPERTY' in '$CONFIG_FILE' to '$NEW_VALUE' ($TYPE)"
 exit 0

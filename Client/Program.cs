@@ -19,7 +19,6 @@
 */
 
 using System.Text;
-using Enigma5.App.Common.Contracts.Hubs;
 using Enigma5.Crypto.DataProviders;
 using Enigma5.Structures;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -29,6 +28,7 @@ using System.Net.Http.Json;
 using Enigma5.App.Models.HubInvocation;
 using NSubstitute;
 using Enigma5.Security.Contracts;
+using Enigma5.App.Models.Contracts.Hubs;
 
 namespace Client;
 
