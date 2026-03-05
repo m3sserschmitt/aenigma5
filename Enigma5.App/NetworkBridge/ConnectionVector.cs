@@ -31,7 +31,7 @@ using System.Net;
 
 namespace Enigma5.App.NetworkBridge;
 
-internal class ConnectionVector : IDisposable
+public class ConnectionVector : IDisposable
 {
     private bool _disposed;
 
@@ -98,31 +98,7 @@ internal class ConnectionVector : IDisposable
 
     public bool Connected => _source.State == HubConnectionState.Connected && _target.State == HubConnectionState.Connected;
 
-    public event Func<Exception?, Task>? TargetClosed
-    {
-        add
-        {
-            _target.Closed -= value;
-            _target.Closed += value;
-        }
-        remove
-        {
-            _target.Closed -= value;
-        }
-    }
-
-    public event Func<Exception?, Task>? SourceClosed
-    {
-        add
-        {
-            _source.Closed -= value;
-            _source.Closed += value;
-        }
-        remove
-        {
-            _source.Closed -= value;
-        }
-    }
+    public event Func<Exception?, ConnectionVector, Task>? Closed;
 
     private ConnectionVector(
         string sourceUrl,
@@ -167,6 +143,8 @@ internal class ConnectionVector : IDisposable
 
         _source.Closed += OnSourceClosed;
         _target.Closed += OnTargetClosed;
+
+        _impersonateServiceAddress = impersonateServiceAddress;
     }
 
     private ConnectionVector(ConnectionVector connectionVector, bool reversed)
@@ -353,16 +331,17 @@ internal class ConnectionVector : IDisposable
         return vertex != null && _networkGraphValidationPolicy.Validate(vertex);
     }
 
-    private Task OnSourceClosed(Exception? _)
+    private Task OnSourceClosed(Exception? ex)
     {
         SourceAuthenticated = false;
-        return Task.CompletedTask;
+        return _target.StopAsync();
     }
 
-    private Task OnTargetClosed(Exception? _)
+    private Task OnTargetClosed(Exception? ex)
     {
         TargetAuthenticated = false;
-        return Task.CompletedTask;
+        _source.StopAsync();
+        return Closed?.Invoke(ex, this) ?? Task.CompletedTask;
     }
 
     private ConnectionVector Reversed() => new(this, true);
@@ -479,8 +458,8 @@ internal class ConnectionVector : IDisposable
             {
 
             }
-            _source.Closed += OnSourceClosed;
-            _target.Closed += OnTargetClosed;
+            _source.Closed -= OnSourceClosed;
+            _target.Closed -= OnTargetClosed;
             _disposed = true;
         }
     }

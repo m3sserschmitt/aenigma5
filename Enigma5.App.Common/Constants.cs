@@ -30,7 +30,7 @@ public static class Constants
 
     public static readonly int MaxSharedFileSize = 100 * 1024 * 1024;
 
-    public static readonly int MaxSharedDataSize = 1 * 1024 * 1024;
+    public static readonly int MaxSharedDataSize = 1024 * 512;
 
     public const string XImpersonateServiceHeader = "X-Impersonate-Service";
 
@@ -66,7 +66,7 @@ public static class Constants
 
     public const string FilesCleanupJobInterval = "*/5 * * * *";
 
-    public const string InvokeNetworkBridgeJobInterval = "*/5 * * * *";
+    public const string InvokeNetworkBridgeJobInterval = "*/10 * * * *";
 
     public const string NativeLibsRelativePathTemplate = "runtimes/{0}/native/{1}";
 

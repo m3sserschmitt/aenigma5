@@ -50,23 +50,26 @@ public class HubConnectionsProxy(
 
     private HubConnection? _localHubConnection;
 
-    public event Func<Exception?, Task>? OnAnyTargetClosed
+    public event Func<Exception?, ConnectionVector, Task>? OnAnyClosed
     {
         add
         {
             foreach (var connection in _connections)
             {
-                connection.TargetClosed += value;
+                connection.Closed += value;
             }
         }
         remove
         {
             foreach (var connection in _connections)
             {
-                connection.TargetClosed -= value;
+                connection.Closed -= value;
             }
         }
     }
+
+    public bool RemoveConnection(ConnectionVector connectionVector)
+    => _connections.Remove(connectionVector);
 
     public async Task<bool> LoadConnections()
     {
@@ -105,7 +108,6 @@ public class HubConnectionsProxy(
 
         foreach (var connection in _connections)
         {
-            connection.ForwardCloseSignal();
             connection.ForwardMessageRouting();
             connection.ForwardBroadcasts();
         }

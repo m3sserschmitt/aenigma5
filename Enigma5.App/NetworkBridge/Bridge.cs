@@ -19,6 +19,7 @@
 */
 
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Common.Utils;
 
 namespace Enigma5.App.NetworkBridge;
 
@@ -26,39 +27,37 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
 {
     private bool _disposed;
 
-    private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-
     private readonly HubConnectionsProxy _connections = hubConnectionsProxy;
 
     private readonly IConfiguration _configuration = configuration;
+
+    private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
 
     ~Bridge()
     {
         Dispose(false);
     }
 
-    public async Task<bool> StartAsync()
-    => await _connections.LoadConnections() &&
+    public async Task<bool> StartAsync() => await _singleThreadRunner.RunAsync(async () =>
+    await _connections.LoadConnections() &&
         RegisterEvents() &&
         await _connections.StartAsync() &&
         await _connections.StartAuthenticationAsync() &&
-        await _connections.TriggerBroadcast();
+        await _connections.TriggerBroadcast()
+    );
 
-    public bool RegisterEvents()
+    private bool RegisterEvents()
     {
-        _connections.OnAnyTargetClosed += OnConnectionClosedAsync;
+        _connections.OnAnyClosed += OnConnectionClosedAsync;
         return true;
     }
 
-    private async Task OnConnectionClosedAsync(Exception? ex)
+    private Task<bool> RemoveConnection(ConnectionVector connectionVector)
+    => _singleThreadRunner.RunAsync(() => _connections.RemoveConnection(connectionVector));
+
+    private async Task OnConnectionClosedAsync(Exception? ex, ConnectionVector connectionVector)
     {
-        if (ex == null)
-        {
-            return;
-        }
-
-        await _semaphoreSlim.WaitAsync();
-
+        await RemoveConnection(connectionVector);
         for (int i = 0; i < _configuration.GetConnectionRetriesCount(); i++)
         {
             await Task.Delay(_configuration.GetDelayBetweenConnectionRetries());
@@ -76,8 +75,6 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
                 continue;
             }
         }
-
-        _semaphoreSlim.Release();
     }
 
     public void Dispose()
@@ -94,7 +91,7 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
             {
 
             }
-            _connections.OnAnyTargetClosed -= OnConnectionClosedAsync;
+            _connections.OnAnyClosed -= OnConnectionClosedAsync;
             _disposed = true;
         }
     }

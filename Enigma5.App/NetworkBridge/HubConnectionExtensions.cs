@@ -56,11 +56,6 @@ internal static class HubConnectionExtensions
         connection.Forward<VertexBroadcastRequestDto>(nameof(IEnigmaHub.Broadcast));
     }
 
-    public static void ForwardCloseSignal(this ConnectionVector connection)
-    {
-        connection.SourceClosed += async _ => { try { await connection.StopTargetAsync(CancellationToken.None); } catch (Exception) { /* TODO: log exception */ } };
-        connection.TargetClosed += async _ => { try { await connection.StopSourceAsync(CancellationToken.None); } catch (Exception) { /* TODO: log exception */ } };
-    }
 
     public static async Task<bool> StartAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
     {
