@@ -23,4 +23,4 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetNeighborAddresses : IRequest<CommandResult<HashSet<string>>> { }
+public class GetNeighborAddressesQuery : IRequest<CommandResult<HashSet<string>>> { }

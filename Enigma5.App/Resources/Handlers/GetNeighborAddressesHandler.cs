@@ -24,10 +24,10 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetNeighborAddressesHandler(NetworkGraph networkGraph) : IRequestHandler<GetNeighborAddresses, CommandResult<HashSet<string>>>
+public class GetNeighborAddressesHandler(NetworkGraph networkGraph) : IRequestHandler<GetNeighborAddressesQuery, CommandResult<HashSet<string>>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
 
-    public async Task<CommandResult<HashSet<string>>> Handle(GetNeighborAddresses request, CancellationToken cancellationToken)
+    public async Task<CommandResult<HashSet<string>>> Handle(GetNeighborAddressesQuery request, CancellationToken cancellationToken)
     => CommandResult.CreateResultSuccess(await _networkGraph.GetNeighborAddressesAsync());
 }

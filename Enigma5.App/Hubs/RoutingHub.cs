@@ -182,6 +182,7 @@ public partial class RoutingHub(
     public async Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request)
     {
         var localVertex = await AddNewAdjacencies(request.NewAddresses ?? []);
+        await SyncPendingMessages();
 
         if (localVertex is null)
         {
@@ -201,17 +202,7 @@ public partial class RoutingHub(
     public async Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request)
     {
         bool success = false;
-        var vertex = await _commandRouter.Send(new GetVertexQuery(Next!));
-        var notLeaf = vertex.IsSuccessNotNullResultValue() && vertex.Value!.PublicKey is not null;
-        if (notLeaf && DestinationConnectionId != null && Content != null)
-        {
-            success = await RouteMessage(DestinationConnectionId, Content, null);
-            if (!success)
-            {
-                success = (await CreatePendingMessage()).IsSuccessNotNullResultValue();
-            }
-        }
-        else if (Content is not null)
+        if (Content is not null)
         {
             var result = await CreatePendingMessage();
             success = result.IsSuccessNotNullResultValue();

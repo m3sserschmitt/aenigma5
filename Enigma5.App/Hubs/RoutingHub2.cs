@@ -104,7 +104,7 @@ public partial class RoutingHub
     private async Task<IEnumerable<Task<bool>>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
     {
         var tasks = new List<Task<bool>>();
-        var result = await _commandRouter.Send(new GetNeighborAddresses());
+        var result = await _commandRouter.Send(new GetNeighborAddressesQuery());
 
         if (!result.IsSuccessNotNullResultValue())
         {
@@ -129,7 +129,8 @@ public partial class RoutingHub
 
     private async Task<CommandResult<PendingMessage>> CreatePendingMessage()
     {
-        if (Content != null)
+        var isNeighbor = (await GetNeighborAddressesAsync()).Contains(Next!);
+        if (Content != null && !isNeighbor)
         {
             _logger.LogDebug($"Saving onion for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
             var encodedContent = Convert.ToBase64String(Content);
@@ -142,6 +143,64 @@ public partial class RoutingHub
         }
         _logger.LogDebug($"Could not save pending message for connectionId {{{nameof(Context.ConnectionId)}}} because the content is null.", Context.ConnectionId);
         return CommandResult.CreateResultFailure<PendingMessage>();
+    }
+
+    private async Task<HashSet<string>> GetNeighborAddressesAsync()
+    {
+        var result = await _commandRouter.Send(new GetNeighborAddressesQuery());
+        if (!result.IsSuccessNotNullResultValue())
+        {
+            return [];
+        }
+        return result.Value ?? [];
+    }
+
+    private async Task<List<PendingMessageDto>> GetPendingMessagesAsync(string address)
+    {
+        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address));
+        if (!result.IsSuccessNotNullResultValue())
+        {
+            return [];
+        }
+        return result.Value ?? [];
+    }
+
+    private string? MapAddress(string address)
+    => _sessionManager.TryGetConnectionId(address, out var connectionId) ? connectionId : null;
+
+    private async Task SyncPendingMessages()
+    {
+        foreach (var address in await GetNeighborAddressesAsync())
+        {
+            var pendingMessages = await GetPendingMessagesAsync(address);
+            if (pendingMessages.Count == 0)
+            {
+                continue;
+            }
+
+            var connectionId = MapAddress(address);
+            if (string.IsNullOrWhiteSpace(connectionId))
+            {
+                continue;
+            }
+
+            foreach (var item in pendingMessages)
+            {
+                if (string.IsNullOrWhiteSpace(item.Content))
+                {
+                    continue;
+                }
+                try
+                {
+                    await RouteMessage(connectionId, Convert.FromBase64String(item.Content), item.Uuid);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+            }
+            await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(address));
+        }
     }
 
     private async Task<bool> SendBroadcast(VertexBroadcastRequestDto adjacencyLists)

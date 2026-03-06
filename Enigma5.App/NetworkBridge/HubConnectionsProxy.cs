@@ -131,7 +131,7 @@ public class HubConnectionsProxy(
             }
 
             var newAddresses = _connections
-            .Where(item => !string.IsNullOrWhiteSpace(item.TargetAddress) && item.Authenticated)
+            .Where(item => item.TargetAddress.IsValidAddress() && item.Authenticated)
             .Select(item => item.TargetAddress ?? string.Empty).ToList();
             var result = _localHubConnection != null ?
             await _localHubConnection.InvokeAsync<InvocationResultDto<bool>>(
