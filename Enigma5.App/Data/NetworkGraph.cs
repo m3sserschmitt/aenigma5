@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
@@ -96,10 +95,7 @@ public class NetworkGraph : IDisposable
                 return null;
             }
             var serializedGraph = _vertices.Select(v =>
-                new Vertex(
-                    new(v.Neighborhood.Neighbors, v.Neighborhood.Address, v.Neighborhood.Hostname, v.Neighborhood.OnionService, null),
-                    v.PublicKey,
-                    v.SignedData)
+                new Vertex(new(v.Neighborhood.Neighbors, v.Neighborhood.Address, v.Neighborhood.Hostname, v.Neighborhood.OnionService, null), null, null)
                 ).OrderBy(v => v.Neighborhood.Address)
                 .ToList()
                 .CanonicallySerialize();
