@@ -82,6 +82,45 @@ public static class ConfigurationExtensions
     public static string? GetHostname(this IConfiguration configuration)
     => configuration.GetStringValue("Hostname")?.Trim('/', ' ');
 
+    public static string? GetAvailableHttpService(this IConfiguration configuration)
+    {
+        var service = configuration.GetHostname();
+        if(string.IsNullOrWhiteSpace(service))
+        {
+            service = configuration.GetOnionService();
+        }
+        return string.IsNullOrWhiteSpace(service) ? null : service;
+    }
+
+    public static string? GetSharedDataUrl(this IConfiguration configuration, string tag)
+    {
+        
+        var service = configuration.GetAvailableHttpService();
+        if(string.IsNullOrWhiteSpace(service))
+        {
+            return null;
+        }
+
+        return $"{service}/{Constants.ShareEndpoint}?Tag={tag}";
+    }
+
+    public static DateTimeOffset? GetSharedDataValidityDate(this IConfiguration configuration)
+    => DateTimeOffset.Now + configuration.GetSharedDataRetentionPeriod();
+
+    public static string? GetFileUrl(this IConfiguration configuration, string tag)
+    {
+        var service = configuration.GetAvailableHttpService();
+        if(string.IsNullOrWhiteSpace(service))
+        {
+            return null;
+        }
+
+        return $"{service}/{Constants.FileEndpoint}?Tag={tag}";
+    }
+
+    public static DateTimeOffset? GetFileValidityDate(this IConfiguration configuration)
+    => DateTimeOffset.Now + configuration.GetFilesRetentionPeriod();
+
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
     => configuration.GetStringValue("PrivateKeyPath");
 

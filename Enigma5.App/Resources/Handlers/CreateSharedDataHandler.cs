@@ -21,7 +21,6 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Crypto;
-using Enigma5.Crypto.Extensions;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
@@ -64,13 +63,12 @@ public class CreateSharedDataHandler(
         };
         await _context.AddAsync(sharedData, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
-        var hostname = _configuration.GetHostname();
 
         return CommandResult.CreateResultSuccess(new Models.SharedDataDto
         {
             Tag = sharedData.Tag,
-            ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.ShareEndpoint}?Tag={sharedData.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + _configuration.GetSharedDataRetentionPeriod()
+            ResourceUrl = _configuration.GetSharedDataUrl(sharedData.Tag),
+            ValidUntil = _configuration.GetSharedDataValidityDate()
         });
     }
 }

@@ -57,12 +57,11 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
         using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
         await request.File.CopyToAsync(stream, cancellationToken);
 
-        var hostname = _configuration.GetHostname();
         return CommandResult.CreateResultSuccess(new Models.SharedDataDto
         {
             Tag = record.Tag,
-            ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.FileEndpoint}?Tag={record.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + _configuration.GetFilesRetentionPeriod(),
+            ResourceUrl = _configuration.GetFileUrl(record.Tag),
+            ValidUntil = _configuration.GetFileValidityDate(),
         });
     }
 }

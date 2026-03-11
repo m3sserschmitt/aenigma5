@@ -48,7 +48,10 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
     }
 
     private bool Authenticate(string connectionId)
-    => _pending.Remove(connectionId) && _authenticated.Add(connectionId);
+    {
+        _authenticated.Remove(connectionId);
+        return _pending.Remove(connectionId) && _authenticated.Add(connectionId);
+    }
 
     public string? AddPending(string connectionId)
     {

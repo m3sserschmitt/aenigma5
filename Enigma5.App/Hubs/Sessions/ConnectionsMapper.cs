@@ -32,14 +32,22 @@ public class ConnectionsMapper : IReadOnlyConnectionsMapper
     public IReadOnlyDictionary<string, string> Connections => _connections;
 
     public bool TryAdd(string address, string connectionId)
-    => ThreadSafeExecution.Execute(() => _connections.TryAdd(address, connectionId), false, _locker);
+    => ThreadSafeExecution.Execute(
+        () =>
+        {
+            _connections.Remove(address);
+            return _connections.TryAdd(address, connectionId);
+        },
+        false,
+        _locker
+    );
 
     public bool Remove(string connectionId, out string? address)
     => ThreadSafeExecution.Execute(
         (out string? addr) =>
         {
             addr = null;
-            
+
             foreach (var pair in _connections)
             {
                 if (pair.Value == connectionId)
