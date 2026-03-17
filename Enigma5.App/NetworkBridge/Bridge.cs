@@ -23,13 +23,15 @@ using Enigma5.App.Common.Utils;
 
 namespace Enigma5.App.NetworkBridge;
 
-public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnectionsProxy) : IDisposable
+public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnectionsProxy, ILogger<Bridge> logger) : IDisposable
 {
     private bool _disposed;
 
     private readonly HubConnectionsProxy _connections = hubConnectionsProxy;
 
     private readonly IConfiguration _configuration = configuration;
+
+    private readonly ILogger _logger = logger;
 
     private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
 
@@ -39,12 +41,14 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
     }
 
     public async Task<bool> StartAsync() => await _singleThreadRunner.RunAsync(async () =>
-    await _connections.LoadConnections() &&
-        RegisterEvents() &&
-        await _connections.StartAsync() &&
-        await _connections.StartAuthenticationAsync() &&
-        await _connections.TriggerBroadcast()
-    );
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}}...", nameof(StartAsync));
+        return await _connections.LoadConnectionsAsync() &&
+            RegisterEvents() &&
+            await _connections.StartAsync() &&
+            await _connections.StartAuthenticationAsync() &&
+            await _connections.TriggerBroadcastAsync();
+    }, _logger);
 
     private bool RegisterEvents()
     {
@@ -52,12 +56,16 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
         return true;
     }
 
-    private Task<bool> RemoveConnection(ConnectionVector connectionVector)
-    => _singleThreadRunner.RunAsync(() => _connections.RemoveConnection(connectionVector));
+    private Task<bool> RemoveConnectionAsync(ConnectionVector connectionVector) => _singleThreadRunner.RunAsync(() =>
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}} for connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}}...", nameof(RemoveConnectionAsync), connectionVector);
+        return _connections.RemoveConnection(connectionVector);
+    }, _logger);
 
     private async Task OnConnectionClosedAsync(Exception? ex, ConnectionVector connectionVector)
     {
-        await RemoveConnection(connectionVector);
+        _logger.LogError(ex, $"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}} for connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} with exception.", nameof(OnConnectionClosedAsync), connectionVector);
+        await RemoveConnectionAsync(connectionVector);
         for (int i = 0; i < _configuration.GetConnectionRetriesCount(); i++)
         {
             await Task.Delay(_configuration.GetDelayBetweenConnectionRetries());
@@ -65,14 +73,13 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
             {
                 if (await StartAsync())
                 {
+                    _logger.LogDebug($"Invocation of {{{Common.Constants.Serilog.BridgeMethodNameKey}}} completed successfully. All connections were successfully established.", nameof(StartAsync));
                     break;
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // TODO: Log failed attempt
-                Console.WriteLine("Failed attempt to reestablish connection.");
-                continue;
+                _logger.LogError(e, $"Exception encountered while invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}}. Retrying...", nameof(StartAsync));
             }
         }
     }

@@ -70,7 +70,7 @@ public partial class RoutingHub(
         if (nonce is null)
         {
             _logger.LogError(
-                $"Null nonce generated while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+                $"Null nonce generated while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
                 nameof(GenerateToken),
                 Context.ConnectionId
                 );
@@ -99,7 +99,7 @@ public partial class RoutingHub(
     {
         if (ClientAddress is null)
         {
-            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            _logger.LogError($"ClientAddress null while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
             nameof(Pull),
             Context.ConnectionId);
             return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
@@ -113,7 +113,7 @@ public partial class RoutingHub(
             return Ok(result.Value!);
         }
 
-        _logger.LogError($"Could not retrieve pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        _logger.LogError($"Could not retrieve pending messages while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; Command result: {{@{Common.Constants.Serilog.CommandResultKey}}}.",
         nameof(Pull),
         Context.ConnectionId,
         result);
@@ -125,7 +125,7 @@ public partial class RoutingHub(
     {
         if (ClientAddress is null)
         {
-            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            _logger.LogError($"ClientAddress null while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
             nameof(Cleanup),
             Context.ConnectionId);
             return Error<bool>(InvocationErrors.INTERNAL_ERROR);
@@ -138,7 +138,7 @@ public partial class RoutingHub(
             return Ok(true);
         }
 
-        _logger.LogError($"Could cleanup pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        _logger.LogError($"Could cleanup pending messages while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; Command result: {{@{Common.Constants.Serilog.CommandResultKey}}}.",
         nameof(Pull),
         Context.ConnectionId,
         result);
@@ -152,11 +152,11 @@ public partial class RoutingHub(
 
         if (!authenticated)
         {
-            _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
+            _logger.LogDebug($"Could not authenticate connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.", Context.ConnectionId);
             return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
-        _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
+        _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} authenticated.", Context.ConnectionId);
         return Ok(true);
     }
 
@@ -168,6 +168,7 @@ public partial class RoutingHub(
 
         if (result.IsSuccessNotNullResultValue())
         {
+            _logger.LogError($"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with no success.", nameof(Broadcast), Context.ConnectionId);
             return await SendBroadcast(result.Value!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_FORWARDING_ERROR);
@@ -186,7 +187,7 @@ public partial class RoutingHub(
 
         if (localVertex is null)
         {
-            _logger.LogWarning($"{nameof(TriggerBroadcast)} resulted in no changes to be broadcasted.");
+            _logger.LogError($"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} resulted in no changes to be broadcasted.", nameof(TriggerBroadcast), Context.ConnectionId);
             return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
 
@@ -216,10 +217,10 @@ public partial class RoutingHub(
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected.", Context.ConnectionId);
+        _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} disconnected.", Context.ConnectionId);
         if (!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
         {
-            _logger.LogWarning($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected, but the connection could not be found into Session Manager", Context.ConnectionId);
+            _logger.LogError($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} disconnected, but the connection could not be found into Session Manager.", Context.ConnectionId);
             return;
         }
 

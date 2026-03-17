@@ -71,4 +71,29 @@ public static class Constants
     public const string NativeLibsRelativePathTemplate = "runtimes/{0}/native/{1}";
 
     public const string Libaenigma = "libaenigma.so";
+
+    public static class Serilog
+    {
+        public const string HubMethodNameKey = "HubMethodName";
+
+        public const string HubMethodArgumentsKey = "HubMethodArguments";
+
+        public const string ConnectionVectorMethodNameKey = "ConnectionVectorMethodName";
+
+        public const string HubConnectionsProxyMethodNameKey = "HubConnectionsProxyMethodName";
+
+        public const string BridgeMethodNameKey = "BridgeMethodName";
+
+        public const string ConnectionVectorKey = "ConnectionVector";
+        
+        public const string ConnectionIdKey = "ConnectionId";
+
+        public const string DestinationConnectionIdKey = "DestinationConnectionId";
+
+        public const string CommandKey = "Command";
+
+        public const string CommandResultKey = "CommendResult";
+
+        public const string AddressKey = "Address";
+    }
 }

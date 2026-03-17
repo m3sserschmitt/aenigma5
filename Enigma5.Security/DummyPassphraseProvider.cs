@@ -24,7 +24,7 @@ namespace Enigma5.Security;
 
 public class DummyPassphraseProvider : IPassphraseProvider
 {
-    public char[]? ProvidePassphrase()
+    public static char[]? ProvidePassphrase()
     {
         return [];
     }

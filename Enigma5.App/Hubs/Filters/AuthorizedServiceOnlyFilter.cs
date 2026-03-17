@@ -20,9 +20,9 @@
 
 using Enigma5.App.Attributes;
 using Microsoft.AspNetCore.SignalR;
-using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Models.Contracts.Hubs;
+using Enigma5.App.Extensions;
 
 namespace Enigma5.App.Hubs.Filters;
 
@@ -36,20 +36,13 @@ public class AuthorizedServiceOnlyFilter(IConfiguration configuration, ILogger<A
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        var httpContext = invocationContext.Context.GetHttpContext();
-        if (httpContext == null)
+        if (_configuration.IsAuthorizedHttpInvocation(invocationContext, _logger))
         {
-            _logger.LogError($"Invocation context has null HttpContext.");
-            return false;
-        }
-
-        if (_configuration.IsAuthorizedHttpInvocation(httpContext))
-        {
-            _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+            _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} authorized for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation.",
             invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
             return await next(invocationContext);
         }
-        _logger.LogDebug($"Connection {{{nameof(invocationContext.Context.ConnectionId)}}} not authorized for {{{nameof(invocationContext.HubMethodName)}}} invocation.",
+        _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} not authorized for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation.",
         invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
         return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
     }

@@ -18,34 +18,22 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common;
+using Microsoft.AspNetCore.SignalR;
 using Enigma5.App.Common.Extensions;
 
-namespace Enigma5.App.Middlewares;
+namespace Enigma5.App.Extensions;
 
-public sealed class AuthorizedPortRestrictedPageMiddleware(
-    RequestDelegate next,
-    IConfiguration configuration,
-    ILogger<AuthorizedPortRestrictedPageMiddleware> logger,
-    string path)
+public static class ConfigurationExtensions
 {
-    private readonly RequestDelegate _next = next;
-
-    private readonly IConfiguration _configuration = configuration;
-
-    private readonly ILogger _logger = logger;
-
-    private readonly PathString _path = new(path);
-
-    public async Task InvokeAsync(HttpContext context)
+    public static bool IsAuthorizedHttpInvocation(this IConfiguration configuration, HubInvocationContext hubInvocationContext, ILogger? logger = null)
     {
-        if (context.Request.Path.StartsWithSegments(_path))
+        var httpContext = hubInvocationContext.Context.GetHttpContext();
+        if(httpContext == null)
         {
-            if (!_configuration.IsAuthorizedHttpInvocation(context, _logger))
-            {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
+            logger?.LogError($"HttpContext is null for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.", hubInvocationContext.Context.ConnectionId);
+            return false;
         }
-        await _next(context);
+        return configuration.IsAuthorizedHttpInvocation(httpContext, logger);
     }
 }

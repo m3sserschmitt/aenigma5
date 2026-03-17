@@ -36,13 +36,12 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        // TODO: refactor this to support any number of arguments;
         var data = invocationContext.MethodInvocationArgument<IValidatable>(0);
 
         if (data is null)
         {
             _logger.LogDebug(
-                $"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} invocation on connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}; arguments list: {{@{nameof(invocationContext.HubMethodArguments)}}}.",
+                $"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; arguments list: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
@@ -55,7 +54,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
         if (errors.Count != 0)
         {
             _logger.LogDebug(
-                $"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} invocation on connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}; arguments list: {{@{nameof(invocationContext.HubMethodArguments)}}}.",
+                $"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; arguments list: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
@@ -64,7 +63,7 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
         }
 
         _logger.LogDebug(
-            $"Request model successfully validated for {{{nameof(invocationContext.HubMethodName)}}} invocation on connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.",
+            $"Request model successfully validated for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
             invocationContext.HubMethodName,
             invocationContext.Context.ConnectionId
             );

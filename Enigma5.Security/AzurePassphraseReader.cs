@@ -52,9 +52,7 @@ public class AzurePassphraseReader(
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error encountered while trying to read passphrase from vault.");
-            throw;
+            return null;
         }
     }
-
-    public char[]? ProvidePassphrase() => ProvidePassphraseAsync().GetAwaiter().GetResult();
 }

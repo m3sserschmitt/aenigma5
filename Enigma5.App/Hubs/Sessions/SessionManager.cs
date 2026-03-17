@@ -25,7 +25,7 @@ using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManager
+public class SessionManager(ConnectionsMapper connectionsMapper, ILogger<SessionManager> logger) : ISessionManager
 {
     private readonly object _locker = new();
 
@@ -34,6 +34,8 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
     private readonly HashSet<string> _authenticated = [];
 
     private readonly ConnectionsMapper _connectionsMapper = connectionsMapper;
+
+    private readonly ILogger _logger = logger;
 
     public IReadOnlyDictionary<string, string> Pending => _pending;
 
@@ -62,7 +64,8 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         return ThreadSafeExecution.Execute(
             () => AddPending(connectionId, token) ? token : null,
             null,
-            _locker);
+            _locker,
+            _logger);
     }
 
     private bool LogOut(string connectionId, out string? address)
@@ -108,7 +111,8 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
                 return _connectionsMapper.TryAdd(address, connectionId);
             },
             false,
-            _locker
+            _locker,
+            _logger
         );
     }
 
@@ -117,7 +121,8 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         (out string? addr) => LogOut(connectionId, out addr),
         false,
         out address,
-        _locker
+        _locker,
+        _logger
     );
 
     public bool TryGetConnectionId(string address, out string? connectionId)
@@ -125,7 +130,8 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         (out string? connId) => _connectionsMapper.TryGetConnectionId(address, out connId),
         false,
         out connectionId,
-        _locker
+        _locker,
+        _logger
     );
 
     public bool TryGetAddress(string connectionId, out string? address)
@@ -133,6 +139,7 @@ public class SessionManager(ConnectionsMapper connectionsMapper) : ISessionManag
         (out string? addr) => _connectionsMapper.TryGetAddress(connectionId, out addr),
         false,
         out address,
-        _locker
+        _locker,
+        _logger
     );
 }

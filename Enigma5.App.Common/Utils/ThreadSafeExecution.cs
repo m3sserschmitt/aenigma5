@@ -37,7 +37,7 @@ public static class ThreadSafeExecution
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Exception thrown");
+            logger?.LogError(ex, $"Exception encountered on {nameof(ThreadSafeExecution)}.");
         }
         return defaultReturn;
     }
@@ -53,7 +53,7 @@ public static class ThreadSafeExecution
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Exception thrown.");
+            logger?.LogError(ex, $"Exception encountered on {nameof(ThreadSafeExecution)}.");
         }
         outParam = default;
         return defaultReturn;

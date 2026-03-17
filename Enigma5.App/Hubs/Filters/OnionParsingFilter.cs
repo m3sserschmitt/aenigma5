@@ -63,11 +63,11 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
                         errors.AddErrors(nextErrors);
                     }
                     successResult ??= (nextResult?.Success ?? false) ? nextResult : null;
-                    _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
+                    _logger.LogDebug($"Onion from connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} successfully parsed.", invocationContext.Context.ConnectionId);
                 }
                 else
                 {
-                    _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
+                    _logger.LogDebug($"Could not parse onion from connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}", invocationContext.Context.ConnectionId);
                     errors.AddError(InvocationErrors.ONION_PARSING_FAILED);
                 }
             }
@@ -78,7 +78,7 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
             return errors.Count > 0 ? new EmptyErrorResultDto(errors) : successResult;
         }
 
-        _logger.LogDebug($"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} method: {{@{nameof(invocationContext.HubMethodArguments)}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
+        _logger.LogDebug($"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} method {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
         return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
     }
 }

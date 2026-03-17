@@ -19,7 +19,6 @@
 */
 
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -34,15 +33,15 @@ public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<Request
     {
         try
         {
-            _logger.LogDebug("Handling command {CommandName}: {@Command}", typeof(TRequest).Name, request);
+            _logger.LogDebug($"Handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
             var response = await next();
-            _logger.LogDebug("Command {CommandName} successfully completed with the following response: {@Response}", typeof(TRequest).Name, response);
+            _logger.LogDebug($"Command {{@{Common.Constants.Serilog.CommandKey}}} successfully completed with the following response: {{@{Common.Constants.Serilog.CommandResultKey}}}.", request, response);
 
             return response;
         }
         catch(Exception ex)
         {
-            _logger.LogError(ex, "Exception occurred while handling command {CommandName}: {@Command}", typeof(TRequest).Name, request);
+            _logger.LogError(ex, $"Exception occurred while handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
             return new TResponse();
         }
     }

@@ -23,8 +23,10 @@ using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class ConnectionsMapper : IReadOnlyConnectionsMapper
+public class ConnectionsMapper(ILogger<ConnectionsMapper> logger) : IReadOnlyConnectionsMapper
 {
+    private readonly ILogger _logger = logger;
+
     private readonly object _locker = new();
 
     private readonly Dictionary<string, string> _connections = [];
@@ -39,7 +41,8 @@ public class ConnectionsMapper : IReadOnlyConnectionsMapper
             return _connections.TryAdd(address, connectionId);
         },
         false,
-        _locker
+        _locker,
+        _logger
     );
 
     public bool Remove(string connectionId, out string? address)
@@ -66,7 +69,8 @@ public class ConnectionsMapper : IReadOnlyConnectionsMapper
         },
         false,
         out address,
-        _locker
+        _locker,
+        _logger
     );
 
     public bool TryGetConnectionId(string address, out string? connectionId)
@@ -74,7 +78,8 @@ public class ConnectionsMapper : IReadOnlyConnectionsMapper
         (out string? connId) => _connections.TryGetValue(address, out connId),
         false,
         out connectionId,
-        _locker
+        _locker,
+        _logger
     );
 
     public bool TryGetAddress(string connectionId, out string? address)
@@ -95,6 +100,7 @@ public class ConnectionsMapper : IReadOnlyConnectionsMapper
         },
         false,
         out address,
-        _locker
+        _locker,
+        _logger
     );
 }

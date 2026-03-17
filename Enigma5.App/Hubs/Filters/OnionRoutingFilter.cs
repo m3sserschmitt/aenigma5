@@ -47,18 +47,18 @@ public class OnionRoutingFilter(ISessionManager sessionManager, ILogger<OnionRou
             {
                 onionRouterHub.DestinationConnectionId = connectionId;
                 _logger.LogDebug(
-                    $"{{{nameof(onionParserHub.Next)}}} address resolved to connectionId {{{nameof(onionRouterHub.DestinationConnectionId)}}} for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.",
+                    $"{{{Common.Constants.Serilog.AddressKey}}} address resolved to connectionId {{{Common.Constants.Serilog.DestinationConnectionIdKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
                     onionParserHub.Next,
                     onionRouterHub.DestinationConnectionId,
                     invocationContext.Context.ConnectionId);
                 return await next(invocationContext);
             }
 
-            _logger.LogDebug($"ConnectionId not found for next address {{{nameof(onionParserHub.Next)}}}", onionParserHub.Next);
+            _logger.LogDebug($"ConnectionId not found for next address {{{Common.Constants.Serilog.AddressKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.", onionParserHub.Next, invocationContext.Context.ConnectionId);
             return await next(invocationContext);
         }
 
-        _logger.LogDebug($"Onion null next address for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.", invocationContext.Context.ConnectionId);
+        _logger.LogDebug($"Onion null next address for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.", invocationContext.Context.ConnectionId);
         return EmptyErrorResultDto.Create(InvocationErrors.ONION_ROUTING_FAILED);
     }
 }

@@ -42,7 +42,7 @@ public class AuthenticatedFilter(
     {
         if (_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
         {
-            _logger.LogDebug($"ConnectionId {{{nameof(invocationContext.Context.ConnectionId)}}} resolved to address {{address}}.", invocationContext.Context.ConnectionId, address);
+            _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} resolved to address {{{Common.Constants.Serilog.AddressKey}}}.", invocationContext.Context.ConnectionId, address);
             _ = new IdentityHubAdapter(invocationContext.Hub)
             {
                 ClientAddress = address
@@ -50,7 +50,7 @@ public class AuthenticatedFilter(
             return await next(invocationContext);
         }
 
-        _logger.LogDebug($"ConnectionId {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated thus it cannot be resolved to an address.", invocationContext.Context.ConnectionId);
+        _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} not authenticated thus it cannot be resolved to an address.", invocationContext.Context.ConnectionId);
         return EmptyErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
     }
 }

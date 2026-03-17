@@ -35,7 +35,7 @@ public class MediatorHangfireBridge(
 
     public Task Send<T>(IRequest<T> command)
     {
-        _logger.LogInformation("Executing {CommandName} for Hangfire Job: {@Command}", command.GetType().Name, command);
+        _logger.LogDebug($"Executing command {{@{Common.Constants.Serilog.CommandKey}}} for Hangfire Job.", command);
         return _mediator.Send(command);
     }
 }

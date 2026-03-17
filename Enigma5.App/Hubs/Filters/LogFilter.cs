@@ -30,7 +30,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
     public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         _logger.LogDebug(
-            $"Invoking {{{nameof(invocationContext.HubMethodName)}}} for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} with the following data: {{@{nameof(invocationContext.HubMethodArguments)}}}.",
+            $"Invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{nameof(Common.Constants.Serilog.ConnectionIdKey)}}} with the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
             invocationContext.HubMethodName,
             invocationContext.Context.ConnectionId,
             invocationContext.HubMethodArguments
@@ -45,7 +45,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
         {
             _logger.LogError(
                 ex,
-                $"Exception encountered while invoking {{{nameof(invocationContext.HubMethodName)}}} method on {{{nameof(invocationContext.Context.ConnectionId)}}} connectionId.",
+                $"Exception encountered while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} method on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );
@@ -54,7 +54,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
         if (result is null)
         {
             _logger.LogError(
-                $"Invocation of {{{nameof(invocationContext.HubMethodName)}}} for {{{nameof(invocationContext.Context.ConnectionId)}}} completed with null result.",
+                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with null result.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );
@@ -64,7 +64,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
         if (!result.Success)
         {
             _logger.LogDebug(
-                $"Invocation of {{{nameof(invocationContext.HubMethodName)}}} for {{{nameof(invocationContext.Context.ConnectionId)}}} completed with no success.",
+                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with no success.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );
@@ -72,7 +72,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
         else
         {
             _logger.LogDebug(
-                $"Invocation of {{{nameof(invocationContext.HubMethodName)}}} for {{{nameof(invocationContext.Context.ConnectionId)}}} completed successfully.",
+                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed successfully.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );

@@ -36,7 +36,8 @@ public class HubConnectionsProxy(
     NetworkGraphValidationPolicy networkGraphValidationPolicy,
     IConfiguration configuration,
     ICertificateManager certificateManager,
-    IServiceScopeFactory serviceScopeFactory)
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger<HubConnectionsProxy> logger)
 {
     private readonly IConfiguration _configuration = configuration;
 
@@ -48,7 +49,7 @@ public class HubConnectionsProxy(
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
-    private HubConnection? _localHubConnection;
+    private readonly ILogger<HubConnectionsProxy> _logger = logger;
 
     public event Func<Exception?, ConnectionVector, Task>? OnAnyClosed
     {
@@ -69,89 +70,154 @@ public class HubConnectionsProxy(
     }
 
     public bool RemoveConnection(ConnectionVector connectionVector)
-    => _connections.Remove(connectionVector);
-
-    public async Task<bool> LoadConnections()
     {
-        if (_connections.Count > 0)
+        if (_connections.Remove(connectionVector))
         {
-            return await ReloadConnections();
-        }
-
-        var localAddress = _configuration.GetAuthorizedLocalListenAddress();
-        if (string.IsNullOrWhiteSpace(localAddress))
-        {
-            return false;
-        }
-
-        _localHubConnection ??= ConnectionVector.CreateHubConnection(localAddress);
-
-        using var scope = _scopeFactory.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        var result = await mediator.Send(new GetPeersQuery());
-        if (!result.IsSuccessNotNullResultValue())
-        {
-            return false;
-        }
-
-        if (result.Value?.Count == 0)
-        {
+            _logger.LogDebug($"Connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} removed successfully.", connectionVector);
             return true;
         }
-
-        _connections = ConnectionVector.CreateConnections(
-            localAddress,
-            result.Value ?? [],
-            _networkGraphValidationPolicy,
-            _certificateManager,
-            _configuration);
-
-        foreach (var connection in _connections)
+        else
         {
-            connection.ForwardMessageRouting();
-            connection.ForwardBroadcasts();
+            _logger.LogDebug($"Connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} was not found, so it cannot be removed.", connectionVector);
+            return false;
         }
-        return true;
     }
 
-    public Task<bool> StartAsync(CancellationToken cancellationToken = default) => _connections.StartAsync(cancellationToken);
-
-    public Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default) => _connections.StartAuthenticationAsync(cancellationToken);
-
-    public Task<bool> StopAsync(CancellationToken cancellationToken = default) => _connections.StopAsync(cancellationToken);
-
-    public async Task<bool> TriggerBroadcast(CancellationToken cancellationToken = default)
+    public async Task<bool> LoadConnectionsAsync()
     {
         try
         {
-            if (_localHubConnection != null && _localHubConnection.State != HubConnectionState.Connected)
+            _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(LoadConnectionsAsync));
+            if (_connections.Count > 0)
             {
-                await _localHubConnection.StartAsync(cancellationToken);
-                await _localHubConnection.AuthenticateAsync(_certificateManager, cancellationToken);
+                _logger.LogDebug("There are previous connections available. Resyncing with the database...");
+                return await ReloadConnections();
             }
 
+            var localAddress = _configuration.GetAuthorizedLocalListenAddress();
+            if (string.IsNullOrWhiteSpace(localAddress))
+            {
+                _logger.LogError("Local listen address not configured.");
+                return false;
+            }
+
+            using var scope = _scopeFactory.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var result = await mediator.Send(new GetPeersQuery());
+            if (!result.IsSuccessNotNullResultValue())
+            {
+                _logger.LogError("Could not retrieve peers.");
+                return false;
+            }
+
+            if (result.Value?.Count == 0)
+            {
+                _logger.LogDebug("No peers found.");
+                return true;
+            }
+
+            _connections = ConnectionVector.CreateConnections(
+                localAddress,
+                result.Value ?? [],
+                _networkGraphValidationPolicy,
+                _certificateManager,
+                _configuration,
+                _logger);
+
+            foreach (var connection in _connections)
+            {
+                connection.ForwardMessageRouting();
+                connection.ForwardBroadcasts();
+                _logger.LogDebug($"Connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} configured.", connection);
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error encountered while invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}.", nameof(LoadConnectionsAsync));
+            return false;
+        }
+    }
+
+    public Task<bool> StartAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(StartAsync));
+        return _connections.StartAsync(cancellationToken);
+    }
+    public Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(StartAuthenticationAsync));
+        return _connections.StartAuthenticationAsync(cancellationToken);
+    }
+
+    public Task<bool> StopAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(StopAsync));
+        return _connections.StopAsync(cancellationToken);
+    }
+
+    public async Task<bool> TriggerBroadcastAsync(CancellationToken cancellationToken = default)
+    {
+        HubConnection? localHubConnection = null;
+        try
+        {
+            _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(TriggerBroadcastAsync));
             var newAddresses = _connections
             .Where(item => item.TargetAddress.IsValidAddress() && item.Authenticated)
             .Select(item => item.TargetAddress ?? string.Empty).ToList();
-            var result = _localHubConnection != null ?
-            await _localHubConnection.InvokeAsync<InvocationResultDto<bool>>(
+            localHubConnection = await GetLocalHubConnectionAsync(cancellationToken);
+            if (localHubConnection == null)
+            {
+                _logger.LogError("Could not create connection to local Hub. Aborting...");
+                return false;
+            }
+            var result = await localHubConnection.InvokeAsync<InvocationResultDto<bool>>(
                 nameof(IEnigmaHub.TriggerBroadcast), new TriggerBroadcastRequestDto(newAddresses), cancellationToken: cancellationToken
-            ) : null;
+            );
             return result?.Data ?? false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // TODO: log exception;
+            _logger.LogError(ex, $"Error encountered while invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}.", nameof(TriggerBroadcastAsync));
             return false;
         }
+        finally
+        {
+            if (localHubConnection != null)
+            {
+                await localHubConnection.StopAsync(cancellationToken);
+            }
+        }
+    }
+
+    private async Task<HubConnection?> GetLocalHubConnectionAsync(CancellationToken cancellationToken = default)
+    {
+        var localAddress = _configuration.GetAuthorizedLocalListenAddress();
+        if (string.IsNullOrWhiteSpace(localAddress))
+        {
+            _logger.LogError("Local listen address not configured.");
+            return null;
+        }
+
+        var localHubConnection = ConnectionVector.CreateHubConnection(localAddress);
+
+        await localHubConnection.StartAsync(cancellationToken);
+        if (!await localHubConnection.AuthenticateAsync(_certificateManager, cancellationToken))
+        {
+            _logger.LogError("Could not authenticate to local Hub. Aborting...");
+            await localHubConnection.StopAsync(cancellationToken);
+            return null;
+        }
+        return localHubConnection;
     }
 
     private async Task<bool> ReloadConnections()
     {
         try
         {
-            var newProxy = new HubConnectionsProxy(_networkGraphValidationPolicy, _configuration, _certificateManager, _scopeFactory);
-            await newProxy.LoadConnections();
+            _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(ReloadConnections));
+            var newProxy = new HubConnectionsProxy(_networkGraphValidationPolicy, _configuration, _certificateManager, _scopeFactory, _logger);
+            await newProxy.LoadConnectionsAsync();
 
             var connectionsToBeRemoved = _connections.Except(newProxy._connections).ToList();
             _connections.IntersectWith(newProxy._connections);
@@ -159,14 +225,14 @@ public class HubConnectionsProxy(
 
             foreach (var connection in connectionsToBeRemoved)
             {
+                _logger.LogDebug($"Closing connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}}...", connection);
                 await connection.StopAsync();
             }
             return true;
         }
         catch (Exception ex)
         {
-            // TODO: log exception
-            Console.WriteLine($"Exception while trying to reload connections: {ex.Message}.");
+            _logger.LogError(ex, $"Error while invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}.", nameof(ReloadConnections));
             return false;
         }
     }
