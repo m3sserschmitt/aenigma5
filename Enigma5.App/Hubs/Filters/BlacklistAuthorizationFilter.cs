@@ -26,17 +26,17 @@ using Enigma5.App.Extensions;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class AuthorizedServiceOnlyFilter(IConfiguration configuration, ILogger<AuthorizedServiceOnlyFilter> logger) : BaseFilter<IEnigmaHub, AuthorizedServiceOnlyAttribute>
+public class BlacklistAuthorizationFilter(IConfiguration configuration, ILogger<BlacklistAuthorizationFilter> logger) : BaseFilter<IEnigmaHub, BlacklistAuthorizationAttribute>
 {
     private readonly IConfiguration _configuration = configuration;
 
-    private readonly ILogger<AuthorizedServiceOnlyFilter> _logger = logger;
+    private readonly ILogger<BlacklistAuthorizationFilter> _logger = logger;
 
     protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        if (_configuration.IsAuthorizedHttpInvocation(invocationContext, _logger))
+        if (_configuration.IsHubMethodCallAuthorized(invocationContext, _logger))
         {
             _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} authorized for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation.",
             invocationContext.Context.ConnectionId, invocationContext.HubMethodName);

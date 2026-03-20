@@ -32,7 +32,11 @@ public static class Constants
 
     public static readonly int MaxSharedDataSize = 1024 * 512;
 
-    public const string XImpersonateServiceHeader = "X-Impersonate-Service";
+    public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
+
+    public const string HubConnectionLocalIpKey = "HubConnectionLocalIp";
+
+    public const string HubConnectionLocalPortKey = "HubConnectionLocalPort";
 
     public const string OnionRoutingEndpoint = "OnionRouting";
 
@@ -43,6 +47,8 @@ public static class Constants
     public const string ShareEndpoint = "Share";
 
     public const string VertexEndpoint = "Vertex";
+
+    public const string LocalVertexEndpoint = "LocalVertex";
 
     public const string FileEndpoint = "File";
 

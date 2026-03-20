@@ -20,7 +20,6 @@
 
 using System.Reflection;
 using Enigma5.App.Attributes;
-using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
@@ -34,29 +33,15 @@ namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub
 {
-    public bool IsAuthorizedService
-    {
-        get
-        {
-            var authorizedLocalAddress = _configuration.GetAuthorizedLocalListenAddress();
-            if (authorizedLocalAddress == null)
-            {
-                return false;
-            }
-            var parsedAuthorizedLocalAddress = new Uri(authorizedLocalAddress);
-            return Context.GetHttpContext()?.Connection.LocalPort == parsedAuthorizedLocalAddress.Port;
-        }
-    }
-
     protected async Task<bool> IsLocalAddress(string publicKey)
     => await _certificateManager.GetAddressAsync() == CertificateHelper.GetHexAddressFromPublicKey(publicKey);
 
     protected async Task<bool> Authenticate(string publicKey, string signature)
-    => _sessionManager.Authenticate(
+    => await _sessionManager.AuthenticateAsync(
             Context.ConnectionId,
             publicKey!,
             signature!,
-            await IsLocalAddress(publicKey!) ? Context.Items[Common.Constants.XImpersonateServiceHeader] as string : null);
+            await IsLocalAddress(publicKey!) ? Context.Items[Common.Constants.XImpersonateServiceHeaderKey] as string : null);
 
     protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
@@ -113,7 +98,8 @@ public partial class RoutingHub
 
         foreach (var address in result.Value ?? [])
         {
-            if (_sessionManager.TryGetConnectionId(address, out string? connectionId))
+            var connectionId = await _sessionManager.TryGetConnectionIdAsync(address);
+            if (connectionId != null)
             {
                 foreach (var adjacencyList in adjacencyLists)
                 {
@@ -165,9 +151,6 @@ public partial class RoutingHub
         return result.Value ?? [];
     }
 
-    private string? MapAddress(string address)
-    => _sessionManager.TryGetConnectionId(address, out var connectionId) ? connectionId : null;
-
     private async Task SyncPendingMessages()
     {
         foreach (var address in await GetNeighborAddressesAsync())
@@ -178,7 +161,7 @@ public partial class RoutingHub
                 continue;
             }
 
-            var connectionId = MapAddress(address);
+            var connectionId = await _sessionManager.TryGetConnectionIdAsync(address);
             if (string.IsNullOrWhiteSpace(connectionId))
             {
                 continue;

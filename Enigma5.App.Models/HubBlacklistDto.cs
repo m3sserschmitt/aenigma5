@@ -18,15 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Hubs.Extensions;
-using Enigma5.App.Models.Contracts.Hubs;
-using Microsoft.AspNetCore.SignalR;
+using System.Text.Json.Serialization;
 
-namespace Enigma5.App.Hubs.Adapters;
+namespace Enigma5.App.Models;
 
-public class AuthorizedServiceHubAdapter(Hub hub) : IAuthorizedServiceHub
-{
-    private readonly IAuthorizedServiceHub? _hub = hub.As<IAuthorizedServiceHub>();
-
-    public bool IsAuthorizedService => _hub?.IsAuthorizedService ?? false;
-}
+[method: JsonConstructor]
+public record class HubBlacklistDto(
+    string? Endpoint,
+    List<HubBlacklistItemDto>? Items
+);

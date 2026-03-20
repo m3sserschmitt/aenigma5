@@ -115,7 +115,7 @@ public class ConnectionVector : IDisposable
         {
             if (!string.IsNullOrWhiteSpace(impersonateServiceAddress))
             {
-                options.Headers.Add(Constants.XImpersonateServiceHeader, impersonateServiceAddress);
+                options.Headers.Add(Constants.XImpersonateServiceHeaderKey, impersonateServiceAddress);
             }
         });
         _target = CreateHubConnection(targetUrl, options =>
@@ -192,6 +192,16 @@ public class ConnectionVector : IDisposable
         try
         {
             _logger.LogDebug($"Invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAsync), this);
+            if (_target.State == HubConnectionState.Disconnected)
+            {
+                _logger.LogDebug($"Starting target connection for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+                await _target.StartAsync(cancellationToken);
+            }
+            else
+            {
+                _logger.LogDebug($"Target already started for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+            }
+            
             if (_source.State == HubConnectionState.Disconnected)
             {
                 _logger.LogDebug($"Starting source connection for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
@@ -202,21 +212,12 @@ public class ConnectionVector : IDisposable
                 _logger.LogDebug($"Source already started for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
             }
 
-            if (_target.State == HubConnectionState.Disconnected)
-            {
-                _logger.LogDebug($"Starting target connection for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-                await _target.StartAsync(cancellationToken);
-            }
-            else
-            {
-                _logger.LogDebug($"Target already started for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-            }
-
             return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAsync), this);
+            await OnTargetClosed(ex);
             return false;
         }
     }
@@ -236,6 +237,7 @@ public class ConnectionVector : IDisposable
         if (!Connected)
         {
             _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started. Aborting...", this);
+            await StopAsync(cancellationToken);
             return false;
         }
 
@@ -245,7 +247,7 @@ public class ConnectionVector : IDisposable
             SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
             SourceAddress = reversedVector.TargetAddress;
 
-            return Authenticated;
+            return Authenticated || (await StopAsync(cancellationToken) && false);
         }
 
         try
@@ -253,6 +255,7 @@ public class ConnectionVector : IDisposable
             if (!await RequestTargetVertexAsync(cancellationToken))
             {
                 _logger.LogError($"Requesting target vertex failed for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}. Aborting...", this);
+                await StopAsync(cancellationToken);
                 return false;
             }
 
@@ -261,6 +264,7 @@ public class ConnectionVector : IDisposable
             if (!nonce.Success || nonce.Data is null)
             {
                 _logger.LogError($"Invalid nonce returned from target on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                await StopAsync(cancellationToken);
                 return false;
             }
 
@@ -269,6 +273,7 @@ public class ConnectionVector : IDisposable
             if (signature is null)
             {
                 _logger.LogError($"Signing nonce failed for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                await StopAsync(cancellationToken);
                 return false;
             }
 
@@ -293,14 +298,15 @@ public class ConnectionVector : IDisposable
                 SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
                 SourceAddress = reversedVector.TargetAddress;
 
-                return Authenticated;
+                return Authenticated || (await StopAsync(cancellationToken) && false);
             }
 
-            return TargetAuthenticated;
+            return TargetAuthenticated || (await StopAsync(cancellationToken) && false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAuthenticationAsync), this);
+            await StopAsync(cancellationToken);
             return false;
         }
     }
@@ -383,19 +389,19 @@ public class ConnectionVector : IDisposable
         }
     }
 
-    private Task OnSourceClosed(Exception? ex)
+    private async Task OnSourceClosed(Exception? ex)
     {
         _logger.LogError(ex, $"Source closed on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
         SourceAuthenticated = false;
-        return _target.StopAsync();
+        await StopAsync(_target);
     }
 
-    private Task OnTargetClosed(Exception? ex)
+    private async Task OnTargetClosed(Exception? ex)
     {
         _logger.LogError(ex, $"Target closed on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
         TargetAuthenticated = false;
-        _source.StopAsync();
-        return Closed?.Invoke(ex, this) ?? Task.CompletedTask;
+        await StopAsync(_source);
+        _ = Task.Run(() => Closed?.Invoke(ex, this));
     }
 
     private ConnectionVector Reversed() => new(this, true);

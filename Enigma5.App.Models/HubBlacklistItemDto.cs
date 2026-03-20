@@ -18,17 +18,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Hubs.Sessions.Contracts;
+using System.Text.Json.Serialization;
 
-public interface ISessionManager
-{
-    Task<string?> AddPendingAsync(string connectionId);
+namespace Enigma5.App.Models;
 
-    Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
-
-    Task<string?> RemoveAsync(string connectionId);
-
-    Task<string?> TryGetConnectionIdAsync(string address);
-
-    Task<string?> TryGetAddressAsync(string connectionId);
-}
+[method: JsonConstructor]
+public record class HubBlacklistItemDto(
+    List<string>? Methods
+);

@@ -22,6 +22,7 @@ using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Resources.Queries;
+using Enigma5.Security.Contracts;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -85,6 +86,19 @@ public static class Api
         }
 
         var result = await commandRouter.Send(new GetVertexQuery(address));
+        return result.CreateGetResponse();
+    }
+
+    public static async Task<IResult> GetLocalVertex(
+        [FromServices] IMediator commandRouter,
+        [FromServices] ICertificateManager certificateManager)
+    {
+        var localAddress = await certificateManager.GetAddressAsync();
+        if (string.IsNullOrWhiteSpace(localAddress))
+        {
+            return Results.Problem();
+        }
+        var result = await commandRouter.Send(new GetVertexQuery(localAddress));
         return result.CreateGetResponse();
     }
 

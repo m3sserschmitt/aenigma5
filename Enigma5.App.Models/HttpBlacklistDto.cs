@@ -18,9 +18,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models.Contracts.Hubs;
+using System.Text.Json.Serialization;
 
-public interface IAuthorizedServiceHub
-{
-    bool IsAuthorizedService { get; }
-}
+namespace Enigma5.App.Models;
+
+[method: JsonConstructor]
+public record class HttpBlacklistDto(
+    string? Endpoint,
+    List<HttpBlacklistItemDto>? Items
+);

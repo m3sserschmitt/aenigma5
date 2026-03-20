@@ -53,7 +53,7 @@ public class StartupConfiguration(IConfiguration configuration)
         {
             options.AddFilter<LogFilter>();
             options.AddFilter<AuthenticatedFilter>();
-            options.AddFilter<AuthorizedServiceOnlyFilter>();
+            options.AddFilter<BlacklistAuthorizationFilter>();
             options.AddFilter<ValidateModelFilter>();
             options.AddFilter<OnionParsingFilter>();
             options.AddFilter<OnionRoutingFilter>();
@@ -87,7 +87,7 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseRouting();
         app.UseAntiforgery();
         app.UseStaticFiles();
-        app.UseMiddleware<AuthorizedPortRestrictedPageMiddleware>($"/{Constants.DashboardPageEndpoint}");
+        app.UseMiddleware<HttpBlacklistAuthorizationMiddleware>();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
@@ -99,6 +99,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
             endpoints.MapGet(Constants.VerticesEndpoint, Api.GetVertices);
             endpoints.MapGet(Constants.VertexEndpoint, Api.GetVertex);
+            endpoints.MapGet(Constants.LocalVertexEndpoint, Api.GetLocalVertex);
             endpoints.MapPost(Constants.FileEndpoint, Api.PostFile)
                 .Accepts<IFormFile>("multipart/form-data")
                 .WithMetadata(new IgnoreAntiforgeryTokenAttribute())

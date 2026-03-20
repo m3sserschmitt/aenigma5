@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,17 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Hubs.Sessions.Contracts;
+namespace Enigma5.App.Attributes;
 
-public interface ISessionManager
-{
-    Task<string?> AddPendingAsync(string connectionId);
-
-    Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
-
-    Task<string?> RemoveAsync(string connectionId);
-
-    Task<string?> TryGetConnectionIdAsync(string address);
-
-    Task<string?> TryGetAddressAsync(string connectionId);
-}
+[AttributeUsage(AttributeTargets.Method)]
+public class BlacklistAuthorizationAttribute: Attribute { }

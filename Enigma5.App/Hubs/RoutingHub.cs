@@ -29,6 +29,7 @@ using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Models.Contracts.Hubs;
+using Enigma5.App.Extensions;
 
 namespace Enigma5.App.Hubs;
 
@@ -36,14 +37,12 @@ public partial class RoutingHub(
     ISessionManager sessionManager,
     ICertificateManager certificateManager,
     IMediator commandRouter,
-    IConfiguration configuration,
     ILogger<RoutingHub> logger) :
     Hub,
     IEnigmaHub,
     IOnionParsingHub,
     IOnionRoutingHub,
-    IIdentityHub,
-    IAuthorizedServiceHub
+    IIdentityHub
 {
     private readonly ISessionManager _sessionManager = sessionManager;
 
@@ -53,8 +52,6 @@ public partial class RoutingHub(
 
     private readonly ILogger<RoutingHub> _logger = logger;
 
-    private readonly IConfiguration _configuration = configuration;
-
     public string? DestinationConnectionId { get; set; }
 
     public string? Next { get; set; }
@@ -63,9 +60,10 @@ public partial class RoutingHub(
 
     public string? ClientAddress { get; set; }
 
-    public Task<InvocationResultDto<string>> GenerateToken()
+    [BlacklistAuthorization]
+    public async Task<InvocationResultDto<string>> GenerateToken()
     {
-        var nonce = _sessionManager.AddPending(Context.ConnectionId);
+        var nonce = await _sessionManager.AddPendingAsync(Context.ConnectionId);
 
         if (nonce is null)
         {
@@ -76,9 +74,10 @@ public partial class RoutingHub(
                 );
         }
 
-        return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
+        return nonce is not null ? Ok(nonce) : Error<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<VertexDto>> GetLocalVertex()
     {
         var localAddress = await _certificateManager.GetAddressAsync();
@@ -95,6 +94,7 @@ public partial class RoutingHub(
     }
 
     [Authenticated]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull()
     {
         if (ClientAddress is null)
@@ -121,6 +121,7 @@ public partial class RoutingHub(
     }
 
     [Authenticated]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> Cleanup()
     {
         if (ClientAddress is null)
@@ -146,6 +147,7 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request)
     {
         var authenticated = await Authenticate(request.PublicKey!, request.Signature!);
@@ -162,6 +164,7 @@ public partial class RoutingHub(
 
     [Authenticated]
     [ValidateModel]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto broadcastAdjacencyList)
     {
         var result = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
@@ -179,7 +182,7 @@ public partial class RoutingHub(
 
     [ValidateModel]
     [Authenticated]
-    [AuthorizedServiceOnly]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request)
     {
         var localVertex = await AddNewAdjacencies(request.NewAddresses ?? []);
@@ -200,6 +203,7 @@ public partial class RoutingHub(
     [OnionParsing]
     [OnionRouting]
     [Authenticated]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request)
     {
         bool success = false;
@@ -218,7 +222,8 @@ public partial class RoutingHub(
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} disconnected.", Context.ConnectionId);
-        if (!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
+        var removedAddress = await _sessionManager.RemoveAsync(Context.ConnectionId);
+        if (removedAddress == null)
         {
             _logger.LogError($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} disconnected, but the connection could not be found into Session Manager.", Context.ConnectionId);
             return;
@@ -236,17 +241,7 @@ public partial class RoutingHub(
 
     public override async Task OnConnectedAsync()
     {
-        var impersonateServiceHeader = Context.GetHttpContext()?.Request.Headers[Common.Constants.XImpersonateServiceHeader];
-        if (!impersonateServiceHeader.HasValue)
-        {
-            return;
-        }
-        var impersonateServiceHeaderString = impersonateServiceHeader.ToString();
-        if (string.IsNullOrWhiteSpace(impersonateServiceHeaderString))
-        {
-            return;
-        }
-        Context.Items[Common.Constants.XImpersonateServiceHeader] = impersonateServiceHeaderString;
+        Context.MapConnectionDetails();
         await base.OnConnectedAsync();
     }
 }

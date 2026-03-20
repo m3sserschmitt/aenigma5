@@ -40,7 +40,8 @@ public class AuthenticatedFilter(
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        if (_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
+        var address = await _sessionManager.TryGetAddressAsync(invocationContext.Context.ConnectionId);
+        if (address != null)
         {
             _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} resolved to address {{{Common.Constants.Serilog.AddressKey}}}.", invocationContext.Context.ConnectionId, address);
             _ = new IdentityHubAdapter(invocationContext.Hub)

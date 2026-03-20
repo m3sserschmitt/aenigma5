@@ -94,7 +94,7 @@ public class HubConnectionsProxy(
                 return await ReloadConnections();
             }
 
-            var localAddress = _configuration.GetAuthorizedLocalListenAddress();
+            var localAddress = _configuration.GetHttpEndpoint();
             if (string.IsNullOrWhiteSpace(localAddress))
             {
                 _logger.LogError("Local listen address not configured.");
@@ -192,7 +192,7 @@ public class HubConnectionsProxy(
 
     private async Task<HubConnection?> GetLocalHubConnectionAsync(CancellationToken cancellationToken = default)
     {
-        var localAddress = _configuration.GetAuthorizedLocalListenAddress();
+        var localAddress = _configuration.GetControlHttpEndpoint();
         if (string.IsNullOrWhiteSpace(localAddress))
         {
             _logger.LogError("Local listen address not configured.");

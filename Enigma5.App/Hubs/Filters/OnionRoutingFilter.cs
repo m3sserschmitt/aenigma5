@@ -43,7 +43,8 @@ public class OnionRoutingFilter(ISessionManager sessionManager, ILogger<OnionRou
         {
             var onionRouterHub = new OnionRoutingHubAdapter(invocationContext.Hub);
 
-            if(_sessionManager.TryGetConnectionId(onionParserHub.Next, out string? connectionId))
+            var connectionId = await _sessionManager.TryGetConnectionIdAsync(onionParserHub.Next);
+            if(connectionId != null)
             {
                 onionRouterHub.DestinationConnectionId = connectionId;
                 _logger.LogDebug(

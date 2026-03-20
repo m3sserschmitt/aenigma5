@@ -18,17 +18,17 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Hubs.Sessions.Contracts;
+using Microsoft.AspNetCore.SignalR;
 
-public interface ISessionManager
+namespace Enigma5.App.Extensions;
+
+public static class HubCallerContextExtensions
 {
-    Task<string?> AddPendingAsync(string connectionId);
-
-    Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
-
-    Task<string?> RemoveAsync(string connectionId);
-
-    Task<string?> TryGetConnectionIdAsync(string address);
-
-    Task<string?> TryGetAddressAsync(string connectionId);
+    public static void MapConnectionDetails(this HubCallerContext context)
+    {
+        var httpContext = context.GetHttpContext();
+        context.Items[Common.Constants.XImpersonateServiceHeaderKey] = httpContext?.Request.Headers[Common.Constants.XImpersonateServiceHeaderKey].FirstOrDefault()?.ToString();
+        context.Items[Common.Constants.HubConnectionLocalIpKey] = httpContext?.Connection.LocalIpAddress;
+        context.Items[Common.Constants.HubConnectionLocalPortKey] = httpContext?.Connection.LocalPort;
+    }
 }

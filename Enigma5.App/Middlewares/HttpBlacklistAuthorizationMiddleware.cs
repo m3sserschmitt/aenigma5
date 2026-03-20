@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,7 +18,29 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Attributes;
+using Enigma5.App.Extensions;
 
-[AttributeUsage(AttributeTargets.Method)]
-public class AuthorizedServiceOnlyAttribute: Attribute { }
+namespace Enigma5.App.Middlewares;
+
+public sealed class HttpBlacklistAuthorizationMiddleware(
+    RequestDelegate next,
+    IConfiguration configuration,
+    ILogger<HttpBlacklistAuthorizationMiddleware> logger
+    )
+{
+    private readonly RequestDelegate _next = next;
+
+    private readonly IConfiguration _configuration = configuration;
+
+    private readonly ILogger _logger = logger;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (!_configuration.IsHttpRequestCallAuthorized(context, _logger))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+        await _next(context);
+    }
+}

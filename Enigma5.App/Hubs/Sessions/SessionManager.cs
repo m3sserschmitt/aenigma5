@@ -22,20 +22,26 @@ using Enigma5.App.Common.Utils;
 using Enigma5.Crypto.Extensions;
 using Enigma5.Crypto;
 using Enigma5.App.Hubs.Sessions.Contracts;
+using Enigma5.Security.Contracts;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class SessionManager(ConnectionsMapper connectionsMapper, ILogger<SessionManager> logger) : ISessionManager
+public class SessionManager(
+    ConnectionsMapper connectionsMapper,
+    ICertificateManager certificateManager,
+    ILogger<SessionManager> logger) : ISessionManager
 {
-    private readonly object _locker = new();
-
     private readonly Dictionary<string, string> _pending = [];
 
     private readonly HashSet<string> _authenticated = [];
 
     private readonly ConnectionsMapper _connectionsMapper = connectionsMapper;
 
+    private readonly ICertificateManager _certificateManager = certificateManager;
+
     private readonly ILogger _logger = logger;
+
+    private readonly SimpleSingleThreadRunner _singleThreadExecutor = new();
 
     public IReadOnlyDictionary<string, string> Pending => _pending;
 
@@ -55,18 +61,15 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ILogger<Session
         return _pending.Remove(connectionId) && _authenticated.Add(connectionId);
     }
 
-    public string? AddPending(string connectionId)
-    {
-        var tokenData = new byte[Common.Constants.AuthTokenSize];
-        new Random().NextBytes(tokenData);
-        var token = Convert.ToBase64String(tokenData);
-
-        return ThreadSafeExecution.Execute(
-            () => AddPending(connectionId, token) ? token : null,
-            null,
-            _locker,
-            _logger);
-    }
+    public Task<string?> AddPendingAsync(string connectionId)
+    => _singleThreadExecutor.RunAsync(() =>
+        {
+            var nonceData = new byte[Common.Constants.AuthTokenSize];
+            new Random().NextBytes(nonceData);
+            var nonce = Convert.ToBase64String(nonceData);
+            return AddPending(connectionId, nonce) ? nonce : null;
+        },
+        _logger);
 
     private bool LogOut(string connectionId, out string? address)
     {
@@ -75,71 +78,64 @@ public class SessionManager(ConnectionsMapper connectionsMapper, ILogger<Session
         return _connectionsMapper.Remove(connectionId, out address);
     }
 
-    public bool Authenticate(string connectionId, string publicKey, string signature, string? impersonateServiceAddress)
-    {
-        return ThreadSafeExecution.Execute(
-            () =>
+    public Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress)
+    => _singleThreadExecutor.RunAsync(
+            async () =>
             {
                 using var signatureVerifier = SealProvider.Factory.CreateVerifier(publicKey);
                 var decodedSignature = Convert.FromBase64String(signature);
-                var token = decodedSignature.GetDataFromSignature(publicKey);
+                var nonce = decodedSignature.GetDataFromSignature(publicKey);
 
-                if (token is null)
+                if (nonce is null)
                 {
                     return false;
                 }
 
-                var encodedToken = Convert.ToBase64String(token);
+                var encodedNonce = Convert.ToBase64String(nonce);
 
-                if (encodedToken is null)
+                if (encodedNonce is null)
                 {
                     return false;
                 }
 
-                if (!_pending.TryGetValue(connectionId, out string? t) ||
-                    t != encodedToken ||
+                var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
+                if (address == null)
+                {
+                    return false;
+                }
+
+                var impersonateAddressNull = string.IsNullOrWhiteSpace(impersonateServiceAddress);
+                if (!_pending.TryGetValue(connectionId, out string? expectedNonce) ||
+                    expectedNonce != encodedNonce ||
                     !signatureVerifier.Verify(decodedSignature) ||
-                    !Authenticate(connectionId)
+                    !Authenticate(connectionId) ||
+                    (!impersonateAddressNull && await _certificateManager.GetAddressAsync() != address)
                 )
                 {
                     return false;
                 }
 
-                var address = string.IsNullOrWhiteSpace(impersonateServiceAddress)
-                ? CertificateHelper.GetHexAddressFromPublicKey(publicKey)
-                : impersonateServiceAddress;
-                return _connectionsMapper.TryAdd(address, connectionId);
+                address = !impersonateAddressNull ? impersonateServiceAddress : address;
+                return _connectionsMapper.TryAdd(address!, connectionId);
             },
-            false,
-            _locker,
             _logger
         );
-    }
 
-    public bool Remove(string connectionId, out string? address)
-    => ThreadSafeExecution.Execute(
-        (out string? addr) => LogOut(connectionId, out addr),
-        false,
-        out address,
-        _locker,
+    public Task<string?> RemoveAsync(string connectionId)
+    => _singleThreadExecutor.RunAsync(
+        () => LogOut(connectionId, out var address) ? address : null,
         _logger
     );
 
-    public bool TryGetConnectionId(string address, out string? connectionId)
-    => ThreadSafeExecution.Execute(
-        (out string? connId) => _connectionsMapper.TryGetConnectionId(address, out connId),
-        false,
-        out connectionId,
-        _locker,
+    public Task<string?> TryGetConnectionIdAsync(string address)
+    => _singleThreadExecutor.RunAsync(
+        () => _connectionsMapper.TryGetConnectionId(address, out var connectionId) ? connectionId : null,
         _logger
     );
 
-    public bool TryGetAddress(string connectionId, out string? address)
-    => ThreadSafeExecution.Execute(
-        (out string? addr) => _connectionsMapper.TryGetAddress(connectionId, out addr),
-        false,
-        out address,
-        _locker,
+    public Task<string?> TryGetAddressAsync(string connectionId)
+    => _singleThreadExecutor.RunAsync(
+        () => _connectionsMapper.TryGetAddress(connectionId, out var address) ? address : null,
         _logger
     );
 }

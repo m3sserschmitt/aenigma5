@@ -20,9 +20,6 @@
 
 using Enigma5.App.Common.Enums;
 using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Http;
-using System.Net;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Common.Extensions;
 
@@ -34,55 +31,16 @@ public static class ConfigurationExtensions
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
-    public static string? GetLocalListenAddress(this IConfiguration configuration)
+    public static string? GetHttpEndpoint(this IConfiguration configuration)
     => configuration.GetStringValue("Kestrel:EndPoints:Http:Url")?.Trim('/', ' ');
 
-    public static string? GetAuthorizedLocalListenAddress(this IConfiguration configuration)
-    => configuration.GetStringValue("Kestrel:EndPoints:HttpAuthorized:Url")?.Trim('/', ' ');
-
-    public static bool IsAuthorizedHttpInvocation(this IConfiguration configuration, HttpContext httpContext, ILogger? logger = null)
-    {
-        var authorizedLocalAddress = configuration.GetAuthorizedLocalListenAddress();
-        if (string.IsNullOrWhiteSpace(authorizedLocalAddress))
-        {
-            logger?.LogError($"Authorized local address not found into config.");
-            return false;
-        }
-
-        if (!Uri.TryCreate(authorizedLocalAddress, UriKind.Absolute, out var uri))
-        {
-            logger?.LogError($"Authorized local address could not be parsed.");
-            return false;
-        }
-
-        if (!IPAddress.TryParse(uri.Host, out var authorizedIp))
-        {
-            logger?.LogError($"Could not parse authorized IP.");
-            return false;
-        }
-
-        var connectionLocalPort = httpContext.Connection.LocalPort;
-
-        if (authorizedIp.Equals(IPAddress.Any))
-        {
-            return uri.Port == connectionLocalPort;
-        }
-
-        var connectionLocalIp = httpContext.Connection.LocalIpAddress;
-
-        if (connectionLocalIp == null)
-        {
-            logger?.LogError($"Local authorized IP resolved to null.");
-            return false;
-        }
-
-        return connectionLocalIp.Normalize().Equals(authorizedIp.Normalize()) && uri.Port == connectionLocalPort;
-    }
+    public static string? GetControlHttpEndpoint(this IConfiguration configuration)
+    => configuration.GetStringValue("Kestrel:EndPoints:HttpControl:Url")?.Trim('/', ' ');
 
     public static string? GetHostname(this IConfiguration configuration)
     => configuration.GetStringValue("Hostname")?.Trim('/', ' ');
 
-    public static string? GetAvailableHttpService(this IConfiguration configuration)
+    public static string? GetPublicEndpoint(this IConfiguration configuration)
     {
         var service = configuration.GetHostname();
         if(string.IsNullOrWhiteSpace(service))
@@ -95,7 +53,7 @@ public static class ConfigurationExtensions
     public static string? GetSharedDataUrl(this IConfiguration configuration, string tag)
     {
         
-        var service = configuration.GetAvailableHttpService();
+        var service = configuration.GetPublicEndpoint();
         if(string.IsNullOrWhiteSpace(service))
         {
             return null;
@@ -109,7 +67,7 @@ public static class ConfigurationExtensions
 
     public static string? GetFileUrl(this IConfiguration configuration, string tag)
     {
-        var service = configuration.GetAvailableHttpService();
+        var service = configuration.GetPublicEndpoint();
         if(string.IsNullOrWhiteSpace(service))
         {
             return null;
