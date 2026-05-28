@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Common.Utils;
 
-public sealed class SimpleSingleThreadRunner : IDisposable
+public class SimpleSingleThreadRunner : IDisposable
 {
     private const string EXCEPTION_MESSAGE = "Exception encountered while doing work on single thread executor";
 

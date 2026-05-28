@@ -1,45 +1,62 @@
+/*
+    Aenigma - Federal messaging system
+    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+using Enigma5.App.Resources.Contracts;
+
 namespace Enigma5.App.Resources.Handlers;
 
-public class CommandResult<T>
+public class CommandResult<T> : ICommandResult
 {
     public CommandResult()
     {
-        Value = default;
-        Success = false;
+        _value = default;
+        _success = false;
     }
 
-    protected CommandResult(bool success)
+    public CommandResult(T? value, bool success)
     {
-        Value = default;
-        Success = success;
+        _value = value;
+        _success = success;
     }
 
-    protected CommandResult(T? value, bool success)
-    {
-        Value = value;
-        Success = success;
-    }
+    private T? _value;
 
-    public T? Value { get; private set; }
+    private bool _success;
 
-    public bool Success { get; private set; }
+    public T? Value { get => _value; }
 
-    public static CommandResult<V> CreateResultSuccess<V>() => new(true);
+    public bool Success { get => _success; }
+
+    public static CommandResult<V> CreateResultSuccess<V>() => new(default, true);
 
     public static CommandResult<V> CreateResultSuccess<V>(V? value) => new(value, true);
 
-    public static CommandResult<V> CreateResultFailure<V>() => new(false);
+    public static CommandResult<V> CreateResultFailure<V>() => new(default, false);
 
     public static CommandResult<V> CreateResultFailure<V>(V? value) => new(value, false);
+
+    public void ToFailure()
+    {
+        _value = default;
+        _success = false;
+    }
 }
 
-public class CommandResult : CommandResult<object>
-{
-    public CommandResult() : base() { }
-
-    protected CommandResult(bool success) : base(success) { }
-
-    public static CommandResult CreateResultFailure() => new(false);
-
-    public static CommandResult CreateResultSuccess() => new(true);
-}
+public class CommandResult : CommandResult<object> { }

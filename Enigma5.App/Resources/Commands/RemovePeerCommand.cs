@@ -23,7 +23,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class RemovePeerCommand(long id): IRequest<CommandResult<bool>>
+public class RemovePeerCommand(long id): IRequest<CommandResult<int>>
 {
     public long Id { get; private set; } = id;
 }

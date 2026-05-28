@@ -19,6 +19,7 @@
 */
 
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
@@ -26,18 +27,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupFilesHandler(EnigmaDbContext context, IConfiguration configuration)
-: IRequestHandler<CleanupFilesCommand, CommandResult<int>>
+public class CleanupFilesHandler(
+    EnigmaDbContext context,
+    IConfiguration configuration,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<CleanupFilesCommand, CommandResult<int>>
 {
     private readonly IConfiguration _configuration = configuration;
-    
+
     private readonly EnigmaDbContext _context = context;
+
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
 
     public async Task<CommandResult<int>> Handle(CleanupFilesCommand request, CancellationToken cancellationToken)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
         var webContentDirectory = _configuration.GetWebContentDirectory();
         var filesToBeRemoved = await _context.Files.Where(item => time > item.Timestamp).ToListAsync(cancellationToken: cancellationToken);
+        var result = 0;
         foreach (var fileToBeRemoved in filesToBeRemoved)
         {
             if (!string.IsNullOrEmpty(webContentDirectory) && Directory.Exists(webContentDirectory))
@@ -48,8 +55,13 @@ public class CleanupFilesHandler(EnigmaDbContext context, IConfiguration configu
                     File.Delete(fullPath);
                 }
             }
-            _context.Remove(fileToBeRemoved);
+            cancellationToken.ThrowIfCancellationRequested();
+            result += await _dbSingleThreadRunner.RunAsync(() =>
+            {
+                _context.Remove(fileToBeRemoved);
+                return _context.SaveChanges();
+            });
         }
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        return CommandResult<int>.CreateResultSuccess(result);
     }
 }

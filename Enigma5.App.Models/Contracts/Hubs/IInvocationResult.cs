@@ -18,13 +18,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Resources.Handlers;
-using MediatR;
+namespace Enigma5.App.Models.Contracts.Hubs;
 
-namespace Enigma5.App.Resources.Commands;
-
-public class IncrementSharedDataAccessCountCommand(string tag)
-: IRequest<CommandResult<int>>
+public interface IInvocationResult
 {
-    public string Tag { get; private set; } = tag;
+    bool Success { get; }
+
+    public HashSet<ErrorDto> Errors { get; }
 }

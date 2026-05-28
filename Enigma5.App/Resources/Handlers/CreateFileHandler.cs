@@ -19,25 +19,32 @@
 */
 
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CreateFileHandler(EnigmaDbContext context, IConfiguration configuration)
-    : IRequestHandler<CreateFileCommand, CommandResult<Models.SharedDataDto>>
+public class CreateFileHandler(
+    EnigmaDbContext context,
+    IConfiguration configuration,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<CreateFileCommand, CommandResult<SharedDataDto>>
 {
     private readonly EnigmaDbContext _context = context;
 
     private readonly IConfiguration _configuration = configuration;
 
-    public async Task<CommandResult<Models.SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+
+    public async Task<CommandResult<SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
     {
         var webContentDirectory = _configuration.GetWebContentDirectory();
         if (webContentDirectory == null || request.File == null || request.File.Length == 0)
         {
-            return CommandResult.CreateResultFailure<Models.SharedDataDto>();
+            return CommandResult.CreateResultFailure<SharedDataDto>();
         }
 
         if (!string.IsNullOrEmpty(webContentDirectory) && !Directory.Exists(webContentDirectory))
@@ -50,14 +57,18 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
             MaxAccessCount = request.MaxAccessCount
         };
 
-        _context.Files.Add(record);
-        await _context.SaveChangesAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await _dbSingleThreadRunner.RunAsync(() =>
+        {
+            _context.Files.Add(record);
+            return _context.SaveChanges();
+        });
 
         string fullPath = Path.Combine(webContentDirectory, record.Tag);
         using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
         await request.File.CopyToAsync(stream, cancellationToken);
 
-        return CommandResult.CreateResultSuccess(new Models.SharedDataDto
+        return CommandResult.CreateResultSuccess(new SharedDataDto
         {
             Tag = record.Tag,
             ResourceUrl = _configuration.GetFileUrl(record.Tag),

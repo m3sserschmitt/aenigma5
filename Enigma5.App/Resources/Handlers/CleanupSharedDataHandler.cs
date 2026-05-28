@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
@@ -25,15 +26,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupSharedDataHandler(EnigmaDbContext context)
-: IRequestHandler<CleanupSharedDataCommand, CommandResult<int>>
+public class CleanupSharedDataHandler(
+    EnigmaDbContext context,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<CleanupSharedDataCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
+
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
 
     public async Task<CommandResult<int>> Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken = default)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        return CommandResult.CreateResultSuccess(await _context.SharedData.Where(item => time > item.Timestamp)
-        .ExecuteDeleteAsync(cancellationToken: cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
+        {
+            return _context.SharedData.Where(item => time > item.Timestamp).ExecuteDelete();
+        }));
     }
 }

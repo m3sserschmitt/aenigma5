@@ -44,6 +44,6 @@ public class BlacklistAuthorizationFilter(IConfiguration configuration, ILogger<
         }
         _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} not authorized for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation.",
         invocationContext.Context.ConnectionId, invocationContext.HubMethodName);
-        return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
+        return ErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
     }
 }

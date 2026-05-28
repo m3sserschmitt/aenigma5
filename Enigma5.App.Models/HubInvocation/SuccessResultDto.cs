@@ -20,11 +20,4 @@
 
 namespace Enigma5.App.Models.HubInvocation;
 
-public class SuccessResultDto<T> : InvocationResultDto<T>
-{
-    public SuccessResultDto(T? data) : base(data) { }
-
-    public SuccessResultDto() { }
-
-    public override bool Success => true;
-}
+public class SuccessResultDto<T>(T? data) : InvocationResultDto<T>(data, [], true) { }

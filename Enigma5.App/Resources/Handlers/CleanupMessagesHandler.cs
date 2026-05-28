@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
@@ -25,18 +26,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupMessagesHandler(EnigmaDbContext context)
-: IRequestHandler<CleanupMessagesCommand, CommandResult<int>>
+public class CleanupMessagesHandler(
+    EnigmaDbContext context,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<CleanupMessagesCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
+
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
 
     public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken = default)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
         var deliveredTime = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
-        return CommandResult.CreateResultSuccess(await _context.Messages.Where(item =>
-        (!item.Sent && time > item.Timestamp) ||
-        (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp))
-        .ExecuteDeleteAsync(cancellationToken: cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
+        {
+            return _context.Messages.Where(item =>
+                (!item.Sent && time > item.Timestamp) ||
+                (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp)
+            ).ExecuteDelete();
+        }));
     }
 }

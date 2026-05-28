@@ -19,6 +19,7 @@
 */
 
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
@@ -26,14 +27,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class IncrementFileAccessCountHandler(EnigmaDbContext context, IConfiguration configuration)
-: IRequestHandler<IncrementFileAccessCountCommand, CommandResult>
+public class IncrementFileAccessCountHandler(
+    EnigmaDbContext context,
+    IConfiguration configuration,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<IncrementFileAccessCountCommand, CommandResult<int>>
 {
     private readonly IConfiguration _configuration = configuration;
 
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult> Handle(IncrementFileAccessCountCommand request, CancellationToken cancellationToken)
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+
+    public async Task<CommandResult<int>> Handle(IncrementFileAccessCountCommand request, CancellationToken cancellationToken)
     {
         var fileRecord = await _context.Files.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,
@@ -42,28 +48,31 @@ public class IncrementFileAccessCountHandler(EnigmaDbContext context, IConfigura
 
         if (fileRecord is not null)
         {
-            fileRecord.AccessCount += 1;
-            if (fileRecord.AccessCount >= fileRecord.MaxAccessCount)
+            cancellationToken.ThrowIfCancellationRequested();
+            return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
             {
-                _context.Remove(fileRecord);
-                if (!string.IsNullOrWhiteSpace(webContentDirectory))
+                fileRecord.AccessCount += 1;
+                if (fileRecord.AccessCount >= fileRecord.MaxAccessCount)
                 {
-                    var fullPath = Path.Combine(webContentDirectory, request.Tag);
-                    if (File.Exists(fullPath))
+                    _context.Remove(fileRecord);
+                    if (!string.IsNullOrWhiteSpace(webContentDirectory))
                     {
-                        File.Delete(fullPath);
+                        var fullPath = Path.Combine(webContentDirectory, request.Tag);
+                        if (File.Exists(fullPath))
+                        {
+                            File.Delete(fullPath);
+                        }
                     }
                 }
-            }
-            else
-            {
-                _context.Update(fileRecord);
-            }
+                else
+                {
+                    _context.Update(fileRecord);
+                }
 
-            await _context.SaveChangesAsync(cancellationToken);
-            return CommandResult.CreateResultSuccess();
+                return _context.SaveChanges();
+            }));
         }
 
-        return CommandResult.CreateResultFailure();
+        return CommandResult.CreateResultFailure<int>();
     }
 }

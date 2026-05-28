@@ -18,28 +18,41 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class RemovePeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<RemovePeerCommand, CommandResult<bool>>
+public class RemovePeerHandler(
+    IMediator mediator,
+    EnigmaDbContext dbContext,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<RemovePeerCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _dbContext = dbContext;
 
     private readonly IMediator _mediator = mediator;
 
-    public async Task<CommandResult<bool>> Handle(RemovePeerCommand request, CancellationToken cancellationToken = default)
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+
+    public async Task<CommandResult<int>> Handle(RemovePeerCommand request, CancellationToken cancellationToken = default)
     {
         var peer = await _dbContext.Peers.FindAsync([request.Id], cancellationToken: cancellationToken);
         if (peer == null)
         {
-            return CommandResult.CreateResultFailure(false);
+            return CommandResult.CreateResultFailure<int>();
         }
-        _dbContext.Remove(peer);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await _dbSingleThreadRunner.RunAsync(() =>
+        {
+            _dbContext.Remove(peer);
+            return _dbContext.SaveChanges();
+        });
+
         await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-        return CommandResult.CreateResultSuccess(true);
+        return CommandResult.CreateResultSuccess(result);
     }
 }

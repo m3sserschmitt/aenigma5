@@ -20,18 +20,16 @@
 
 namespace Enigma5.App.Models.HubInvocation;
 
-public class ErrorResultDto<T> : InvocationResultDto<T>
+public class ErrorResultDto<T>(T? data, HashSet<ErrorDto> errors) : InvocationResultDto<T>(data, errors, false)
 {
-    public ErrorResultDto(T? data, HashSet<ErrorDto> errors) : base(data)
-    {
-        Errors = errors;
-    }
-
-    public ErrorResultDto() { }
-
-    public override bool Success => false;
-
     public static ErrorResultDto<T> Create(T? data, IEnumerable<string> errors) => new(data, [.. errors.Select(error => new ErrorDto(error))]);
 
     public static ErrorResultDto<T> Create(T? data, string error) => new(data, [new(error)]);
+}
+
+public class ErrorResultDto(HashSet<ErrorDto> errors) : ErrorResultDto<object>(null, errors)
+{
+    public static ErrorResultDto Create(List<string> errors) => new([.. errors.Select(error => new ErrorDto(error))]);
+
+    public static ErrorResultDto Create(string error) => Create([error]);
 }

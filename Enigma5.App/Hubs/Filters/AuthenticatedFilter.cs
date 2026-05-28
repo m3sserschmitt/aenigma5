@@ -52,6 +52,6 @@ public class AuthenticatedFilter(
         }
 
         _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} not authenticated thus it cannot be resolved to an address.", invocationContext.Context.ConnectionId);
-        return EmptyErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
+        return ErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
     }
 }

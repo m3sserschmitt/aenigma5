@@ -24,7 +24,7 @@ using MediatR;
 namespace Enigma5.App.Resources.Commands;
 
 public class IncrementFileAccessCountCommand(string tag)
-: IRequest<CommandResult>
+: IRequest<CommandResult<int>>
 {
     public string Tag { get; private set; } = tag;
 }

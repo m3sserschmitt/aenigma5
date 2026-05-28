@@ -102,6 +102,8 @@ public static class Constants
     {
         public const string HubMethodNameKey = "HubMethodName";
 
+        public const string HubMethodInvocationErrorsKey = "HubMethodInvocationErrors";
+
         public const string HubMethodArgumentsKey = "HubMethodArguments";
 
         public const string ConnectionVectorMethodNameKey = "ConnectionVectorMethodName";

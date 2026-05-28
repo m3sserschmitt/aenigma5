@@ -77,10 +77,10 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
             {
                 errors.AddError(InvocationErrors.INTERNAL_ERROR);
             }
-            return errors.Count > 0 ? new EmptyErrorResultDto(errors) : successResult;
+            return errors.Count > 0 ? new ErrorResultDto(errors) : successResult;
         }
 
         _logger.LogDebug($"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} method {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
-        return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+        return ErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
     }
 }

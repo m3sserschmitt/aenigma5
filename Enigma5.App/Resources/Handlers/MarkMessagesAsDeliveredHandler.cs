@@ -19,6 +19,7 @@
 */
 
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using LinqKit;
@@ -27,9 +28,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IRequestHandler<MarkMessagesAsDeliveredCommand, CommandResult<int>>
+public class MarkMessagesAsDeliveredHandler(
+    EnigmaDbContext dbContext,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<MarkMessagesAsDeliveredCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _dbContext = dbContext;
+
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
 
     public async Task<CommandResult<int>> Handle(MarkMessagesAsDeliveredCommand request, CancellationToken cancellationToken)
     {
@@ -47,11 +53,15 @@ public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IReques
             predicate = predicate.And(item => item.Id <= request.SupId);
         }
 
-        return CommandResult.CreateResultSuccess(await _dbContext.Messages
+        cancellationToken.ThrowIfCancellationRequested();
+        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
+        {
+            return _dbContext.Messages
             .Where(predicate)
-            .ExecuteUpdateAsync(s =>
+            .ExecuteUpdate(s =>
                 s.SetProperty(m => m.Sent, true)
                 .SetProperty(m => m.DateSent, now)
-                .SetProperty(m => m.SentTimestamp, utcTimestamp), cancellationToken: cancellationToken));
+                .SetProperty(m => m.SentTimestamp, utcTimestamp));
+        }));
     }
 }

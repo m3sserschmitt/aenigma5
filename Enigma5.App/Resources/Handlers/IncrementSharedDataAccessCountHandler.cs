@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
@@ -25,12 +26,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
-: IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult>
+public class IncrementSharedDataAccessCountHandler(
+    EnigmaDbContext context,
+    DbSingleThreadRunner dbSingleThreadRunner
+) : IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
+    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+
+    public async Task<CommandResult<int>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,
@@ -38,20 +43,23 @@ public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
 
         if (sharedData is not null)
         {
-            sharedData.AccessCount += 1;
-            if (sharedData.AccessCount >= sharedData.MaxAccessCount)
+            cancellationToken.ThrowIfCancellationRequested();
+            return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
             {
-                _context.Remove(sharedData);
-            }
-            else
-            {
-                _context.Update(sharedData);
-            }
-            
-            await _context.SaveChangesAsync(cancellationToken);
-            return CommandResult.CreateResultSuccess();
+                sharedData.AccessCount += 1;
+                if (sharedData.AccessCount >= sharedData.MaxAccessCount)
+                {
+                    _context.Remove(sharedData);
+                }
+                else
+                {
+                    _context.Update(sharedData);
+                }
+
+                return _context.SaveChanges();
+            }));
         }
 
-        return CommandResult.CreateResultFailure();
+        return CommandResult.CreateResultFailure<int>();
     }
 }

@@ -39,6 +39,7 @@ using Enigma5.App.NetworkBridge;
 using Enigma5.App.UI;
 using System.Text.Json.Serialization;
 using Enigma5.App.Middlewares;
+using Enigma5.App.Common.Utils;
 
 namespace Enigma5.App;
 
@@ -72,6 +73,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<DashboardUIState>();
         services.AddSingleton<Bridge>();
         services.AddSingleton<HubConnectionsProxy>();
+        services.AddSingleton<DbSingleThreadRunner>();
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();

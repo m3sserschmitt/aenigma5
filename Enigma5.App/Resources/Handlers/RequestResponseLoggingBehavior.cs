@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
@@ -25,7 +26,7 @@ namespace Enigma5.App.Resources.Handlers;
 public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<RequestResponseLoggingBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : class
-    where TResponse: new()
+    where TResponse : ICommandResult, new()
 {
     private readonly ILogger<RequestResponseLoggingBehavior<TRequest, TResponse>> _logger = logger;
 
@@ -35,14 +36,23 @@ public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<Request
         {
             _logger.LogDebug($"Handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
             var response = await next();
-            _logger.LogDebug($"Command {{@{Common.Constants.Serilog.CommandKey}}} successfully completed with the following response: {{@{Common.Constants.Serilog.CommandResultKey}}}.", request, response);
+            if (response.Success)
+            {
+                _logger.LogDebug($"Command {{@{Common.Constants.Serilog.CommandKey}}} successfully completed with the following response: {{@{Common.Constants.Serilog.CommandResultKey}}}.", request, response);
+            }
+            else
+            {
+                _logger.LogDebug($"Command {{@{Common.Constants.Serilog.CommandKey}}} completed with no success having the following response: {{@{Common.Constants.Serilog.CommandResultKey}}}.", request, response);
+            }
 
             return response;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, $"Exception occurred while handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
-            return new TResponse();
+            var response = new TResponse();
+            response.ToFailure();
+            return response;
         }
     }
 }
