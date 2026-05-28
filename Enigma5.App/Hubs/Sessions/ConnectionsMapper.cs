@@ -18,89 +18,59 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Hubs.Sessions.Contracts;
 
 namespace Enigma5.App.Hubs.Sessions;
 
-public class ConnectionsMapper(ILogger<ConnectionsMapper> logger) : IReadOnlyConnectionsMapper
+public class ConnectionsMapper : IReadOnlyConnectionsMapper
 {
-    private readonly ILogger _logger = logger;
-
-    private readonly object _locker = new();
-
     private readonly Dictionary<string, string> _connections = [];
 
     public IReadOnlyDictionary<string, string> Connections => _connections;
 
     public bool TryAdd(string address, string connectionId)
-    => ThreadSafeExecution.Execute(
-        () =>
-        {
-            _connections.Remove(address);
-            return _connections.TryAdd(address, connectionId);
-        },
-        false,
-        _locker,
-        _logger
-    );
+    {
+        _connections.Remove(address);
+        return _connections.TryAdd(address, connectionId);
+    }
 
     public bool Remove(string connectionId, out string? address)
-    => ThreadSafeExecution.Execute(
-        (out string? addr) =>
+    {
+        address = null;
+
+        foreach (var pair in _connections)
         {
-            addr = null;
-
-            foreach (var pair in _connections)
+            if (pair.Value == connectionId)
             {
-                if (pair.Value == connectionId)
-                {
-                    addr = pair.Key;
-                    break;
-                }
+                address = pair.Key;
+                break;
             }
+        }
 
-            if (addr == null || !_connections.Remove(addr, out var _))
-            {
-                return false;
-            }
+        if (address == null || !_connections.Remove(address, out var _))
+        {
+            return false;
+        }
 
-            return true;
-        },
-        false,
-        out address,
-        _locker,
-        _logger
-    );
+        return true;
+    }
 
     public bool TryGetConnectionId(string address, out string? connectionId)
-    => ThreadSafeExecution.Execute(
-        (out string? connId) => _connections.TryGetValue(address, out connId),
-        false,
-        out connectionId,
-        _locker,
-        _logger
-    );
+    => _connections.TryGetValue(address, out connectionId);
 
     public bool TryGetAddress(string connectionId, out string? address)
-    => ThreadSafeExecution.Execute(
-        (out string? addr) =>
+    {
+        try
         {
-            try
-            {
-                var item = _connections.First(item => item.Value == connectionId);
-                addr = item.Key;
-                return true;
-            }
-            catch
-            {
-                addr = null;
-                return false;
-            }
-        },
-        false,
-        out address,
-        _locker,
-        _logger
-    );
+            var item = _connections.First(item => item.Value == connectionId);
+            address = item.Key;
+            return true;
+        }
+        catch
+        {
+            address = null;
+            return false;
+        }
+    }
+
 }

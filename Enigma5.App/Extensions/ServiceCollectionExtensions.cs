@@ -59,7 +59,7 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("DbConnectionString");
         return services.AddDbContext<EnigmaDbContext>(options =>
         {
-            options.UseSqlite(connectionString!);
+            options.UseSqlite(connectionString!).AddInterceptors(new SqlitePragmaInterceptor());
         });
     }
 

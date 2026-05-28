@@ -21,6 +21,7 @@
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -33,9 +34,9 @@ public class CleanupMessagesHandler(EnigmaDbContext context)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
         var deliveredTime = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
-        _context.Messages.RemoveRange(_context.Messages.Where(item =>
-            (!item.Sent && time > item.Timestamp) || (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp))
-        );
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        return CommandResult.CreateResultSuccess(await _context.Messages.Where(item =>
+        (!item.Sent && time > item.Timestamp) ||
+        (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp))
+        .ExecuteDeleteAsync(cancellationToken: cancellationToken));
     }
 }

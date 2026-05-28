@@ -18,25 +18,41 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
+using LinqKit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetPendingMessagesByDestinationHandler(Data.EnigmaDbContext context)
-: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<Models.PendingMessageDto>>>
+public class GetPendingMessagesByDestinationHandler(EnigmaDbContext context)
+: IRequestHandler<GetPendingMessagesByDestinationQuery, CommandResult<List<PendingMessageDto>>>
 {
-    private readonly Data.EnigmaDbContext _context = context;    
+    private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult<List<Models.PendingMessageDto>>> Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
-    => CommandResult.CreateResultSuccess(await _context.Messages.Where(item => item.Destination == request.Destination)
-    .Select(item => new Models.PendingMessageDto
+    public async Task<CommandResult<List<PendingMessageDto>>> Handle(GetPendingMessagesByDestinationQuery request, CancellationToken cancellationToken)
     {
-        Uuid = item.Uuid,
-        Destination = item.Destination,
-        Content = item.Content,
-        DateReceived = item.DateCreated,
-        Sent = item.Sent
-    }).ToListAsync(cancellationToken));
+        var predicate = PredicateBuilder.New<PendingMessage>(item => item.Destination == request.Destination && !item.Sent);
+        
+        if (request.InfId != null)
+        {
+            predicate = predicate.And(item => item.Id > request.InfId);
+        }
+
+        return CommandResult.CreateResultSuccess(await _context.Messages
+        .Where(predicate)
+        .OrderBy(item => item.Id)
+        .Take(request.PageSize).Select(item => new PendingMessageDto
+        {
+            Id = item.Id,
+            Uuid = item.Uuid,
+            Destination = item.Destination,
+            Content = item.Content,
+            DateReceived = item.DateCreated,
+            Sent = item.Sent
+        }
+        ).ToListAsync(cancellationToken));
+    }
 }

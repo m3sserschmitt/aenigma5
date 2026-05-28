@@ -38,7 +38,7 @@ public class InvokeNetworkBridgeHandler(IMediator mediator, Bridge bridge, Dashb
     public async Task<CommandResult<bool>> Handle(InvokeNetworkBridgeCommand request, CancellationToken cancellationToken)
     {
         await UpdateDashboardUIState(cancellationToken);
-        return CommandResult.CreateResultSuccess(await _bridge.StartAsync());
+        return CommandResult.CreateResultSuccess(await _bridge.StartAsync(cancellationToken));
     }
 
     private async Task UpdateDashboardUIState(CancellationToken cancellationToken)

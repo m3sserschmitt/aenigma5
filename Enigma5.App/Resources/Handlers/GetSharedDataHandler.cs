@@ -18,20 +18,24 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetSharedDataHandler(Data.EnigmaDbContext context) : IRequestHandler<GetSharedDataQuery, CommandResult<Models.SharedDataDto>>
+public class GetSharedDataHandler(EnigmaDbContext context) : IRequestHandler<GetSharedDataQuery, CommandResult<SharedDataDto>>
 {
-    private readonly Data.EnigmaDbContext _context = context;
+    private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult<Models.SharedDataDto>> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<SharedDataDto>> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken: cancellationToken);
-        return sharedData is null ? CommandResult.CreateResultSuccess<Models.SharedDataDto>() : CommandResult.CreateResultSuccess(new Models.SharedDataDto
+        return sharedData is null
+        ? CommandResult.CreateResultFailure<SharedDataDto>()
+        : CommandResult.CreateResultSuccess(new SharedDataDto
         {
             Tag = sharedData.Tag,
             Data = sharedData.Data,

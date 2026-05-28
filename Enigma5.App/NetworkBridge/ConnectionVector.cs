@@ -41,6 +41,10 @@ public class ConnectionVector : IDisposable
 
     private bool _targetAuthenticated;
 
+    private bool _sourceToTargetSynchronized;
+
+    private bool _targetToSourceSynchronized;
+
     private string? _sourceAddress;
 
     private string? _targetAddress;
@@ -201,7 +205,7 @@ public class ConnectionVector : IDisposable
             {
                 _logger.LogDebug($"Target already started for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
             }
-            
+
             if (_source.State == HubConnectionState.Disconnected)
             {
                 _logger.LogDebug($"Starting source connection for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
@@ -224,6 +228,85 @@ public class ConnectionVector : IDisposable
 
     public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
+
+    public async Task<bool> CleanupAsync(HubConnection connection, CancellationToken cancellationToken = default)
+    {
+        if (!Authenticated || !Connected)
+        {
+            _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started or synchronized. Aborting...", this);
+            return false;
+        }
+
+        try
+        {
+            var result1 = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Cleanup), cancellationToken);
+            return result1.Success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(CleanupAsync), this);
+            return false;
+        }
+    }
+
+    public async Task<bool> CleanupAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Cleaning up source for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, cancellationToken);
+        _logger.LogDebug($"Cleaning up target for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, cancellationToken);
+        return result1 && result2;
+    }
+
+    private async Task<bool> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
+    {
+        if (!Authenticated || !Connected)
+        {
+            _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started. Aborting...", this);
+            return false;
+        }
+
+        try
+        {
+            var pendingMessages = new List<PendingMessageDto>();
+            do
+            {
+                var pullResult = await c1.InvokeAsync<InvocationResultDto<List<PendingMessageDto>>>(nameof(IEnigmaHub.Pull2), new PullRequestDto(pendingMessages.LastOrDefault()?.Id), cancellationToken);
+                if (!pullResult.Success)
+                {
+                    _logger.LogError($"Failed to pull pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                    return false;
+                }
+                pendingMessages = pullResult.Data ?? [];
+                foreach (var message in pendingMessages)
+                {
+                    var routeResult = await c2.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.RouteMessage), new RoutingRequestDto([message.Content], message.Uuid), cancellationToken);
+                    if (!routeResult.Success)
+                    {
+                        _logger.LogError($"Failed to route pending message on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                        return false;
+                    }
+                }
+
+            } while (pendingMessages.Count > 0);
+            _logger.LogDebug($"Pending messages synchronized on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SyncMessagesAsync), this);
+            return false;
+        }
+    }
+
+    public async Task<bool> SyncMessagesAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Syncing source to target pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        _sourceToTargetSynchronized = await SyncMessagesAsync(_source, _target, cancellationToken);
+        _logger.LogDebug($"Syncing target to source pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        _targetToSourceSynchronized = await SyncMessagesAsync(_target, _source, cancellationToken);
+        return _sourceToTargetSynchronized && _targetToSourceSynchronized;
+    }
 
     public async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
     {
@@ -479,9 +562,18 @@ public class ConnectionVector : IDisposable
         logger);
 
     private static HubConnection CreateHubConnection(string baseUrl, Action<HttpConnectionOptions> httpOptions)
-    => new HubConnectionBuilder().WithUrl(
+    {
+        var connection = new HubConnectionBuilder().WithUrl(
         $"{baseUrl.Trim('/')}/{Constants.OnionRoutingEndpoint}",
-        options => httpOptions(options)).Build();
+        options => httpOptions(options))
+        .WithAutomaticReconnect(Constants.SignalRReconnectDelays)
+        .WithKeepAliveInterval(Constants.SignalRKeepAliveInterval)
+        .WithServerTimeout(Constants.SignalRServerTimeoutInterval)
+        .WithStatefulReconnect()
+        .Build();
+        connection.HandshakeTimeout = Constants.SignalRHandshakeTimeout;
+        return connection;
+    }
 
     public static HubConnection CreateHubConnection(string baseUrl) => CreateHubConnection(baseUrl, x => { });
 

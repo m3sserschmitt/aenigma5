@@ -19,9 +19,12 @@
 */
 
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Data;
 
+[Index(nameof(Destination), nameof(Sent))]
+[Index(nameof(Uuid))]
 public class PendingMessage : Entity
 {
     [Key]

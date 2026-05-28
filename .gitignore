@@ -4,5 +4,5 @@
 *.sqlite*
 Enigma5.App/logs/*
 *.pem
-build
+*.lscache
 Enigma5.Scripts/Deb

@@ -135,7 +135,7 @@ public static class ConfigurationExtensions
     }
 
     public static TimeSpan GetVertexLifetime(this IConfiguration configuration)
-    => configuration.GetTimeSpan("VertexLifetime", Constants.LeafsLifetimeDefault);
+    => configuration.GetTimeSpan("VertexLifetime", Constants.DefaultVertexLifetime);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetStringValue("AzureVaultUrl");
@@ -151,4 +151,10 @@ public static class ConfigurationExtensions
 
     public static string? GetSocks5Proxy(this IConfiguration configuration)
     => configuration.GetStringValue("Socks5Proxy");
+
+    public static long GetSharedFileMaxSize(this IConfiguration configuration)
+    => configuration.GetValue("SharedFileMaxSize", Constants.DefaultSharedFileMaxSize);
+
+    public static long GetSharedDataMaxSize(this IConfiguration configuration)
+    => configuration.GetValue("SharedDataMaxSize", Constants.DefaultSharedDataMaxSize);
 }

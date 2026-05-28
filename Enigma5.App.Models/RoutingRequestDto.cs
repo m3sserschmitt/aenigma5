@@ -19,6 +19,7 @@
 */
 
 using System.Text.Json.Serialization;
+using Enigma5.App.Common;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.Contracts;
 using Enigma5.App.Models.Extensions;
@@ -39,7 +40,11 @@ public class RoutingRequestDto(List<string?>? payloads = null, string? uuid = nu
         {
             errors.AddError(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(Payloads));
         }
-        else if(!Payloads.All(item => item.IsValidBase64()))
+        if(Payloads?.Count > Constants.MessagesPageSize)
+        {
+            errors.AddError(ValidationErrorsDto.TOO_MANY_PAYLOADS, nameof(Payloads));
+        }
+        else if(!(Payloads?.All(item => item.IsValidBase64()) ?? true))
         {
             errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
         }

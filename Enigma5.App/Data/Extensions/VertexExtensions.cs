@@ -39,6 +39,6 @@ public static class VertexExtensions
             return false;
         }
         var sameNeighborhood = vertex.Neighborhood == previous.Neighborhood;
-        return !sameNeighborhood || (sameNeighborhood && timeInterval > Common.Constants.VertexBroadcastMinimumPeriod);
+        return !sameNeighborhood || (sameNeighborhood && timeInterval > Common.Constants.DefaultVertexBroadcastMinimumPeriod);
     }
 }

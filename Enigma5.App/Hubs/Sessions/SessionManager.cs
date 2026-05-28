@@ -52,13 +52,17 @@ public class SessionManager(
     private bool AddPending(string connectionId, string token)
     {
         _pending.Remove(connectionId);
+        _authenticated.Remove(connectionId);
+        _connectionsMapper.Remove(connectionId, out var _);
         return _pending.TryAdd(connectionId, token);
     }
 
     private bool Authenticate(string connectionId)
     {
+        _pending.Remove(connectionId);
         _authenticated.Remove(connectionId);
-        return _pending.Remove(connectionId) && _authenticated.Add(connectionId);
+        _connectionsMapper.Remove(connectionId, out var _);
+        return _authenticated.Add(connectionId);
     }
 
     public Task<string?> AddPendingAsync(string connectionId)

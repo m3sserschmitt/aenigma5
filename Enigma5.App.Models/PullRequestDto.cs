@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,25 +18,24 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models.HubInvocation;
+using System.Text.Json.Serialization;
+using Enigma5.App.Models.Contracts;
+using Enigma5.App.Models.Extensions;
 
-namespace Enigma5.App.Models.Contracts.Hubs;
+namespace Enigma5.App.Models;
 
-public interface IEnigmaHub
+[method: JsonConstructor]
+public class PullRequestDto(long? infId = null) : IValidatable
 {
-    Task<InvocationResultDto<string>> GenerateToken();
+    public long? InfId { get; private set; } = infId;
 
-    Task<InvocationResultDto<VertexDto>> GetLocalVertex();
-
-    Task<InvocationResultDto<List<PendingMessageDto>>> Pull();
-
-    Task<InvocationResultDto<bool>> Cleanup();
-
-    Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request);
-
-    Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto request);
-
-    Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request);
-
-    Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request);
+    public HashSet<ErrorDto> Validate()
+    {
+        var errors = new HashSet<ErrorDto>();
+        if (InfId < 0)
+        {
+            errors.AddError(ValidationErrorsDto.INVALID_VALUE_FOR_PROPERTY, nameof(InfId));
+        }
+        return errors;
+    }
 }

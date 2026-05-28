@@ -18,16 +18,18 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Handlers;
 using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class CreatePendingMessageCommand(string destination, string content)
-: IRequest<CommandResult<PendingMessage>>
+public class CreatePendingMessageCommand(string destination, string content, string? uuid)
+: IRequest<CommandResult<PendingMessageDto>>
 {
     public string Destination { get; private set; } = destination;
 
     public string Content { get; private set; } = content;
+
+    public string? Uuid { get; private set; } = uuid;
 }

@@ -1,4 +1,4 @@
-/*
+﻿/*
     Aenigma - Federal messaging system
     Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -18,13 +18,28 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models.HubInvocation;
+
 namespace Enigma5.App.Models.Contracts.Hubs;
 
-public interface IOnionParsingHub
+public interface IEnigmaHub
 {
-    public string? Next { get; set; }
+    Task<InvocationResultDto<string>> GenerateToken();
 
-    public byte[]? Content { get; set; }
+    Task<InvocationResultDto<VertexDto>> GetLocalVertex();
 
-    public string? Uuid { get; set; }
+    [Obsolete("Use PullPaged instead; Still here for compatibility with previous versions and will be removed in the future;")]
+    Task<InvocationResultDto<List<PendingMessageDto>>> Pull();
+
+    Task<InvocationResultDto<List<PendingMessageDto>>> Pull2(PullRequestDto request);
+
+    Task<InvocationResultDto<bool>> Cleanup();
+
+    Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request);
+
+    Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto request);
+
+    Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request);
+
+    Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request);
 }

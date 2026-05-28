@@ -21,6 +21,7 @@
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -32,7 +33,7 @@ public class CleanupSharedDataHandler(EnigmaDbContext context)
     public async Task<CommandResult<int>> Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken = default)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        _context.RemoveRange(_context.SharedData.Where(item => time > item.Timestamp));
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        return CommandResult.CreateResultSuccess(await _context.SharedData.Where(item => time > item.Timestamp)
+        .ExecuteDeleteAsync(cancellationToken: cancellationToken));
     }
 }

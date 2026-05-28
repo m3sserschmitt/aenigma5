@@ -40,14 +40,16 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
         Dispose(false);
     }
 
-    public async Task<bool> StartAsync() => await _singleThreadRunner.RunAsync(async () =>
+    public async Task<bool> StartAsync(CancellationToken cancellationToken = default) => await _singleThreadRunner.RunAsync(async () =>
     {
         _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}}...", nameof(StartAsync));
-        var result = await _connections.LoadConnectionsAsync();
+        var result = await _connections.LoadConnectionsAsync(cancellationToken);
         RegisterEvents();
-        result &= await _connections.StartAsync();
-        result &= await _connections.StartAuthenticationAsync();
-        result &= await _connections.TriggerBroadcastAsync();
+        result &= await _connections.StartAsync(cancellationToken);
+        result &= await _connections.StartAuthenticationAsync(cancellationToken);
+        result &= await _connections.TriggerBroadcastAsync(cancellationToken);
+        result &= await _connections.SyncMessagesAsync(cancellationToken);
+        result &= await _connections.CleanupAsync(cancellationToken);
         return result;
     }, _logger);
 
@@ -67,7 +69,6 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
     {
         _logger.LogError(ex, $"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}} for connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} with exception.", nameof(OnConnectionClosedAsync), connectionVector);
         await RemoveConnectionAsync(connectionVector);
-        /* for (int i = 0; i < _configuration.GetConnectionRetriesCount(); i++) */
         {
             await Task.Delay(_configuration.GetDelayBetweenConnectionRetries());
             try
@@ -75,7 +76,6 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
                 if (await StartAsync())
                 {
                     _logger.LogDebug($"Invocation of {{{Common.Constants.Serilog.BridgeMethodNameKey}}} completed successfully. All connections were successfully established.", nameof(StartAsync));
-                    // break;
                 }
             }
             catch (Exception e)

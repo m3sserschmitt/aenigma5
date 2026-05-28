@@ -22,11 +22,13 @@ namespace Enigma5.App.Models;
 
 public static class ValidationErrorsDto
 {
-    public static readonly string NULL_REQUIRED_PROPERTIES = "One or more required properties not provided.";
+    public const string NULL_REQUIRED_PROPERTIES = "One or more required properties not provided.";
 
-    public static  readonly string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
+    public const string TOO_MANY_PAYLOADS = "Too many payloads for one request.";
 
-    public static readonly string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";
+    public const string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
 
-    public static readonly string INVALID_VALUE_FOR_PROPERTY = "One or more properties have invalid values.";
+    public const string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";
+
+    public const string INVALID_VALUE_FOR_PROPERTY = "One or more properties have invalid values.";
 }

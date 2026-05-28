@@ -33,12 +33,12 @@ public class GetFileHandler(IConfiguration configuration) : IRequestHandler<GetF
         var webContentDirectory = _configuration.GetWebContentDirectory();
         if (string.IsNullOrEmpty(webContentDirectory) || !Directory.Exists(webContentDirectory))
         {
-            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedDataDto>());
+            return Task.FromResult(CommandResult.CreateResultFailure<Models.SharedDataDto>());
         }
         var fullPath = Path.Combine(webContentDirectory, request.Tag);
         if (!File.Exists(fullPath))
         {
-            return Task.FromResult(CommandResult.CreateResultSuccess<Models.SharedDataDto>());
+            return Task.FromResult(CommandResult.CreateResultFailure<Models.SharedDataDto>());
         }
 
         return Task.FromResult(CommandResult.CreateResultSuccess(new Models.SharedDataDto

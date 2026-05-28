@@ -49,7 +49,14 @@ public class StartupConfiguration(IConfiguration configuration)
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddSignalR().AddHubOptions<RoutingHub>(options =>
+        services.AddSignalR(options =>
+        {
+            options.KeepAliveInterval = Constants.SignalRKeepAliveInterval;
+            options.ClientTimeoutInterval = Constants.SignalRClientTimeoutInterval;
+            options.HandshakeTimeout = Constants.SignalRHandshakeTimeout;
+            options.StatefulReconnectBufferSize = Constants.SignalRStatefulReconnectBufferSize;
+        })
+        .AddHubOptions<RoutingHub>(options =>
         {
             options.AddFilter<LogFilter>();
             options.AddFilter<AuthenticatedFilter>();
@@ -91,10 +98,13 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
-            endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint);
+            endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint, options =>
+            {
+                options.AllowStatefulReconnects = true;
+            });
             endpoints.MapGet(Constants.InfoEndpoint, Api.GetInfo);
             endpoints.MapPost(Constants.ShareEndpoint, Api.PostShare)
-                .WithMetadata(new RequestSizeLimitAttribute(Constants.MaxSharedDataSize));
+                .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedDataMaxSize()));
             endpoints.MapGet(Constants.ShareEndpoint, Api.GetShare);
             endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
             endpoints.MapGet(Constants.VerticesEndpoint, Api.GetVertices);
@@ -103,10 +113,10 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPost(Constants.FileEndpoint, Api.PostFile)
                 .Accepts<IFormFile>("multipart/form-data")
                 .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
-                .WithMetadata(new RequestSizeLimitAttribute(Constants.MaxSharedFileSize))
+                .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedFileMaxSize()))
                 .WithMetadata(new RequestFormLimitsAttribute
                 {
-                    MultipartBodyLengthLimit = Constants.MaxSharedFileSize
+                    MultipartBodyLengthLimit = configuration.GetSharedFileMaxSize()
                 }).DisableAntiforgery();
             endpoints.MapGet(Constants.FileEndpoint, Api.GetFile);
             endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);

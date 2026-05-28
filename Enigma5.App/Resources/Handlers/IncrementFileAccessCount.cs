@@ -64,6 +64,6 @@ public class IncrementFileAccessCountHandler(EnigmaDbContext context, IConfigura
             return CommandResult.CreateResultSuccess();
         }
 
-        return CommandResult.CreateResultSuccess();
+        return CommandResult.CreateResultFailure();
     }
 }

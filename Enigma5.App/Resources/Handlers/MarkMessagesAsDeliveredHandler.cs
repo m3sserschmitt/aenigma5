@@ -21,7 +21,9 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using LinqKit;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -31,20 +33,25 @@ public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IReques
 
     public async Task<CommandResult<int>> Handle(MarkMessagesAsDeliveredCommand request, CancellationToken cancellationToken)
     {
-        if(!request.Destination.IsValidAddress())
+        if (!request.Destination.IsValidAddress())
         {
             return CommandResult.CreateResultFailure<int>();
         }
 
-        var messages = _dbContext.Messages.Where(item => item.Destination == request.Destination && !item.Sent);
-        foreach (var message in messages)
-        {
-            message.Sent = true;
-            message.DateSent = DateTimeOffset.Now;
-            message.SentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        }
-        _dbContext.Messages.UpdateRange(messages);
+        var now = DateTimeOffset.Now;
+        var utcTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var predicate = PredicateBuilder.New<PendingMessage>(item => item.Destination == request.Destination && !item.Sent);
 
-        return CommandResult.CreateResultSuccess(await _dbContext.SaveChangesAsync(cancellationToken));
+        if (request.SupId != null)
+        {
+            predicate = predicate.And(item => item.Id <= request.SupId);
+        }
+
+        return CommandResult.CreateResultSuccess(await _dbContext.Messages
+            .Where(predicate)
+            .ExecuteUpdateAsync(s =>
+                s.SetProperty(m => m.Sent, true)
+                .SetProperty(m => m.DateSent, now)
+                .SetProperty(m => m.SentTimestamp, utcTimestamp), cancellationToken: cancellationToken));
     }
 }

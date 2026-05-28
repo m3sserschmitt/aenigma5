@@ -36,7 +36,7 @@ public class GetVertexHandler(NetworkGraph graph)
 
         if (vertex is null)
         {
-            return CommandResult.CreateResultSuccess<VertexDto>();
+            return CommandResult.CreateResultFailure<VertexDto>();
         }
 
         return CommandResult.CreateResultSuccess(new VertexDto

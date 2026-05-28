@@ -23,7 +23,9 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class MarkMessagesAsDeliveredCommand(string destination): IRequest<CommandResult<int>>
+public class MarkMessagesAsDeliveredCommand(string? destination, long? supId): IRequest<CommandResult<int>>
 {
-    public string Destination { get; private set; } = destination;
+    public string? Destination { get; private set; } = destination;
+
+    public long? SupId { get; private set; } = supId;
 }

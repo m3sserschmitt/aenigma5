@@ -83,7 +83,7 @@ public class HubConnectionsProxy(
         }
     }
 
-    public async Task<bool> LoadConnectionsAsync()
+    public async Task<bool> LoadConnectionsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -91,7 +91,7 @@ public class HubConnectionsProxy(
             if (_connections.Count > 0)
             {
                 _logger.LogDebug("There are previous connections available. Resyncing with the database...");
-                return await ReloadConnections();
+                return await ReloadConnections(cancellationToken);
             }
 
             var localAddress = _configuration.GetHttpEndpoint();
@@ -103,7 +103,7 @@ public class HubConnectionsProxy(
 
             using var scope = _scopeFactory.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            var result = await mediator.Send(new GetPeersQuery());
+            var result = await mediator.Send(new GetPeersQuery(), cancellationToken);
             if (!result.IsSuccessNotNullResultValue())
             {
                 _logger.LogError("Could not retrieve peers.");
@@ -148,6 +148,18 @@ public class HubConnectionsProxy(
     {
         _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(StartAuthenticationAsync));
         return _connections.StartAuthenticationAsync(cancellationToken);
+    }
+
+    public Task<bool> CleanupAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(CleanupAsync));
+        return _connections.CleanupAsync(cancellationToken);
+    }
+
+    public Task<bool> SyncMessagesAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(SyncMessagesAsync));
+        return _connections.SyncMessagesAsync(cancellationToken);
     }
 
     public Task<bool> StopAsync(CancellationToken cancellationToken = default)
@@ -211,13 +223,13 @@ public class HubConnectionsProxy(
         return localHubConnection;
     }
 
-    private async Task<bool> ReloadConnections()
+    private async Task<bool> ReloadConnections(CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.HubConnectionsProxyMethodNameKey}}}...", nameof(ReloadConnections));
             var newProxy = new HubConnectionsProxy(_networkGraphValidationPolicy, _configuration, _certificateManager, _scopeFactory, _logger);
-            await newProxy.LoadConnectionsAsync();
+            await newProxy.LoadConnectionsAsync(cancellationToken);
 
             var connectionsToBeRemoved = _connections.Except(newProxy._connections).ToList();
             _connections.IntersectWith(newProxy._connections);
@@ -226,7 +238,7 @@ public class HubConnectionsProxy(
             foreach (var connection in connectionsToBeRemoved)
             {
                 _logger.LogDebug($"Closing connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}}...", connection);
-                await connection.StopAsync();
+                await connection.StopAsync(cancellationToken);
             }
             return true;
         }

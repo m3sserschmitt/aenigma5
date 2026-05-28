@@ -20,20 +20,22 @@
 
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CreatePendingMessageHandler(EnigmaDbContext context) : IRequestHandler<CreatePendingMessageCommand, CommandResult<PendingMessage>>
+public class CreatePendingMessageHandler(EnigmaDbContext context) : IRequestHandler<CreatePendingMessageCommand, CommandResult<PendingMessageDto>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult<PendingMessage>> Handle(CreatePendingMessageCommand request, CancellationToken cancellationToken)
+    public async Task<CommandResult<PendingMessageDto>> Handle(CreatePendingMessageCommand request, CancellationToken cancellationToken)
     {
-        if(!request.Destination.IsValidAddress() || !request.Content.IsValidBase64())
+        if (!request.Destination.IsValidAddress() || !request.Content.IsValidBase64())
         {
-            return CommandResult.CreateResultFailure<PendingMessage>();
+            return CommandResult.CreateResultFailure<PendingMessageDto>();
         }
 
         var pendingMessage = new PendingMessage
@@ -41,8 +43,35 @@ public class CreatePendingMessageHandler(EnigmaDbContext context) : IRequestHand
             Destination = request.Destination,
             Content = request.Content
         };
+
+        if (request.Uuid != null)
+        {
+            var existingEntry = await _context.Messages.FirstOrDefaultAsync(item => item.Uuid == request.Uuid, cancellationToken: cancellationToken);
+            if (existingEntry != null)
+            {
+                return CommandResult.CreateResultFailure(new PendingMessageDto
+                {
+                    Id = existingEntry.Id,
+                    Uuid = existingEntry.Uuid,
+                    Sent = existingEntry.Sent,
+                    Destination = existingEntry.Destination,
+                    Content = existingEntry.Content,
+                    DateReceived = existingEntry.DateCreated
+                });
+            }
+            pendingMessage.Uuid = request.Uuid;
+        }
+
         await _context.AddAsync(pendingMessage, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
-        return CommandResult.CreateResultSuccess(pendingMessage);
+        return CommandResult.CreateResultSuccess(new PendingMessageDto
+        {
+            Id = pendingMessage.Id,
+            Uuid = pendingMessage.Uuid,
+            Sent = pendingMessage.Sent,
+            Destination = pendingMessage.Destination,
+            Content = pendingMessage.Content,
+            DateReceived = pendingMessage.DateCreated
+        });
     }
 }

@@ -21,6 +21,7 @@
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
@@ -31,8 +32,8 @@ public class RemoveMessagesHandler(EnigmaDbContext context)
 
     public async Task<CommandResult<int>> Handle(RemoveMessagesCommand request, CancellationToken cancellationToken)
     {
-        var messages = _context.Messages.Where(item => item.Destination == request.Destination);
-        _context.RemoveRange(messages);
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        return CommandResult.CreateResultSuccess(await _context.Messages
+        .Where(item => item.Destination == request.Destination && item.Sent)
+        .ExecuteDeleteAsync(cancellationToken: cancellationToken));
     }
 }

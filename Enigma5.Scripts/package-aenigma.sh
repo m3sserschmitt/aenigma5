@@ -34,7 +34,7 @@ show_help() {
     echo "Options:"
     echo "  -v VERSION  The version of the application (e.g., 1.0.0)"
     echo "  -c CONFIG   The config used for this package ("azure", "ubuntu")"
-    echo "  -c ARCH     The config used for this package ("amd64", "arm64")"
+    echo "  -a ARCH     The config used for this package ("amd64", "arm64")"
     echo ""
     echo "Example:"
     echo "  $0 -v 1.0.0 -c ubuntu -a amd64"

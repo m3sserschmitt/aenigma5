@@ -20,9 +20,9 @@ public class CommandResult<T>
         Success = success;
     }
 
-    public T? Value { get;set; }
+    public T? Value { get; private set; }
 
-    public bool Success { get; set; }
+    public bool Success { get; private set; }
 
     public static CommandResult<V> CreateResultSuccess<V>() => new(true);
 

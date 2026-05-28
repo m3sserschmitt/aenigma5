@@ -74,4 +74,16 @@ internal static class HubConnectionExtensions
         var results = await Task.WhenAll(connections.Select(async connection => await connection.StartAuthenticationAsync(cancellationToken)));
         return results.All(result => result);
     }
+
+    public static async Task<bool> CleanupAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.CleanupAsync(cancellationToken)));
+        return results.All(result => result);
+    }
+
+    public static async Task<bool> SyncMessagesAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.SyncMessagesAsync(cancellationToken)));
+        return results.All(result => result);
+    }
 }

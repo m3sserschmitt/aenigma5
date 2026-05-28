@@ -52,6 +52,6 @@ public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
             return CommandResult.CreateResultSuccess();
         }
 
-        return CommandResult.CreateResultSuccess();
+        return CommandResult.CreateResultFailure();
     }
 }

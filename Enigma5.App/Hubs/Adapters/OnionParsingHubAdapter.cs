@@ -51,4 +51,16 @@ public class OnionParsingHubAdapter(Hub hub) : IOnionParsingHub
             }
         }
     }
+
+    public string? Uuid
+    {
+        get => onionParserHub?.Uuid;
+        set
+        {
+            if (onionParserHub != null)
+            {
+                onionParserHub.Uuid = value;
+            }
+        }
+    }
 }

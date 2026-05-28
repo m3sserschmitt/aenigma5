@@ -20,7 +20,6 @@
 
 using System.Reflection;
 using Enigma5.App.Attributes;
-using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
@@ -33,33 +32,34 @@ namespace Enigma5.App.Hubs;
 
 public partial class RoutingHub
 {
-    protected async Task<bool> IsLocalAddress(string publicKey)
+    private async Task<bool> IsLocalAddress(string publicKey)
     => await _certificateManager.GetAddressAsync() == CertificateHelper.GetHexAddressFromPublicKey(publicKey);
 
-    protected async Task<bool> Authenticate(string publicKey, string signature)
+    private async Task<bool> Authenticate(string publicKey, string signature)
     => await _sessionManager.AuthenticateAsync(
             Context.ConnectionId,
             publicKey!,
             signature!,
             await IsLocalAddress(publicKey!) ? Context.Items[Common.Constants.XImpersonateServiceHeaderKey] as string : null);
 
-    protected async Task<bool> SendAsync(string connectionId, string method, object? arg1)
+    private Task<bool> SendAsync(string connectionId, string method, object? arg1)
     {
         try
         {
-            await Clients.Client(connectionId).SendAsync(method, arg1);
-            return true;
+            var clientProxy = Clients.Client(connectionId);
+            Task.Run(() => clientProxy.SendAsync(method, arg1));
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
             nameof(SendAsync),
             Context.ConnectionId);
-            return false;
+            return Task.FromResult(false);
         }
     }
 
-    protected async Task<bool> RouteMessage(string connectionId, byte[] data, string? uuid)
+    private async Task<bool> RouteMessages(string connectionId, List<string?> payloads, string? uuid)
     {
         try
         {
@@ -67,8 +67,7 @@ public partial class RoutingHub
                     .SingleOrDefault(m => m.GetCustomAttribute<OnionRoutingAttribute>() != null)
                     ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
 
-            await Clients.Client(connectionId).SendAsync(routingMethod.Name, new RoutingRequestDto([Convert.ToBase64String(data)], uuid));
-            return true;
+            return await SendAsync(connectionId, routingMethod.Name, new RoutingRequestDto(payloads, uuid));
         }
         catch (Exception ex)
         {
@@ -78,6 +77,9 @@ public partial class RoutingHub
             return false;
         }
     }
+
+    private async Task<bool> RouteMessage(string connectionId, byte[] data, string? uuid)
+    => await RouteMessages(connectionId, [Convert.ToBase64String(data)], uuid);
 
     private async Task<VertexBroadcastRequestDto?> AddNewAdjacencies(List<string> addresses)
     => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, true))).Value;
@@ -113,77 +115,31 @@ public partial class RoutingHub
     private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
     => (await Task.WhenAll(await GenerateBroadcastTask(adjacencyLists))).All(success => success);
 
-    private async Task<CommandResult<PendingMessage>> CreatePendingMessage()
+    private async Task<CommandResult<PendingMessageDto>> CreatePendingMessage()
     {
-        var isNeighbor = (await GetNeighborAddressesAsync()).Contains(Next!);
-        if (Content != null && !isNeighbor)
+        if (Content != null)
         {
             _logger.LogDebug($"Saving onion for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
             var encodedContent = Convert.ToBase64String(Content);
             if (encodedContent is null)
             {
                 _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
-                return CommandResult.CreateResultFailure<PendingMessage>();
+                return CommandResult.CreateResultFailure<PendingMessageDto>();
             }
-            return await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent));
+            return await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent, Uuid));
         }
         _logger.LogDebug($"Could not save pending message for connectionId {{{nameof(Context.ConnectionId)}}} because the content is null.", Context.ConnectionId);
-        return CommandResult.CreateResultFailure<PendingMessage>();
+        return CommandResult.CreateResultFailure<PendingMessageDto>();
     }
 
-    private async Task<HashSet<string>> GetNeighborAddressesAsync()
+    private async Task<List<PendingMessageDto>> GetPendingMessagesAsync(string address, long? infId, int pageSize)
     {
-        var result = await _commandRouter.Send(new GetNeighborAddressesQuery());
+        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address, infId, pageSize));
         if (!result.IsSuccessNotNullResultValue())
         {
             return [];
         }
         return result.Value ?? [];
-    }
-
-    private async Task<List<PendingMessageDto>> GetPendingMessagesAsync(string address)
-    {
-        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address));
-        if (!result.IsSuccessNotNullResultValue())
-        {
-            return [];
-        }
-        return result.Value ?? [];
-    }
-
-    private async Task SyncPendingMessages()
-    {
-        foreach (var address in await GetNeighborAddressesAsync())
-        {
-            var pendingMessages = await GetPendingMessagesAsync(address);
-            if (pendingMessages.Count == 0)
-            {
-                continue;
-            }
-
-            var connectionId = await _sessionManager.TryGetConnectionIdAsync(address);
-            if (string.IsNullOrWhiteSpace(connectionId))
-            {
-                continue;
-            }
-
-            foreach (var item in pendingMessages)
-            {
-                if (string.IsNullOrWhiteSpace(item.Content))
-                {
-                    continue;
-                }
-                try
-                {
-                    await RouteMessage(connectionId, Convert.FromBase64String(item.Content), item.Uuid);
-                }
-                catch (Exception)
-                {
-                    continue;
-                }
-            }
-            await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(address));
-        }
     }
 
     private async Task<bool> SendBroadcast(VertexBroadcastRequestDto adjacencyLists)

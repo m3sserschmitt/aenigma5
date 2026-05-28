@@ -47,14 +47,16 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
         {
             object? successResult = null;
             var errors = new HashSet<ErrorDto>();
-            foreach (var item in request.Payloads!)
+            var payloads = request.Payloads ?? [];
+            foreach (var item in payloads)
             {
                 if (await _parser.ParseAsync(item!))
                 {
                     _ = new OnionParsingHubAdapter(invocationContext.Hub)
                     {
                         Content = _parser.Content,
-                        Next = _parser.NextAddress
+                        Next = _parser.NextAddress,
+                        Uuid = payloads.Count == 1 ? request.Uuid : null
                     };
                     dynamic? nextResult = await next(invocationContext);
                     var nextErrors = nextResult?.Errors as HashSet<ErrorDto>;

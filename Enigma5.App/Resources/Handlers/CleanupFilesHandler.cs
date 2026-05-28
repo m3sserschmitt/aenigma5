@@ -23,7 +23,6 @@ using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
