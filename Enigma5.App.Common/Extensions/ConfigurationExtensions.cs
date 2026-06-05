@@ -40,6 +40,9 @@ public static class ConfigurationExtensions
     public static string? GetHostname(this IConfiguration configuration)
     => configuration.GetStringValue("Hostname")?.Trim('/', ' ');
 
+    public static string? GetDatabaseConnectionString(this IConfiguration configuration)
+    => configuration.GetConnectionString("DbConnectionString");
+
     public static string? GetPublicEndpoint(this IConfiguration configuration)
     {
         var service = configuration.GetHostname();
@@ -103,12 +106,6 @@ public static class ConfigurationExtensions
     public static string? GetPassphraseKeyPath(this IConfiguration configuration)
     => configuration.GetStringValue("PassphrasePath");
 
-    public static bool GetRetryConnection(this IConfiguration configuration)
-    => configuration.GetValue("Network:RetryConnections", false);
-
-    public static int GetConnectionRetriesCount(this IConfiguration configuration)
-    => configuration.GetValue("Network:ConnectionRetriesCount", 0);
-
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
     => configuration.GetValue("Network:DelayBetweenConnectionRetries", 0);
 
@@ -145,6 +142,9 @@ public static class ConfigurationExtensions
 
     public static PassphraseSource GetPassphraseSource(this IConfiguration configuration)
     => configuration.GetEnum("PassphraseSource", PassphraseSource.Dashboard);
+
+    public static DbProvider GetDbProvider(this IConfiguration configuration)
+    => configuration.GetEnum("DbProvider", DbProvider.Sqlite);
 
     public static string? GetOnionService(this IConfiguration configuration)
     => configuration.GetStringValue("OnionService");

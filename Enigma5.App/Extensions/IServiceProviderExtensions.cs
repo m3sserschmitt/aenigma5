@@ -50,7 +50,7 @@ public static class IServiceProviderExtensions
 
     public static IServiceProvider SetupMasterPassphrase(this IServiceProvider serviceProvider)
     {
-        serviceProvider.GetRequiredService<IMediator>().Send(new SetMasterPassphraseCommand(null));
+        serviceProvider.GetRequiredService<IMediator>().Send(new SetMasterPassphraseCommand([]));
         return serviceProvider;
     }
 }

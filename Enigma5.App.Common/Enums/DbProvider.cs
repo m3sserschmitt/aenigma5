@@ -18,12 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Resources.Handlers;
-using MediatR;
+namespace Enigma5.App.Common.Enums;
 
-namespace Enigma5.App.Resources.Commands;
-
-public class SetMasterPassphraseCommand(char[] passphrase): IRequest<CommandResult<bool>>
+public enum DbProvider
 {
-    public char[] Passphrase { get; private set; } = passphrase;
+    Sqlite
 }

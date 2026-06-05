@@ -90,40 +90,57 @@ public sealed class CertificateManager(
     public Task<IEnvelopeSigner> CreateSignerAsync()
     => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
 
-    public async Task<bool> SetupAsync(char[]? passphrase)
+    public async Task<bool> SetupAsync(char[] passphrase)
     {
-        var passphraseChars = passphrase ?? await _passphraseProvider.ProvidePassphraseAsync();
-        if (passphraseChars == null)
+        try
         {
+            var passphraseChars = passphrase.Length == 0 ? await _passphraseProvider.ProvidePassphraseAsync() : passphrase;
+            if (passphraseChars == null)
+            {
+                return false;
+            }
+            var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
+            try
+            {
+                return passphraseChars.Length == 0 ? await GenerateKeysAsync(passphraseChars)
+                : await GenerateKeysAsync(passphraseChars) && await CreateMasterPassphraseAsync(passphraseBytes);
+            }
+            finally
+            {
+                Array.Clear(passphraseBytes);
+                Array.Clear(passphraseChars);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception encountered while setting up master passphrase.");
             return false;
         }
-        else if (passphraseChars.Length == 0)
-        {
-            return true;
-        }
-        var passphraseBytes = Encoding.UTF8.GetBytes(passphraseChars);
-        var ok = passphraseChars.Length != 0 && await GenerateKeysAsync(passphraseChars) && await CreateMasterPassphraseAsync(passphraseBytes);
-        Array.Clear(passphraseBytes);
-        Array.Clear(passphraseChars);
-        return ok;
     }
 
     public async Task<bool> GenerateKeysAsync(char[] passphrase)
     {
         var publicKeyPath = _keysProvider.PublicKeyPath;
         var privateKeyPath = _keysProvider.PrivateKeyPath;
+
         if (string.IsNullOrWhiteSpace(publicKeyPath) || string.IsNullOrWhiteSpace(privateKeyPath))
         {
             return false;
         }
-        if (!File.Exists(privateKeyPath))
+
+        var privateKeyFileInfo = new FileInfo(privateKeyPath);
+        if (!privateKeyFileInfo.Exists || privateKeyFileInfo.Length == 0)
         {
             return await KeysGenerator.Generate(privateKeyPath, passphrase) &&
             await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
         }
-        else if (!File.Exists(publicKeyPath))
+        else
         {
-            return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+            var publicKeyFileInfo = new FileInfo(publicKeyPath);
+            if (!publicKeyFileInfo.Exists || publicKeyFileInfo.Length == 0)
+            {
+                return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+            }
         }
         return true;
     }

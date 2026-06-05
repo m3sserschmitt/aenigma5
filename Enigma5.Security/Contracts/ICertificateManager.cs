@@ -37,7 +37,7 @@ public interface ICertificateManager
 
     Task<bool> RemoveMasterPassphraseAsync();
 
-    Task<bool> SetupAsync(char[]? passphrase);
+    Task<bool> SetupAsync(char[] passphrase);
 
     Task<IEnvelopeUnsealer> CreateUnsealerAsync();
 

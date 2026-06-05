@@ -178,7 +178,6 @@ public partial class RoutingHub(
 
         if (result.IsSuccessNotNullResultValue())
         {
-            _logger.LogError($"Invocation of {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}} completed with no success.", nameof(Broadcast), Context.ConnectionId);
             return await SendBroadcast(result.Value!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_FORWARDING_ERROR);
@@ -192,15 +191,17 @@ public partial class RoutingHub(
     [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request)
     {
-        var localVertex = await AddNewAdjacencies(request.NewAddresses ?? []);
+        var vertexBroadcastRequest = await AddNewAdjacencies(request.NewAddresses ?? []);
 
-        if (localVertex is null)
+        if (vertexBroadcastRequest is null)
         {
-            _logger.LogError($"Invocation of {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}} resulted in no changes to be broadcasted.", nameof(TriggerBroadcast), Context.ConnectionId);
+            _logger.LogError($"Invocation of {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}} returned null vertex broadcast.",
+            nameof(TriggerBroadcast),
+            Context.ConnectionId);
             return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
 
-        return await SendBroadcast(localVertex!)
+        return await SendBroadcast(vertexBroadcastRequest!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
     }
@@ -235,12 +236,7 @@ public partial class RoutingHub(
             return;
         }
 
-        var broadcast = await RemoveAdjacencies([removedAddress!]);
-
-        if (broadcast != null)
-        {
-            await SendBroadcast(broadcast);
-        }
+        await RemoveAdjacencies([removedAddress!]);
 
         await base.OnDisconnectedAsync(exception);
     }

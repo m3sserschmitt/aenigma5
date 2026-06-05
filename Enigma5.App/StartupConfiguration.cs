@@ -74,6 +74,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<Bridge>();
         services.AddSingleton<HubConnectionsProxy>();
         services.AddSingleton<DbSingleThreadRunner>();
+        services.AddSingleton<SqlitePragmaInterceptor>();
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();

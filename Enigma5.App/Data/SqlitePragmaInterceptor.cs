@@ -23,29 +23,76 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Enigma5.App.Data;
 
-public class SqlitePragmaInterceptor : DbConnectionInterceptor
+public class SqlitePragmaInterceptor(ILogger<SqlitePragmaInterceptor> logger) : DbConnectionInterceptor
 {
+    private readonly ILogger _logger = logger;
+
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {
-        ApplyPragmas(connection);
+        try
+        {
+            ApplyPragmas(connection);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Critical error while applying database pragmas.");
+            throw;
+        }
     }
 
-    public override Task ConnectionOpenedAsync(DbConnection connection, ConnectionEndEventData eventData,
+    public override async Task ConnectionOpenedAsync(
+        DbConnection connection,
+        ConnectionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        ApplyPragmas(connection);
-        return Task.CompletedTask;
+        try
+        {
+            await ApplyPragmasAsync(connection, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Critical error while applying database pragmas.");
+            throw;
+        }
     }
 
     private static void ApplyPragmas(DbConnection connection)
     {
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = @"
-            PRAGMA journal_mode=WAL;
-            PRAGMA busy_timeout=5000;
-            PRAGMA synchronous=NORMAL;
-            PRAGMA foreign_keys=ON;
-        ";
-        cmd.ExecuteNonQuery();
+        cmd.CommandText = "PRAGMA journal_mode=WAL;";
+        var result = cmd.ExecuteScalar()?.ToString();
+        if (result != "wal")
+        {
+            throw new InvalidOperationException($"Failed to set WAL mode, got: {result}");
+        }
+        foreach (var pragma in GetPragmas())
+        {
+            using var pragmaCmd = connection.CreateCommand();
+            pragmaCmd.CommandText = pragma;
+            pragmaCmd.ExecuteNonQuery();
+        }
     }
+
+    private static async Task ApplyPragmasAsync(DbConnection connection, CancellationToken cancellationToken)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "PRAGMA journal_mode=WAL;";
+        var result = (await cmd.ExecuteScalarAsync(cancellationToken))?.ToString();
+        if (result != "wal")
+        {
+            throw new InvalidOperationException($"Failed to set WAL mode, got: {result}");
+        }
+        foreach (var pragma in GetPragmas())
+        {
+            using var pragmaCmd = connection.CreateCommand();
+            pragmaCmd.CommandText = pragma;
+            await pragmaCmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private static IEnumerable<string> GetPragmas() =>
+    [
+        "PRAGMA synchronous=NORMAL;",
+        "PRAGMA foreign_keys=ON;"
+    ];
 }

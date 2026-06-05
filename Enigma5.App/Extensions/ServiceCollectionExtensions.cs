@@ -56,10 +56,18 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection SetupDbContext(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DbConnectionString");
-        return services.AddDbContext<EnigmaDbContext>(options =>
+        var connectionString = configuration.GetDatabaseConnectionString();
+        var dbProvider = configuration.GetDbProvider();
+        return services.AddDbContext<EnigmaDbContext>((serviceProvider, options) =>
         {
-            options.UseSqlite(connectionString!).AddInterceptors(new SqlitePragmaInterceptor());
+            switch (dbProvider)
+            {
+                case DbProvider.Sqlite:
+                    options.UseSqlite(connectionString!)
+                    .AddInterceptors(serviceProvider.GetRequiredService<SqlitePragmaInterceptor>());
+                    break;
+            }
+
         });
     }
 
