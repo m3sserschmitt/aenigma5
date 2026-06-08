@@ -23,7 +23,11 @@ using Enigma5.App.Common.Utils;
 
 namespace Enigma5.App.NetworkBridge;
 
-public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnectionsProxy, ILogger<Bridge> logger) : IDisposable
+public class Bridge(
+    IConfiguration configuration,
+    HubConnectionsProxy hubConnectionsProxy,
+    SimpleSingleThreadRunner singleThreadRunner,
+    ILogger<Bridge> logger) : IDisposable
 {
     private bool _disposed;
 
@@ -33,7 +37,7 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
 
     private readonly ILogger _logger = logger;
 
-    private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
+    private readonly SimpleSingleThreadRunner _singleThreadRunner = singleThreadRunner;
 
     ~Bridge()
     {

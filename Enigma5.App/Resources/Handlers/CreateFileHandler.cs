@@ -19,25 +19,22 @@
 */
 
 using Enigma5.App.Common.Extensions;
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class CreateFileHandler(
-    EnigmaDbContext context,
     IConfiguration configuration,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<CreateFileCommand, CommandResult<SharedDataDto>>
 {
-    private readonly EnigmaDbContext _context = context;
-
     private readonly IConfiguration _configuration = configuration;
 
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
     {
@@ -57,22 +54,22 @@ public class CreateFileHandler(
             MaxAccessCount = request.MaxAccessCount
         };
 
-        cancellationToken.ThrowIfCancellationRequested();
-        await _dbSingleThreadRunner.RunAsync(() =>
+        if (await _dbWriter.CreateFileAsync(record, cancellationToken) > 0)
         {
-            _context.Files.Add(record);
-            return _context.SaveChanges();
-        });
+            string fullPath = Path.Combine(webContentDirectory, record.Tag);
+            using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+            await request.File.CopyToAsync(stream, cancellationToken);
 
-        string fullPath = Path.Combine(webContentDirectory, record.Tag);
-        using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
-        await request.File.CopyToAsync(stream, cancellationToken);
-
-        return CommandResult.CreateResultSuccess(new SharedDataDto
+            return CommandResult.CreateResultSuccess(new SharedDataDto
+            {
+                Tag = record.Tag,
+                ResourceUrl = _configuration.GetFileUrl(record.Tag),
+                ValidUntil = _configuration.GetFileValidityDate(),
+            });
+        }
+        else
         {
-            Tag = record.Tag,
-            ResourceUrl = _configuration.GetFileUrl(record.Tag),
-            ValidUntil = _configuration.GetFileValidityDate(),
-        });
+            return CommandResult.CreateResultFailure<SharedDataDto>();
+        }
     }
 }

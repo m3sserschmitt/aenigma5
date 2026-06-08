@@ -31,6 +31,7 @@ using Microsoft.Extensions.Logging;
 namespace Enigma5.Security;
 
 public sealed class CertificateManager(
+    SimpleSingleThreadRunner simpleSingleThreadRunner,
     IConfiguration configuration,
     IPassphraseProvider passphraseProvider,
     IKeyReader keysProvider,
@@ -38,7 +39,7 @@ public sealed class CertificateManager(
 {
     private bool _disposed;
 
-    private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = new();
+    private readonly SimpleSingleThreadRunner _simpleSingleThreadRunner = simpleSingleThreadRunner;
 
     private readonly IKeyReader _keysProvider = keysProvider;
 

@@ -19,9 +19,9 @@
 */
 
 using Enigma5.App.Common.Extensions;
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,14 +30,14 @@ namespace Enigma5.App.Resources.Handlers;
 public class CleanupFilesHandler(
     EnigmaDbContext context,
     IConfiguration configuration,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<CleanupFilesCommand, CommandResult<int>>
 {
     private readonly IConfiguration _configuration = configuration;
 
     private readonly EnigmaDbContext _context = context;
 
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(CleanupFilesCommand request, CancellationToken cancellationToken)
     {
@@ -55,13 +55,8 @@ public class CleanupFilesHandler(
                     File.Delete(fullPath);
                 }
             }
-            cancellationToken.ThrowIfCancellationRequested();
-            result += await _dbSingleThreadRunner.RunAsync(() =>
-            {
-                _context.Remove(fileToBeRemoved);
-                return _context.SaveChanges();
-            });
+            result += await _dbWriter.RemoveFileAsync(fileToBeRemoved, cancellationToken);
         }
-        return CommandResult<int>.CreateResultSuccess(result);
+        return CommandResult.CreateResultSuccess(result);
     }
 }

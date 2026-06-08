@@ -18,34 +18,27 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
+using LinqKit;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class CleanupMessagesHandler(
-    EnigmaDbContext context,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<CleanupMessagesCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
-
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken = default)
     {
-        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        var deliveredTime = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
-        cancellationToken.ThrowIfCancellationRequested();
-        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
-        {
-            return _context.Messages.Where(item =>
-                (!item.Sent && time > item.Timestamp) ||
-                (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp)
-            ).ExecuteDelete();
-        }));
+        var supTimestamp = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        var supDeliveredTimeSpan = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
+        var predicate = PredicateBuilder.New<PendingMessage>(item =>
+            (!item.Sent && supTimestamp > item.Timestamp) ||
+            (item.Sent && item.SentTimestamp != null && supDeliveredTimeSpan > item.SentTimestamp));
+        return CommandResult.CreateResultSuccess(await _dbWriter.RemoveMessagesAsync(predicate, cancellationToken));
     }
 }

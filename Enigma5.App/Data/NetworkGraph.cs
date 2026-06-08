@@ -32,7 +32,7 @@ public class NetworkGraph : IDisposable
 {
     private bool _disposed;
 
-    private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
+    private readonly SimpleSingleThreadRunner _singleThreadRunner;
 
     private readonly ICertificateManager _certificateManager;
 
@@ -52,6 +52,7 @@ public class NetworkGraph : IDisposable
         ICertificateManager certificateManager,
         NetworkGraphValidationPolicy networkGraphValidationPolicy,
         IConfiguration configuration,
+        SimpleSingleThreadRunner singleThreadRunner,
         ILogger<NetworkGraph> logger,
         DashboardUIState dashboardUIState)
     {
@@ -62,6 +63,7 @@ public class NetworkGraph : IDisposable
         _logger = logger;
         _dashboardUIState = dashboardUIState;
         _networkGraphValidationPolicy = networkGraphValidationPolicy;
+        _singleThreadRunner = singleThreadRunner;
     }
 
     ~NetworkGraph()

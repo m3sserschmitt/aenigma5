@@ -73,8 +73,8 @@ public class StartupConfiguration(IConfiguration configuration)
         services.AddSingleton<DashboardUIState>();
         services.AddSingleton<Bridge>();
         services.AddSingleton<HubConnectionsProxy>();
-        services.AddSingleton<DbSingleThreadRunner>();
         services.AddSingleton<SqlitePragmaInterceptor>();
+        services.AddTransient<SimpleSingleThreadRunner>();
         services.AddTransient<OnionParser>();
         services.AddTransient<AzureClient>();
         services.AddTransient<MediatorHangfireBridge>();
@@ -84,6 +84,7 @@ public class StartupConfiguration(IConfiguration configuration)
         services.SetupPassphraseReader(_configuration);
         services.SetupHangfire();
         services.SetupDbContext(_configuration);
+        services.SetupDbWriter(_configuration);
         services.SetupMediatR();
         services.AddAntiforgery();
         services.ConfigureHttpJsonOptions(options =>

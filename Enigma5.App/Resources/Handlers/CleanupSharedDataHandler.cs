@@ -18,30 +18,24 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
+using LinqKit;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class CleanupSharedDataHandler(
-    EnigmaDbContext context,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<CleanupSharedDataCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
-
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken = default)
     {
-        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        cancellationToken.ThrowIfCancellationRequested();
-        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
-        {
-            return _context.SharedData.Where(item => time > item.Timestamp).ExecuteDelete();
-        }));
+        var supTimestamp = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        var predicate = PredicateBuilder.New<SharedData>(item => supTimestamp > item.Timestamp);
+        return CommandResult.CreateResultSuccess(await _dbWriter.RemoveSharedDataAsync(predicate, cancellationToken));
     }
 }

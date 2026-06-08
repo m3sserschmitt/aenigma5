@@ -18,9 +18,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,12 +28,12 @@ namespace Enigma5.App.Resources.Handlers;
 
 public class IncrementSharedDataAccessCountHandler(
     EnigmaDbContext context,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
@@ -43,21 +43,8 @@ public class IncrementSharedDataAccessCountHandler(
 
         if (sharedData is not null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
-            {
-                sharedData.AccessCount += 1;
-                if (sharedData.AccessCount >= sharedData.MaxAccessCount)
-                {
-                    _context.Remove(sharedData);
-                }
-                else
-                {
-                    _context.Update(sharedData);
-                }
-
-                return _context.SaveChanges();
-            }));
+            var result = await _dbWriter.IncrementSharedDataAccessCountAsync(sharedData, cancellationToken);
+            return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
         }
 
         return CommandResult.CreateResultFailure<int>();

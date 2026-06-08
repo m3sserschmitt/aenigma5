@@ -29,6 +29,7 @@ namespace Enigma5.App.Hubs.Sessions;
 public class SessionManager(
     ConnectionsMapper connectionsMapper,
     ICertificateManager certificateManager,
+    SimpleSingleThreadRunner singleThreadExecutor,
     ILogger<SessionManager> logger) : ISessionManager
 {
     private readonly Dictionary<string, string> _pending = [];
@@ -41,7 +42,7 @@ public class SessionManager(
 
     private readonly ILogger _logger = logger;
 
-    private readonly SimpleSingleThreadRunner _singleThreadExecutor = new();
+    private readonly SimpleSingleThreadRunner _singleThreadExecutor = singleThreadExecutor;
 
     public IReadOnlyDictionary<string, string> Pending => _pending;
 

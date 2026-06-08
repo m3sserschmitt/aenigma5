@@ -19,26 +19,23 @@
 */
 
 using Enigma5.App.Common.Extensions;
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using Enigma5.Crypto;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class CreateSharedDataHandler(
-    EnigmaDbContext context,
     IConfiguration configuration,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<CreateSharedDataCommand, CommandResult<SharedDataDto>>
 {
-    private readonly EnigmaDbContext _context = context;
-
     private readonly IConfiguration _configuration = configuration;
 
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<SharedDataDto>> Handle(CreateSharedDataCommand request, CancellationToken cancellationToken)
     {
@@ -68,18 +65,12 @@ public class CreateSharedDataHandler(
             MaxAccessCount = request.SharedDataCreate.AccessCount ?? 1
         };
 
-        cancellationToken.ThrowIfCancellationRequested();
-        await _dbSingleThreadRunner.RunAsync(() =>
-        {
-            _context.Add(sharedData);
-            return _context.SaveChanges();
-        });
-
-        return CommandResult.CreateResultSuccess(new SharedDataDto
+        return await _dbWriter.CreateSharedDataAsync(sharedData, cancellationToken) > 0 ?
+        CommandResult.CreateResultSuccess(new SharedDataDto
         {
             Tag = sharedData.Tag,
             ResourceUrl = _configuration.GetSharedDataUrl(sharedData.Tag),
             ValidUntil = _configuration.GetSharedDataValidityDate()
-        });
+        }) : CommandResult.CreateResultFailure<SharedDataDto>();
     }
 }

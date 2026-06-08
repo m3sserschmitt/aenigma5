@@ -19,23 +19,19 @@
 */
 
 using Enigma5.App.Common.Extensions;
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using LinqKit;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class MarkMessagesAsDeliveredHandler(
-    EnigmaDbContext dbContext,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<MarkMessagesAsDeliveredCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _dbContext = dbContext;
-
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(MarkMessagesAsDeliveredCommand request, CancellationToken cancellationToken)
     {
@@ -44,8 +40,6 @@ public class MarkMessagesAsDeliveredHandler(
             return CommandResult.CreateResultFailure<int>();
         }
 
-        var now = DateTimeOffset.Now;
-        var utcTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var predicate = PredicateBuilder.New<PendingMessage>(item => item.Destination == request.Destination && !item.Sent);
 
         if (request.SupId != null)
@@ -53,15 +47,6 @@ public class MarkMessagesAsDeliveredHandler(
             predicate = predicate.And(item => item.Id <= request.SupId);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
-        {
-            return _dbContext.Messages
-            .Where(predicate)
-            .ExecuteUpdate(s =>
-                s.SetProperty(m => m.Sent, true)
-                .SetProperty(m => m.DateSent, now)
-                .SetProperty(m => m.SentTimestamp, utcTimestamp));
-        }));
+        return CommandResult.CreateResultSuccess(await _dbWriter.MarkMessagesAsDeliveredAsync(predicate, cancellationToken));
     }
 }

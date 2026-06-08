@@ -18,31 +18,23 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
+using LinqKit;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class RemoveMessagesHandler(
-    EnigmaDbContext context,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<RemoveMessagesCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
-
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(RemoveMessagesCommand request, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        return CommandResult.CreateResultSuccess(await _dbSingleThreadRunner.RunAsync(() =>
-        {
-            return _context.Messages
-            .Where(item => item.Destination == request.Destination && item.Sent)
-            .ExecuteDelete();
-        }));
+        var predicate = PredicateBuilder.New<PendingMessage>(item => item.Destination == request.Destination && item.Sent);
+        return CommandResult.CreateResultSuccess(await _dbWriter.RemoveMessagesAsync(predicate, cancellationToken));
     }
 }

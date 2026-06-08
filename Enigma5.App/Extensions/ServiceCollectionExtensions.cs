@@ -22,6 +22,7 @@ using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Common.Enums;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
+using Enigma5.App.Resources.Contracts;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.Security;
 using Enigma5.Security.Contracts;
@@ -35,17 +36,14 @@ namespace Enigma5.App.Extensions;
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection SetupHangfire(this IServiceCollection services)
-    {
-        services.AddHangfire(configuration =>
-                {
-                    configuration.UseInMemoryStorage();
-                    configuration.UseSerializerSettings(new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    });
-                });
-        return services.AddHangfireServer();
-    }
+    => services.AddHangfire(configuration =>
+        {
+            configuration.UseInMemoryStorage();
+            configuration.UseSerializerSettings(new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
+        }).AddHangfireServer();
 
     public static IServiceCollection SetupMediatR(this IServiceCollection services)
     => services.AddMediatR(config =>
@@ -55,28 +53,30 @@ public static class ServiceCollectionExtensions
         });
 
     public static IServiceCollection SetupDbContext(this IServiceCollection services, IConfiguration configuration)
-    {
-        var connectionString = configuration.GetDatabaseConnectionString();
-        var dbProvider = configuration.GetDbProvider();
-        return services.AddDbContext<EnigmaDbContext>((serviceProvider, options) =>
+        => services.AddDbContext<EnigmaDbContext>((serviceProvider, options) =>
         {
-            switch (dbProvider)
+            _ = configuration.GetDbProvider() switch
             {
-                case DbProvider.Sqlite:
-                    options.UseSqlite(connectionString!)
-                    .AddInterceptors(serviceProvider.GetRequiredService<SqlitePragmaInterceptor>());
-                    break;
-            }
-
+                DbProvider.Sqlite => options
+                    .UseSqlite(configuration.GetDatabaseConnectionString())
+                    .AddInterceptors(serviceProvider.GetRequiredService<SqlitePragmaInterceptor>()),
+                _ => throw new NotSupportedException($"DB provider not supported.")
+            };
         });
-    }
+
+    public static IServiceCollection SetupDbWriter(this IServiceCollection services, IConfiguration configuration)
+    => configuration.GetDbProvider() switch
+    {
+        DbProvider.Sqlite => services.AddSingleton<IDbWriter, SingleThreadDbWriter>(),
+        _ => throw new NotSupportedException($"DB provider not supported."),
+    };
 
     public static IServiceCollection SetupKeyReader(this IServiceCollection services, IConfiguration configuration)
     => configuration.GetKeySource() switch
     {
         KeySource.File => services.AddTransient(typeof(IKeyReader), typeof(FileKeyReader)),
         KeySource.Azure => services.AddTransient(typeof(IKeyReader), typeof(AzureKeysReader)),
-        _ => services,
+        _ => throw new NotSupportedException($"Key source not supported."),
     };
 
     public static IServiceCollection SetupPassphraseReader(this IServiceCollection services, IConfiguration configuration)
@@ -85,6 +85,6 @@ public static class ServiceCollectionExtensions
         PassphraseSource.Azure => services.AddTransient(typeof(IPassphraseProvider), typeof(AzurePassphraseReader)),
         PassphraseSource.Dashboard => services.AddTransient(typeof(IPassphraseProvider), typeof(DummyPassphraseProvider)),
         PassphraseSource.Keyboard => services.AddTransient(typeof(IPassphraseProvider), typeof(CommandLinePassphraseReader)),
-        _ => services
+        _ => throw new NotSupportedException($"Passphrase source not supported.")
     };
 }

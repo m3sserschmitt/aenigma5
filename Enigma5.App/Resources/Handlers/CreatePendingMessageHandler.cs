@@ -19,10 +19,10 @@
 */
 
 using Enigma5.App.Common.Extensions;
-using Enigma5.App.Common.Utils;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,12 +30,12 @@ namespace Enigma5.App.Resources.Handlers;
 
 public class CreatePendingMessageHandler(
     EnigmaDbContext context,
-    DbSingleThreadRunner dbSingleThreadRunner
+    IDbWriter dbWriter
 ) : IRequestHandler<CreatePendingMessageCommand, CommandResult<PendingMessageDto>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    private readonly DbSingleThreadRunner _dbSingleThreadRunner = dbSingleThreadRunner;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<PendingMessageDto>> Handle(CreatePendingMessageCommand request, CancellationToken cancellationToken)
     {
@@ -67,15 +67,9 @@ public class CreatePendingMessageHandler(
             }
             pendingMessage.Uuid = request.Uuid;
         }
-        
-        cancellationToken.ThrowIfCancellationRequested();
-        await _dbSingleThreadRunner.RunAsync(() =>
-        {
-            _context.Add(pendingMessage);
-            return _context.SaveChanges();
-        });
 
-        return CommandResult.CreateResultSuccess(new PendingMessageDto
+        return await _dbWriter.CreatePendingMessageAsync(pendingMessage, cancellationToken) > 0 ?
+        CommandResult.CreateResultSuccess(new PendingMessageDto
         {
             Id = pendingMessage.Id,
             Uuid = pendingMessage.Uuid,
@@ -83,6 +77,6 @@ public class CreatePendingMessageHandler(
             Destination = pendingMessage.Destination,
             Content = pendingMessage.Content,
             DateReceived = pendingMessage.DateCreated
-        });
+        }) : CommandResult.CreateResultFailure<PendingMessageDto>();
     }
 }
