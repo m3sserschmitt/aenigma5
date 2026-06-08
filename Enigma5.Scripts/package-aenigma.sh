@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Aenigma - Federal messaging system
-# Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+# Aenigma - Federated messaging system
+# Copyright © 2024-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
 # This file is part of Aenigma project.
 
@@ -97,7 +97,7 @@ Priority: optional
 Architecture: $ARCH
 Depends: openssl (>= 3.0.0), jq, basez
 Maintainer: Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
-Description: Federal messaging system
+Description: Federated messaging system
 EOF
 
 # Step 6: Build the Debian package
