@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2024-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+
+SERVICE_USER="openvpn"
+OPENVPN_DIRECTORY="/etc/openvpn"
+EASYRSA_DIRECTORY="$OPENVPN_DIRECTORY/easy-rsa"
+EASYRSA="$EASYRSA_DIRECTORY/easyrsa"
+EASYRSA_PKI="$EASYRSA_DIRECTORY/pki"
+export EASYRSA_PKI
+ 
+show_help() {
+    echo "Usage: $0 -c CLIENT_NAME -d DOMAIN"
+    echo ""
+    echo "Options:"
+    echo "  -c CLIENT_NAME  Name for the client certificate (e.g., john)"
+    echo "  -d DOMAIN       The domain name for the server (e.g., example.com)"
+    echo ""
+    echo "Example:"
+    echo "  sudo $0 -c john -d example.com"
+    exit 1
+}
+ 
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+ 
+if [ "$#" -lt 4 ]; then
+    show_help
+fi
+ 
+while getopts "c:d:h" opt; do
+    case $opt in
+        c) CLIENT_NAME=$OPTARG ;;
+        d) DOMAIN=$OPTARG ;;
+        h) show_help ;;
+        *) show_help ;;
+    esac
+done
+ 
+if [[ ! -v CLIENT_NAME || ! -v DOMAIN ]]; then
+    echo "Error: CLIENT_NAME and DOMAIN are required."
+    show_help
+fi
+ 
+[[ ! -f "${EASYRSA_PKI}/ca.crt" ]] && { echo "ERROR: CA not found. Setup the server and CA first."; exit 1; }
+ 
+SERVER_DIRECTORY="$OPENVPN_DIRECTORY/$DOMAIN"
+CLIENT_DIR="$OPENVPN_DIRECTORY/clients/$CLIENT_NAME"
+mkdir -p "$CLIENT_DIR"
+ 
+"$EASYRSA" --batch gen-req "$CLIENT_NAME" nopass
+"$EASYRSA" --batch sign-req client "$CLIENT_NAME"
+ 
+cp -v "$EASYRSA_PKI/ca.crt"                   "$CLIENT_DIR/"
+cp -v "$EASYRSA_PKI/issued/$CLIENT_NAME.crt"  "$CLIENT_DIR/"
+cp -v "$EASYRSA_PKI/private/$CLIENT_NAME.key" "$CLIENT_DIR/"
+chown "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
+chmod 700 "$CLIENT_DIR/$CLIENT_NAME.key"
+ 
+cp -v "$SERVER_DIRECTORY/ta.key" "$CLIENT_DIR/"
+chown "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
+chmod 700 "$CLIENT_DIR/ta.key"
+ 
+echo ""
+echo "Client certificate created."
+echo "  Files location: $CLIENT_DIR/"
+echo "  Copy this directory to $OPENVPN_DIRECTORY/clients/$CLIENT_NAME/ on the client machine."

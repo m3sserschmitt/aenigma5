@@ -32,6 +32,6 @@ systemctl enable "$SERVICE_NAME"
 echo "Done."
 
 echo "Starting $SERVICE_NAME service ..."
-systemctl start "$SERVICE_NAME"
+systemctl restart "$SERVICE_NAME"
 echo "Done."
 exit 0
