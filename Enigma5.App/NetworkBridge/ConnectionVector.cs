@@ -255,7 +255,12 @@ public class ConnectionVector : IDisposable
         var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, cancellationToken);
         _logger.LogDebug($"Cleaning up target for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
         var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, cancellationToken);
-        return result1 && result2;
+        var result = result1 && result2;
+        if (!result)
+        {
+            await StopAsync(cancellationToken);
+        }
+        return result;
     }
 
     private async Task<bool> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
@@ -305,7 +310,12 @@ public class ConnectionVector : IDisposable
         _sourceToTargetSynchronized = await SyncMessagesAsync(_source, _target, cancellationToken);
         _logger.LogDebug($"Syncing target to source pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
         _targetToSourceSynchronized = await SyncMessagesAsync(_target, _source, cancellationToken);
-        return _sourceToTargetSynchronized && _targetToSourceSynchronized;
+        var result = _sourceToTargetSynchronized && _targetToSourceSynchronized;
+        if (!result)
+        {
+            await StopAsync(cancellationToken);
+        }
+        return result;
     }
 
     public async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
