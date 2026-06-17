@@ -19,67 +19,75 @@
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
 set -euo pipefail
- 
+
 OPENVPN_DIRECTORY="/etc/openvpn"
 DNSMASQ_HOSTS="/etc/openvpn/dnsmasq-hosts"
- 
+
 show_help() {
-    echo "Usage: $0 -d DOMAIN -i DNS_IP"
+    echo "Usage: $0 -d DOMAIN -i DNS_IP -a DOMAIN_IP"
     echo ""
     echo "Options:"
     echo "  -d DOMAIN       The domain name of the server (e.g., example.com)"
     echo "  -i DNS_IP       VPN server IP to be pushed as DNS (e.g., 10.8.0.1)"
+    echo "  -a DOMAIN_IP    IP address to assign to the domain itself (e.g., 10.8.0.1)"
     echo ""
     echo "Example:"
-    echo "  sudo $0 -d example.com -i 10.8.0.1"
+    echo "  sudo $0 -d example.com -i 10.8.0.1 -a 10.8.0.1"
     exit 1
 }
- 
+
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
- 
-if [ "$#" -lt 4 ]; then
+
+if [ "$#" -lt 6 ]; then
     show_help
 fi
- 
-while getopts "d:i:h" opt; do
+
+while getopts "d:i:a:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
         i) DNS_IP=$OPTARG ;;
+        a) DOMAIN_IP=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
 done
- 
-if [[ ! -v DOMAIN || ! -v DNS_IP ]]; then
-    echo "Error: DOMAIN and DNS_IP are required."
+
+if [[ ! -v DOMAIN || ! -v DNS_IP || ! -v DOMAIN_IP ]]; then
+    echo "Error: DOMAIN, DNS_IP and DOMAIN_IP are required."
     show_help
 fi
- 
+
 apt-get update -qq
 apt-get install -y dnsmasq
- 
+
 # Point dnsmasq to our hosts file
 cat > "/etc/dnsmasq.d/$DOMAIN.conf" << CONF
 interface=tun0
 bind-interfaces
 addn-hosts=$DNSMASQ_HOSTS
 CONF
- 
+
 # Create empty hosts file if it does not exist
 touch "$DNSMASQ_HOSTS"
- 
+
+# Add domain itself to hosts file if not already present
+if ! grep -q "$DOMAIN" "$DNSMASQ_HOSTS"; then
+    echo "$DOMAIN_IP  $DOMAIN" >> "$DNSMASQ_HOSTS"
+fi
+
 # Add push directive to server config if not already present
 SERVER_CONF="$OPENVPN_DIRECTORY/$DOMAIN.conf"
 if ! grep -q "dhcp-option DNS" "$SERVER_CONF"; then
     echo "push \"dhcp-option DNS $DNS_IP\"" >> "$SERVER_CONF"
 fi
- 
+
 systemctl enable dnsmasq
 systemctl restart dnsmasq
 systemctl restart "openvpn@${DOMAIN}"
- 
+
 echo ""
 echo "DNS setup complete."
 echo "  dnsmasq config: /etc/dnsmasq.d/$DOMAIN.conf"
 echo "  Hosts file:     $DNSMASQ_HOSTS"
 echo "  Pushed DNS:     $DNS_IP"
+echo "  Domain IP:      $DOMAIN_IP  $DOMAIN"
