@@ -104,4 +104,10 @@ for f in "$APP_INSTALL_DIR"/Scripts/*.sh; do
     ln -sfv "$f" "$link_name"
 done
 
+if systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo "Enable and restart $SERVICE_NAME.service"
+    systemctl enable "$SERVICE_NAME"
+    systemctl restart "$SERVICE_NAME"
+fi
+
 echo "Done."

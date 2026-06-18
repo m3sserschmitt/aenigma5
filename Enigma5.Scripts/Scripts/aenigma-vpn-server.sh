@@ -132,8 +132,6 @@ group $SERVICE_USER
  
 persist-key
 persist-tun
-
-push "dhcp-option DOMAIN $DOMAIN"
  
 explicit-exit-notify 1
 verb 3

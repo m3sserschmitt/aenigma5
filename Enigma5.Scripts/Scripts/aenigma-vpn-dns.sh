@@ -19,75 +19,84 @@
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
 set -euo pipefail
-
+ 
 OPENVPN_DIRECTORY="/etc/openvpn"
-DNSMASQ_HOSTS="/etc/openvpn/dnsmasq-hosts"
-
+ 
 show_help() {
-    echo "Usage: $0 -d DOMAIN -i DNS_IP -a DOMAIN_IP"
+    echo "Usage: $0 -d DOMAIN -i DNS_IP -f INTERFACE [-c CNAME]"
     echo ""
     echo "Options:"
     echo "  -d DOMAIN       The domain name of the server (e.g., example.com)"
     echo "  -i DNS_IP       VPN server IP to be pushed as DNS (e.g., 10.8.0.1)"
-    echo "  -a DOMAIN_IP    IP address to assign to the domain itself (e.g., 10.8.0.1)"
+    echo "  -f INTERFACE    Network interface to bind (e.g. tun0)"
+    echo "  [-c CNAME]      (Optional) Make DOMAIN act like a CNAME for this value"
     echo ""
     echo "Example:"
-    echo "  sudo $0 -d example.com -i 10.8.0.1 -a 10.8.0.1"
+    echo "  sudo $0 -d vpn.example.com -i 10.8.0.1 -f tun0 -c vpn-endpoint.example.com"
     exit 1
 }
-
+ 
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
-
+ 
 if [ "$#" -lt 6 ]; then
     show_help
 fi
-
-while getopts "d:i:a:h" opt; do
+ 
+while getopts "d:i:f:c:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
         i) DNS_IP=$OPTARG ;;
-        a) DOMAIN_IP=$OPTARG ;;
+        f) INTERFACE=$OPTARG ;;
+        c) CNAME=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
 done
-
-if [[ ! -v DOMAIN || ! -v DNS_IP || ! -v DOMAIN_IP ]]; then
-    echo "Error: DOMAIN, DNS_IP and DOMAIN_IP are required."
+ 
+if [[ ! -v DOMAIN || ! -v DNS_IP || ! -v INTERFACE ]]; then
+    echo "Error: DOMAIN, DNS_IP and INTERFACE are required."
     show_help
 fi
-
+ 
+SERVER_DIRECTORY="$OPENVPN_DIRECTORY/$DOMAIN"
+DNSMASQ_HOSTS="$SERVER_DIRECTORY/dnsmasq-hosts"
+ 
 apt-get update -qq
 apt-get install -y dnsmasq
-
-# Point dnsmasq to our hosts file
-cat > "/etc/dnsmasq.d/$DOMAIN.conf" << CONF
-interface=tun0
+ 
+# Create empty hosts file if it does not exist
+touch "$DNSMASQ_HOSTS"
+ 
+# Build dnsmasq config
+DNSMASQ_CONF="/etc/dnsmasq.d/$DOMAIN.conf"
+cat > "$DNSMASQ_CONF" << CONF
+interface=$INTERFACE
 bind-interfaces
 addn-hosts=$DNSMASQ_HOSTS
 CONF
-
-# Create empty hosts file if it does not exist
-touch "$DNSMASQ_HOSTS"
-
-# Add domain itself to hosts file if not already present
-if ! grep -q "$DOMAIN" "$DNSMASQ_HOSTS"; then
-    echo "$DOMAIN_IP  $DOMAIN" >> "$DNSMASQ_HOSTS"
+ 
+# If CNAME provided, add cname directive; otherwise add IP entry to hosts file
+if [[ -v CNAME ]]; then
+    echo "cname=$DOMAIN,$CNAME" >> "$DNSMASQ_CONF"
 fi
-
-# Add push directive to server config if not already present
+ 
+# Add push directives to server config if not already present
 SERVER_CONF="$OPENVPN_DIRECTORY/$DOMAIN.conf"
 if ! grep -q "dhcp-option DNS" "$SERVER_CONF"; then
     echo "push \"dhcp-option DNS $DNS_IP\"" >> "$SERVER_CONF"
 fi
-
+if ! grep -q "dhcp-option DOMAIN" "$SERVER_CONF"; then
+    echo "push \"dhcp-option DOMAIN $DOMAIN\"" >> "$SERVER_CONF"
+fi
+ 
 systemctl enable dnsmasq
 systemctl restart dnsmasq
 systemctl restart "openvpn@${DOMAIN}"
-
+ 
 echo ""
 echo "DNS setup complete."
-echo "  dnsmasq config: /etc/dnsmasq.d/$DOMAIN.conf"
+echo "  dnsmasq config: $DNSMASQ_CONF"
 echo "  Hosts file:     $DNSMASQ_HOSTS"
 echo "  Pushed DNS:     $DNS_IP"
-echo "  Domain IP:      $DOMAIN_IP  $DOMAIN"
+echo "  Interface:      $INTERFACE"
+[[ -v CNAME ]] && echo "  CNAME:          $DOMAIN -> $CNAME"

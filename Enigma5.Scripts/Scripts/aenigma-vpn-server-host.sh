@@ -21,7 +21,6 @@
 set -euo pipefail
  
 OPENVPN_DIRECTORY="/etc/openvpn"
-DNSMASQ_HOSTS="/etc/openvpn/dnsmasq-hosts"
  
 show_help() {
     echo "Usage: $0 -c CLIENT_NAME -d DOMAIN -i IP -n NETMASK"
@@ -60,6 +59,7 @@ if [[ ! -v CLIENT_NAME || ! -v DOMAIN || ! -v IP || ! -v NETMASK ]]; then
 fi
  
 CLIENT_CONFIGS_DIRECTORY="$OPENVPN_DIRECTORY/ccd/$DOMAIN"
+DNSMASQ_HOSTS="$OPENVPN_DIRECTORY/$DOMAIN/dnsmasq-hosts"
 HOSTNAME="$CLIENT_NAME.$DOMAIN"
  
 [[ ! -d "$CLIENT_CONFIGS_DIRECTORY" ]] && { echo "ERROR: $CLIENT_CONFIGS_DIRECTORY not found. Make sure to setup vpn server first."; exit 1; }

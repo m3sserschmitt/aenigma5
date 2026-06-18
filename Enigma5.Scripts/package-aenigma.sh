@@ -97,7 +97,7 @@ Priority: optional
 Architecture: $ARCH
 Depends: openssl (>= 3.0.0), jq (>= 1.6), basez (>= 1.6.2)
 Maintainer: Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
-Description: Aenigma - Federated messaging system and helper scripts
+Description: Aenigma - Federated messaging system
 EOF
 
 # Step 6: Build the Debian package
