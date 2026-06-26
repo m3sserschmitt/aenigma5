@@ -20,17 +20,4 @@
 
 set -Eeuo pipefail
 
-SERVICE_USER="aenigma"
-KEYS_DIR="/usr/local/etc/$SERVICE_USER"
-PRIVATE_KEY_FILE="$KEYS_DIR/private-key.pem"
-PRIVATE_KEY_UNLOCKED_FILE="$KEYS_DIR/private-key-unlocked.pem"
-
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
-
-openssl pkey -in "$PRIVATE_KEY_FILE" -out "$PRIVATE_KEY_UNLOCKED_FILE"
-mv "$PRIVATE_KEY_UNLOCKED_FILE" "$PRIVATE_KEY_FILE"
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
-chmod -R 700 "$KEYS_DIR"
+/usr/local/aenigma/Enigma5.App --config /usr/local/etc/aenigma/appsettings.json

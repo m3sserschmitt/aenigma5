@@ -27,7 +27,6 @@ CONFIG_DIR="/usr/local/etc/$SERVICE_NAME"
 VAR_LIB="/var/lib/$SERVICE_NAME"
 LOGS_DIR="/var/log/$SERVICE_NAME"
 UPLOADS_DIR="/srv/$SERVICE_NAME"
-SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 
 ACTION="${1:-}"
 
@@ -59,19 +58,10 @@ safe_rm_dir() {
   rm -rf --one-file-system "$DIR"
 }
 
-safe_rm_file() {
-  FILE="$1"
-  log "Removing file: $FILE"
-  [ -n "$FILE" ] && [ -f "$FILE" ] && rm -f "$FILE"
-}
-
 stop_service() {
-  if command -v systemctl >/dev/null 2>&1 &&
-     systemctl list-unit-files | grep -q "^$SERVICE_NAME.service"; then
-    log "Stopping and disabling $SERVICE_NAME.service"
-    systemctl stop "$SERVICE_NAME.service" 2>/dev/null || true
-    systemctl disable "$SERVICE_NAME.service" 2>/dev/null || true
-  fi
+  systemctl stop "$SERVICE_NAME.service" 2>/dev/null || true
+  systemctl disable "$SERVICE_NAME.service" 2>/dev/null || true
+  systemctl daemon-reload
 }
 
 remove_symlinks() {
@@ -107,8 +97,6 @@ case "$ACTION" in
     safe_rm_dir "$VAR_LIB"
     safe_rm_dir "$LOGS_DIR"
     safe_rm_dir "$UPLOADS_DIR"
-
-    safe_rm_file "$SERVICE_FILE"
     remove_user
     ;;
 

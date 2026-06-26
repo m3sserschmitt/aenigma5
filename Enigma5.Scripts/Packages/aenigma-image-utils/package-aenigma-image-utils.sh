@@ -18,34 +18,30 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT_DIR="$SCRIPT_DIR/Deb"
-SERVICE_NAME="aenigma"
-EXECUTABLE_NAME="Enigma5.App"
 POSTINST_SCRIPT="$SCRIPT_DIR/postinst"
 POSTRM_SCRIPT="$SCRIPT_DIR/postrm"
+SERVICES="$SCRIPT_DIR/Services/*.service"
 
-# Function to display usage/help message
 show_help() {
-    echo "Usage: $0 -v VERSION -c CONFIG -a ARCH"
+    echo "Usage: $0 -v VERSION -a ARCH"
     echo ""
     echo "Options:"
-    echo "  -v VERSION  The version of the application (e.g., 1.0.0)"
-    echo "  -c CONFIG   The config used for this package ("azure", "ubuntu")"
-    echo "  -a ARCH     The config used for this package ("amd64", "arm64")"
+    echo "  -v VERSION  The version of the application (e.g., 1.0.0-debian_amd64)"
+    echo "  -a ARCH     The architecture for which is this package is built (e.g., "amd64", "arm64")"
     echo ""
     echo "Example:"
-    echo "  $0 -v 1.0.0 -c ubuntu -a amd64"
+    echo "  $0 -v 1.0.0 -v 1.0.0 -a amd64"
     exit 1
 }
 
 # Parse command line arguments
-while getopts "v:c:a:h" opt; do
+while getopts "v:a:h" opt; do
     case $opt in
         v) VERSION=$OPTARG ;;
-        c) CONFIG=$OPTARG ;;
         a) ARCH=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
@@ -53,53 +49,38 @@ while getopts "v:c:a:h" opt; do
 done
 
 # Check if version argument is provided
-if [[ ! -v VERSION || ! -v CONFIG || ! -v ARCH ]]; then
-    echo "Error: VERSION, CONFIG, ARCH are required."
+if [[ ! -v VERSION || ! -v ARCH ]]; then
+    echo "Error: VERSION and ARCH are required."
     show_help
-    exit 1
 fi
 
-PKG_DIR="$OUT_DIR/${SERVICE_NAME}_${VERSION}-${CONFIG}_${ARCH}"
-CONFIG_DIR="$SCRIPT_DIR/Configs/$CONFIG"
+PKG_DIR="$OUT_DIR/aenigma-image-utils_$VERSION-debian_$ARCH"
 
-if [[ ! -d "$CONFIG_DIR" ]]; then
-    echo "Error: $CONFIG_DIR does not exist."
-    exit 1
-fi
-
-# Step 1: Cleanup old package directory structure, then create a new one
 if [ -d "$PKG_DIR" ]; then
     echo "Cleaning up existing package directory: $PKG_DIR"
     rm -rf "$PKG_DIR"
 fi
 
-# Step 2: Create a fresh package directory structure
 mkdir -pv $PKG_DIR/DEBIAN
-mkdir -pv $PKG_DIR/usr/local/$SERVICE_NAME
+mkdir -pv $PKG_DIR/usr/lib/systemd/system
 
-# Step 3: Publish the .NET app
-dotnet publish $SCRIPT_DIR/../$EXECUTABLE_NAME/$EXECUTABLE_NAME.csproj -c Release -r linux-$ARCH --self-contained true -o $PKG_DIR/usr/local/$SERVICE_NAME
-
-# Step 4: Copy application files to /usr/local/APP_NAME
 cp -v $POSTINST_SCRIPT $PKG_DIR/DEBIAN/postinst
 cp -v $POSTRM_SCRIPT $PKG_DIR/DEBIAN/postrm
-cp -v $CONFIG_DIR/* $PKG_DIR/usr/local/$SERVICE_NAME
-chmod -v +x $PKG_DIR/DEBIAN/postinst
-chmod -v +x $PKG_DIR/DEBIAN/postrm
+cp -v $SERVICES $PKG_DIR/usr/lib/systemd/system
 
-# Step 5: Create control file
-echo "Creating DEBIAN/control file" 
+chmod -v 755 $PKG_DIR/DEBIAN/postinst
+chmod -v 755 $PKG_DIR/DEBIAN/postrm
+chmod -v 755 $PKG_DIR/usr/lib/systemd/system/*.service
+
 cat <<EOF > $PKG_DIR/DEBIAN/control
-Package: $SERVICE_NAME
+Package: aenigma-image-utils
 Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: $ARCH
-Depends: openssl (>= 3.0.0), jq (>= 1.6), basez (>= 1.6.2)
+Depends: aenigma (>= 5.0.0)
 Maintainer: Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
-Description: Aenigma - Federated messaging system
+Description: Additional scripts and services for aenigma debian images
 EOF
 
-# Step 6: Build the Debian package
-dpkg-deb --build --root-owner-group $PKG_DIR
-echo "Package built: ${PKG_DIR}.deb"
+dpkg-deb --build --root-owner-group "$PKG_DIR"

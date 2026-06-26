@@ -34,10 +34,7 @@ show_help() {
     exit 1
 }
  
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
  
 # Check if the script is run with sufficient arguments
 if [ "$#" -lt 4 ]; then
@@ -95,7 +92,7 @@ openssl pkey -in "$PRIVATE_PEM_FILE" -pubout \
     | sed 's/=//g' > "$PUBLIC_KEY_FILE"
  
 echo "descriptor:x25519:$(cat "$PUBLIC_KEY_FILE")" > "$AUTH_FILE"
-echo "descriptor:x25519:$(cat "$PRIVATE_KEY_FILE")" > "$AUTH_FILE_PRIVATE"
+echo "$(cat "$PRIVATE_KEY_FILE")" > "$AUTH_FILE_PRIVATE"
  
 chown -R "$TOR_USER:$TOR_USER" "$AUTHORIZED_CLIENTS_DIR"
 chmod -R 700 "$AUTHORIZED_CLIENTS_DIR"
@@ -103,4 +100,3 @@ chmod -R 700 "$AUTHORIZED_CLIENTS_DIR"
 systemctl restart tor
  
 echo "Access key located at '$AUTH_FILE_PRIVATE'."
-

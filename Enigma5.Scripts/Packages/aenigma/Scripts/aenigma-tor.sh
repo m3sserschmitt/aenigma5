@@ -39,10 +39,7 @@ show_help() {
     exit 1
 }
 
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
 # Check if the script is run with sufficient arguments
 if [ "$#" -lt 6 ]; then
@@ -75,10 +72,7 @@ ONION_SERVICE_ADDRESS_FILE="$TOR_SERVICE_DIR/hostname"
 # ------------------------------
 # 1. Check root
 # ------------------------------
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
 # ------------------------------
 # 2. Install Tor if missing
@@ -99,9 +93,9 @@ systemctl start tor
 # ------------------------------
 if [[ ! -d "$TOR_SERVICE_DIR" ]]; then
     mkdir -pv "$TOR_SERVICE_DIR"
-    chown -Rv "$TOR_USER:$TOR_USER" "$TOR_SERVICE_DIR"
+    chown -R "$TOR_USER:$TOR_USER" "$TOR_SERVICE_DIR"
     chmod g-s "$TOR_SERVICE_DIR"
-    chmod -v 700 "$TOR_SERVICE_DIR"
+    chmod -R 700 "$TOR_SERVICE_DIR"
 fi
 
 # ------------------------------

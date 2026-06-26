@@ -18,13 +18,11 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+set -Eeuo pipefail
 
 SERVICE_NAME="aenigma"
 SERVICE_USER="aenigma"
 APP_INSTALL_DIR="/usr/local/$SERVICE_NAME"
-LAUNCHER_FILE="/usr/local/bin/$SERVICE_NAME-launcher"
-SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 LOG_DIR="/var/log/$SERVICE_NAME"
 CONFIGS_DIR="/usr/local/etc/$SERVICE_NAME"
 CONFIG_FILE="$CONFIGS_DIR/appsettings.json"
@@ -33,11 +31,22 @@ UPLOADS_DIR="$SRV_DIR/uploads"
 LIB_DIR="/var/lib/$SERVICE_NAME"
 DATABASE_DIR="$LIB_DIR/db"
 SCRIPTS_DIR="$APP_INSTALL_DIR/Scripts"
+LIB_SYSTEMD_DIR="/usr/lib/systemd/system"
+LIB_SERVICE_FILE="$LIB_SYSTEMD_DIR/$SERVICE_NAME.service"
 
 filename_without_ext() {
     local fullpath="$1"
     local filename="${fullpath##*/}"
     echo "${filename%.*}"
+}
+
+create_symlinks() {
+    for script in "$SCRIPTS_DIR"/*.sh; do
+        [ -e "$script" ] || continue
+        link="/usr/local/bin/$(filename_without_ext "$script")"
+        ln -sfv "$script" "$link"
+        chmod 755 "$link"
+    done
 }
 
 if ! id "$SERVICE_USER" &>/dev/null; then
@@ -58,31 +67,13 @@ if [ ! -f "$CONFIG_FILE" ]; then
     cp -v $APP_INSTALL_DIR/appsettings.json $CONFIG_FILE
 fi
 
-if [ ! -f "$SERVICE_FILE" ]; then
-    echo "Creating service file: $SERVICE_FILE..."
-    cat <<EOF | tee $SERVICE_FILE > /dev/null
-    [Unit]
-    Description=$SERVICE_NAME Service
-    After=network.target
-
-    [Service]
-    WorkingDirectory=$APP_INSTALL_DIR
-    ExecStart=$LAUNCHER_FILE
-    Restart=always
-    RestartSec=10
-    User=$SERVICE_USER
-    Group=$SERVICE_USER
-
-    [Install]
-    WantedBy=multi-user.target
-EOF
-fi
+chmod -v 644 "$LIB_SERVICE_FILE"
 
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
 chmod -v 755 "$LOG_DIR"
 
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
-chmod -R 700 "$APP_INSTALL_DIR"
+chmod -R 755 "$APP_INSTALL_DIR"
 
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$LIB_DIR"
 chmod -R 700 "$LIB_DIR"
@@ -96,13 +87,7 @@ chmod -R 700 "$CONFIGS_DIR"
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$SCRIPTS_DIR"
 chmod -R 755 "$SCRIPTS_DIR"
 
-for f in "$APP_INSTALL_DIR"/Scripts/*.sh; do
-    [ -e "$f" ] || continue
-    chmod -v +x "$f"
-
-    link_name="/usr/local/bin/$(filename_without_ext "$f")"
-    ln -sfv "$f" "$link_name"
-done
+create_symlinks
 
 if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo "Enable and restart $SERVICE_NAME.service"

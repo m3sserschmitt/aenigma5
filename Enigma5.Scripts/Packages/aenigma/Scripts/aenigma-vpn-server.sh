@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -euo pipefail
+set -Eeuo pipefail
  
 SERVICE_USER="openvpn"
 OPENVPN_DIRECTORY="/etc/openvpn"
@@ -96,12 +96,12 @@ fi
  
 cp -v "${EASYRSA_PKI}/issued/${DOMAIN}.crt"  "$SERVER_DIRECTORY/"
 cp -v "${EASYRSA_PKI}/private/${DOMAIN}.key" "$SERVER_DIRECTORY/"
-chown "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/${DOMAIN}.key"
-chmod 700 "$SERVER_DIRECTORY/${DOMAIN}.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/${DOMAIN}.key"
+chmod -v 700 "$SERVER_DIRECTORY/${DOMAIN}.key"
  
 openvpn --genkey secret "$SERVER_DIRECTORY/ta.key"
-chown "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/ta.key"
-chmod 700 "$SERVER_DIRECTORY/ta.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/ta.key"
+chmod -v 700 "$SERVER_DIRECTORY/ta.key"
  
 cat > "$OPENVPN_DIRECTORY/$DOMAIN.conf" << CONF
 port $PORT

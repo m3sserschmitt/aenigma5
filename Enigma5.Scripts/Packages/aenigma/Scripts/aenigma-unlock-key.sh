@@ -23,35 +23,11 @@ set -Eeuo pipefail
 SERVICE_USER="aenigma"
 KEYS_DIR="/usr/local/etc/$SERVICE_USER"
 PRIVATE_KEY_FILE="$KEYS_DIR/private-key.pem"
-PUBLIC_KEY_FILE="$KEYS_DIR/public-key.pem"
-KEY_SIZE="4096"
+PRIVATE_KEY_UNLOCKED_FILE="$KEYS_DIR/private-key-unlocked.pem"
 
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
-mkdir -pv "$KEYS_DIR"
-
-# Generate the private key with the given size and file name
-echo "Generating private key ... "
-openssl genrsa -aes256 -out "$PRIVATE_KEY_FILE" "$KEY_SIZE"
-echo "Done."
-
-# Extract the public key from the private key and save it to the specified file
-echo "Exporting public key ... "
-openssl rsa -in "$PRIVATE_KEY_FILE" -outform PEM -pubout -out "$PUBLIC_KEY_FILE"
-echo "Done."
-
-echo "Keys generated successfully:"
-echo "Private key: $PRIVATE_KEY_FILE"
-echo "Public key: $PUBLIC_KEY_FILE"
-
-# Changing ownership for generated files
-echo "Changing keys ownership to $SERVICE_USER ..."
+openssl pkey -in "$PRIVATE_KEY_FILE" -out "$PRIVATE_KEY_UNLOCKED_FILE"
+mv "$PRIVATE_KEY_UNLOCKED_FILE" "$PRIVATE_KEY_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$PUBLIC_KEY_FILE"
-chmod -R 700 "$KEYS_DIR"
-
-echo "Done."
-exit 0
+chmod -v 700 "$PRIVATE_KEY_FILE"

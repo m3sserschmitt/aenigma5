@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -euo pipefail
+set -Eeuo pipefail
  
 OPENVPN_DIRECTORY="/etc/openvpn"
  

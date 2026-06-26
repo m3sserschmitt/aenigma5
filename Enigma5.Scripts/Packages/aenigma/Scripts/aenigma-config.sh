@@ -33,10 +33,7 @@ usage() {
     exit 1
 }
 
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
 # Parse options
 while getopts "p:v:h" opt; do
@@ -92,7 +89,7 @@ esac
 
 mv "$TEMPFILE" "$CONFIG_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" $CONFIG_FILE
-chmod -R 700 "$CONFIGS_DIR"
+chmod -v 700 "$CONFIG_FILE"
 
 echo "Updated property '$PROPERTY' in '$CONFIG_FILE' to '$NEW_VALUE' ($TYPE)"
 exit 0

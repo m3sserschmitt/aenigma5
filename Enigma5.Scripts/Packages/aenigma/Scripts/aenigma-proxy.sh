@@ -35,10 +35,7 @@ show_help() {
     exit 1
 }
 
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
-fi
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
 # Check if the script is run with sufficient arguments
 if [ "$#" -lt 4 ]; then

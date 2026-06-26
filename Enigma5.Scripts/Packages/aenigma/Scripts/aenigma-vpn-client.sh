@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -euo pipefail
+set -Eeuo pipefail
  
 SERVICE_USER="openvpn"
 OPENVPN_DIRECTORY="/etc/openvpn"
@@ -71,11 +71,11 @@ if ! id "$SERVICE_USER" &>/dev/null; then
 fi
  
 # Protect private key files
-chown "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
-chmod 700 "$CLIENT_DIR/$CLIENT_NAME.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
+chmod -v 700 "$CLIENT_DIR/$CLIENT_NAME.key"
  
-chown "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
-chmod 700 "$CLIENT_DIR/ta.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
+chmod -v 700 "$CLIENT_DIR/ta.key"
  
 cat > "$OPENVPN_DIRECTORY/$DOMAIN.conf" << CONF
 client

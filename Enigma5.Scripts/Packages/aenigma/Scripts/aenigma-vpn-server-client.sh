@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-set -euo pipefail
+set -Eeuo pipefail
 
 SERVICE_USER="openvpn"
 OPENVPN_DIRECTORY="/etc/openvpn"
@@ -71,12 +71,12 @@ mkdir -p "$CLIENT_DIR"
 cp -v "$EASYRSA_PKI/ca.crt"                   "$CLIENT_DIR/"
 cp -v "$EASYRSA_PKI/issued/$CLIENT_NAME.crt"  "$CLIENT_DIR/"
 cp -v "$EASYRSA_PKI/private/$CLIENT_NAME.key" "$CLIENT_DIR/"
-chown "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
-chmod 700 "$CLIENT_DIR/$CLIENT_NAME.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
+chmod -v 700 "$CLIENT_DIR/$CLIENT_NAME.key"
  
 cp -v "$SERVER_DIRECTORY/ta.key" "$CLIENT_DIR/"
-chown "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
-chmod 700 "$CLIENT_DIR/ta.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
+chmod -v 700 "$CLIENT_DIR/ta.key"
  
 echo ""
 echo "Client certificate created."

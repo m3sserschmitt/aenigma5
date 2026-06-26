@@ -18,4 +18,35 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-/usr/local/aenigma/Enigma5.App --config /usr/local/etc/aenigma/appsettings.json
+set -e
+
+SERVICES="aenigma-standard-setup.service regenerate-ssh-host-keys.service"
+
+log() {
+  printf '%s\n' "$*"
+}
+
+stop_services() {
+  for service_name in $SERVICES; do
+    systemctl stop "$service_name" 2>/dev/null || true
+    systemctl disable "$service_name" 2>/dev/null || true
+    systemctl daemon-reload
+  done
+}
+
+case "$1" in
+  remove)
+    stop_services
+    ;;
+  purge)
+    stop_services
+    ;;
+  upgrade|abort-upgrade|failed-upgrade)
+    log "Upgrade path detected: no cleanup required"
+    ;;
+  *)
+    log "postrm called with unknown action: $1"
+    ;;
+esac
+
+exit 0

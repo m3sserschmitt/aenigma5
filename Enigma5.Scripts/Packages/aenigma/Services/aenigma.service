@@ -1,0 +1,15 @@
+[Unit]
+Description=Aenigma - Federated messaging system
+After=network.target
+
+[Service]
+Environment=DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+WorkingDirectory=/usr/local/aenigma
+ExecStart=/usr/local/bin/aenigma-launcher
+Restart=always
+RestartSec=10
+User=aenigma
+Group=aenigma
+
+[Install]
+WantedBy=multi-user.target

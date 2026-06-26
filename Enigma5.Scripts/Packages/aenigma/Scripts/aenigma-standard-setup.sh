@@ -20,18 +20,20 @@
 
 set -Eeuo pipefail
 
-SERVICE_NAME="aenigma"
+AENIGMA_TOR_SERVICE_NAME="aenigma"
+AENIGMA_DASHBOARD_TOR_SERVICE_NAME="aenigma-dashboard"
+TOR_SERVICES_DIR="/var/lib/tor"
+AENIGMA_TOR_SERVICE_DIR="$TOR_SERVICES_DIR/$AENIGMA_TOR_SERVICE_NAME"
+AENIGMA_DASHBOARD_TOR_SERVICE_DIR="$TOR_SERVICES_DIR/$AENIGMA_DASHBOARD_TOR_SERVICE_NAME"
 
-if [[ $EUID -ne 0 ]]; then
-    echo "Error: Please run the script as root."
-    exit 1
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+
+if [[ ! -f "$AENIGMA_TOR_SERVICE_DIR/hostname" ]]; then
+    echo "Configuring onion service for aenigma service..."
+    aenigma-tor -l 127.0.0.1:8080 -o 80 -s "$AENIGMA_TOR_SERVICE_NAME" -c 1
 fi
 
-echo "Enabling $SERVICE_NAME service ... "
-systemctl enable "$SERVICE_NAME"
-echo "Done."
-
-echo "Starting $SERVICE_NAME service ..."
-systemctl restart "$SERVICE_NAME"
-echo "Done."
-exit 0
+if [[ ! -f "$AENIGMA_DASHBOARD_TOR_SERVICE_DIR/hostname" ]]; then
+    echo "Configuring onion service for aenigma dashboard service..."
+    aenigma-tor -l 127.0.0.1:8081 -o 80 -s "$AENIGMA_DASHBOARD_TOR_SERVICE_NAME" -u "$AENIGMA_DASHBOARD_TOR_SERVICE_NAME"
+fi
