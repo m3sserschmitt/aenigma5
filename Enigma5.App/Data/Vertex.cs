@@ -73,7 +73,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         => CreateAsync(certificateManager, [], hostname, onionService);
 
         public static Vertex Create(string? address)
-        => new(new([], address, null, null, DateTimeOffset.Now), null, null);
+        => new(new([], address, null, null, DateTimeOffset.UtcNow), null, null);
 
         public static class Prototype
         {

@@ -7,4 +7,4 @@ Enigma5.App/logs/*
 *.lscache
 Enigma5.Scripts/Packages/aenigma/Deb
 Enigma5.Scripts/Packages/aenigma-image-utils/Deb
-Enigma5.Scripts/Images/Virtualbox/Boxes
+Enigma5.Scripts/Images/Virtualbox

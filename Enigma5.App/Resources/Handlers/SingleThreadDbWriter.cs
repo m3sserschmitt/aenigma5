@@ -136,8 +136,8 @@ public class SingleThreadDbWriter(
 
     public override async Task<int> RunMarkMessagesAsDeliveredAsync(Expression<Func<PendingMessage, bool>> predicate)
     {
-        var now = DateTimeOffset.Now;
-        var utcTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var now = DateTimeOffset.UtcNow;
+        var utcTimestamp = now.ToUnixTimeSeconds();
         return await _simpleSingleThreadRunner.RunAsync(() =>
         {
             using var scope = _scopeFactory.CreateScope();

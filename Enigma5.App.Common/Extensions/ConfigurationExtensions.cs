@@ -66,7 +66,7 @@ public static class ConfigurationExtensions
     }
 
     public static DateTimeOffset? GetSharedDataValidityDate(this IConfiguration configuration)
-    => DateTimeOffset.Now + configuration.GetSharedDataRetentionPeriod();
+    => DateTimeOffset.UtcNow + configuration.GetSharedDataRetentionPeriod();
 
     public static string? GetFileUrl(this IConfiguration configuration, string tag)
     {
@@ -80,7 +80,7 @@ public static class ConfigurationExtensions
     }
 
     public static DateTimeOffset? GetFileValidityDate(this IConfiguration configuration)
-    => DateTimeOffset.Now + configuration.GetFilesRetentionPeriod();
+    => DateTimeOffset.UtcNow + configuration.GetFilesRetentionPeriod();
 
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
     => configuration.GetStringValue("PrivateKeyPath");

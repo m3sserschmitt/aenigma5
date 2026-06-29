@@ -27,18 +27,18 @@ packer {
 
 # Packer boots this existing box, runs our provisioners on top of it,
 # then packages the result as a new .box file ready to ship to users.
-source "vagrant" "aenigma-debian" {
+source "vagrant" "aenigma-debian-virtualbox" {
   source_path = "bento/debian-13"
   provider    = "virtualbox"
   add_force   = true
   communicator = "ssh"
-  output_dir = "Boxes"
+  output_dir = "Virtualbox"
 }
 
 # Build Aenigma image
 build {
   name    = "aenigma-debian"
-  sources = ["source.vagrant.aenigma-debian"]
+  sources = [ "source.vagrant.aenigma-debian-virtualbox" ]
 
   # Confirm base box is ready before provisioning
   provisioner "shell" {
@@ -49,8 +49,8 @@ build {
     environment_vars = ["DEBIAN_FRONTEND=noninteractive"]
     execute_command  = "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'"
     scripts = [
-      "../Scripts/install.sh",
-      "../Scripts/cleanup.sh"
+      "Scripts/install.sh",
+      "Scripts/cleanup.sh"
     ]
   }
 }

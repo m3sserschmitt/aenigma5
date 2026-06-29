@@ -27,14 +27,13 @@ POSTRM_SCRIPT="$SCRIPT_DIR/postrm"
 SERVICES="$SCRIPT_DIR/Services/*.service"
 
 show_help() {
-    echo "Usage: $0 -v VERSION -a ARCH"
+    echo "Usage: $0 -v VERSION"
     echo ""
     echo "Options:"
-    echo "  -v VERSION  The version of the application (e.g., 1.0.0-debian_amd64)"
-    echo "  -a ARCH     The architecture for which is this package is built (e.g., "amd64", "arm64")"
+    echo "  -v VERSION  The version of the application (e.g., 1.0.0)"
     echo ""
     echo "Example:"
-    echo "  $0 -v 1.0.0 -v 1.0.0 -a amd64"
+    echo "  $0 -v 1.0.0 -v 1.0.0"
     exit 1
 }
 
@@ -49,12 +48,12 @@ while getopts "v:a:h" opt; do
 done
 
 # Check if version argument is provided
-if [[ ! -v VERSION || ! -v ARCH ]]; then
-    echo "Error: VERSION and ARCH are required."
+if [[ ! -v VERSION ]]; then
+    echo "Error: VERSION is required."
     show_help
 fi
 
-PKG_DIR="$OUT_DIR/aenigma-image-utils_$VERSION-debian_$ARCH"
+PKG_DIR="$OUT_DIR/aenigma-image-utils_${VERSION}_all"
 
 if [ -d "$PKG_DIR" ]; then
     echo "Cleaning up existing package directory: $PKG_DIR"
@@ -77,7 +76,7 @@ Package: aenigma-image-utils
 Version: $VERSION
 Section: utils
 Priority: optional
-Architecture: $ARCH
+Architecture: all
 Depends: aenigma (>= 5.0.0)
 Maintainer: Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 Description: Additional scripts and services for aenigma debian images

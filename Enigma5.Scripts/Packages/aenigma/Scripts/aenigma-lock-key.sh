@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#!/bin/bash
+
 # Aenigma - Federated messaging system
 # Copyright © 2024-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
 
@@ -23,15 +25,15 @@ set -Eeuo pipefail
 SERVICE_USER="aenigma"
 KEYS_DIR="/usr/local/etc/$SERVICE_USER"
 PRIVATE_KEY_FILE="$KEYS_DIR/private-key.pem"
-PRIVATE_KEY_UNLOCKED_FILE="$KEYS_DIR/private-key-unlocked.pem"
+PRIVATE_KEY_LOCKED_FILE="$KEYS_DIR/private-key-locked.pem"
 
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
 [[ ! -f "$PRIVATE_KEY_FILE" ]] && { echo "ERROR: Key not found: $PRIVATE_KEY_FILE"; exit 1; }
 
-openssl pkey -in "$PRIVATE_KEY_FILE" -out "$PRIVATE_KEY_UNLOCKED_FILE"
-mv "$PRIVATE_KEY_UNLOCKED_FILE" "$PRIVATE_KEY_FILE"
+openssl pkey -in "$PRIVATE_KEY_FILE" -out "$PRIVATE_KEY_LOCKED_FILE" -aes256
+mv "$PRIVATE_KEY_LOCKED_FILE" "$PRIVATE_KEY_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
 chmod -v 700 "$PRIVATE_KEY_FILE"
 
-echo "Key successfully unlocked: $PRIVATE_KEY_FILE"
+echo "Key successfully locked: $PRIVATE_KEY_FILE"
