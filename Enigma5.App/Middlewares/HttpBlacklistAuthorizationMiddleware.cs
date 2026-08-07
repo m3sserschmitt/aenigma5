@@ -38,7 +38,7 @@ public sealed class HttpBlacklistAuthorizationMiddleware(
     {
         if (!_configuration.IsHttpRequestCallAuthorized(context, _logger))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
         await _next(context);

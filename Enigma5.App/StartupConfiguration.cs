@@ -106,6 +106,7 @@ public class StartupConfiguration(IConfiguration configuration)
             {
                 options.AllowStatefulReconnects = true;
             });
+            endpoints.MapGet("/", Api.GetInfo);
             endpoints.MapGet(Constants.InfoEndpoint, Api.GetInfo);
             endpoints.MapPost(Constants.ShareEndpoint, Api.PostShare)
                 .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedDataMaxSize()));
