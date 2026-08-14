@@ -20,11 +20,15 @@
 
 set -Eeuo pipefail
 
+SERVICE_NAME="aenigma-image-utils"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT_DIR="$SCRIPT_DIR/Deb"
 POSTINST_SCRIPT="$SCRIPT_DIR/postinst"
 POSTRM_SCRIPT="$SCRIPT_DIR/postrm"
-SERVICES="$SCRIPT_DIR/Services/*.service"
+SERVICE_FILES="$SCRIPT_DIR/Services/*.service"
+TIMER_FILES="$SCRIPT_DIR/Services/*.timer"
+CHANGELOG_FILE="$SCRIPT_DIR/changelog"
+COPYRIGHT_FILE="$SCRIPT_DIR/copyright"
 
 show_help() {
     echo "Usage: $0 -v VERSION"
@@ -33,7 +37,7 @@ show_help() {
     echo "  -v VERSION  The version of the application (e.g., 1.0.0)"
     echo ""
     echo "Example:"
-    echo "  $0 -v 1.0.0 -v 1.0.0"
+    echo "  $0 -v 1.0.0"
     exit 1
 }
 
@@ -53,33 +57,59 @@ if [[ ! -v VERSION ]]; then
     show_help
 fi
 
-PKG_DIR="$OUT_DIR/aenigma-image-utils_${VERSION}_all"
+PKG_DIR="$OUT_DIR/${SERVICE_NAME}_${VERSION}_all"
+DEB_FILE="$PKG_DIR.deb"
 
 if [ -d "$PKG_DIR" ]; then
     echo "Cleaning up existing package directory: $PKG_DIR"
     rm -rf "$PKG_DIR"
 fi
 
-mkdir -pv $PKG_DIR/DEBIAN
+mkdir -pv $PKG_DIR/debian
 mkdir -pv $PKG_DIR/usr/lib/systemd/system
 
-cp -v $POSTINST_SCRIPT $PKG_DIR/DEBIAN/postinst
-cp -v $POSTRM_SCRIPT $PKG_DIR/DEBIAN/postrm
-cp -v $SERVICES $PKG_DIR/usr/lib/systemd/system
+cp -v $POSTINST_SCRIPT $PKG_DIR/debian/postinst
+cp -v $POSTRM_SCRIPT $PKG_DIR/debian/postrm
+cp -v $CHANGELOG_FILE $PKG_DIR/debian/changelog
+cp -v $SERVICE_FILES $PKG_DIR/usr/lib/systemd/system
+cp -v $TIMER_FILES $PKG_DIR/usr/lib/systemd/system
+cp -v $COPYRIGHT_FILE $PKG_DIR/debian/copyright
 
-chmod -v 755 $PKG_DIR/DEBIAN/postinst
-chmod -v 755 $PKG_DIR/DEBIAN/postrm
-chmod -v 755 $PKG_DIR/usr/lib/systemd/system/*.service
-
-cat <<EOF > $PKG_DIR/DEBIAN/control
-Package: aenigma-image-utils
-Version: $VERSION
-Section: utils
-Priority: optional
-Architecture: all
-Depends: aenigma (>= 5.0.0)
-Maintainer: Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
-Description: Additional scripts and services for aenigma debian images
+echo "Creating debian/rules file"
+cat <<EOF > $PKG_DIR/debian/rules
+#!/usr/bin/make -f
+%:
+	dh \$@
 EOF
 
-dpkg-deb --build --root-owner-group "$PKG_DIR"
+echo "Creating debian/$SERVICE_NAME.install file"
+cat <<EOF > $PKG_DIR/debian/$SERVICE_NAME.install
+usr/lib/systemd/system/aenigma-standard-setup.service
+usr/lib/systemd/system/regenerate-ssh-host-keys.service
+usr/lib/systemd/system/aenigma-auto-update.service
+usr/lib/systemd/system/aenigma-auto-update.timer
+EOF
+
+echo "Creating debian/control file"
+cat <<EOF > $PKG_DIR/debian/control
+Source: $SERVICE_NAME
+Section: utils
+Priority: optional
+Maintainer: Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+
+Package: $SERVICE_NAME
+Architecture: all
+Depends: \${misc:Depends}, aenigma (>= 5.0.0)
+Description: Additional scripts and services
+ Contains additional scripts and services required by Aenigma Debian
+ images.
+EOF
+
+chmod -v 755 $PKG_DIR/debian/postinst
+chmod -v 755 $PKG_DIR/debian/postrm
+chmod -v 755 $PKG_DIR/debian/rules
+
+(cd $PKG_DIR && dpkg-buildpackage -us -uc -b)
+lintian $DEB_FILE

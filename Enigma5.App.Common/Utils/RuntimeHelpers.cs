@@ -28,25 +28,34 @@ public static class RuntimeHelpers
     public static string? GetRuntimeIdentifier()
     {
         string? osPart = null;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) osPart = "win";
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) osPart = "linux";
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) osPart = "osx";
+        /* if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            osPart = "win";
+        }
+        else */ if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            osPart = "linux";
+        }
+        /* else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            osPart = "osx";
+        } */
 
-        if(string.IsNullOrWhiteSpace(osPart))
+        if (string.IsNullOrWhiteSpace(osPart))
         {
             return null;
         }
 
         string? archPart = RuntimeInformation.ProcessArchitecture switch
         {
-            Architecture.X86 => "x86",
-            Architecture.X64 => "x64",
-            Architecture.Arm => "arm",
+            // Architecture.X86 => "x86",
+            Architecture.X64 => "amd64",
+            // Architecture.Arm => "arm",
             Architecture.Arm64 => "arm64",
             _ => null
         };
 
-        if(string.IsNullOrWhiteSpace(archPart))
+        if (string.IsNullOrWhiteSpace(archPart))
         {
             return null;
         }
@@ -57,19 +66,19 @@ public static class RuntimeHelpers
     public static string? ResolveNativeLibraryPath(string libraryName)
     {
         var runtimeIdentifier = GetRuntimeIdentifier();
-        if(string.IsNullOrWhiteSpace(runtimeIdentifier))
+        if (string.IsNullOrWhiteSpace(runtimeIdentifier))
         {
             return runtimeIdentifier;
         }
 
         var assemblyPath = Assembly.GetEntryAssembly()?.Location;
-        if(string.IsNullOrWhiteSpace(assemblyPath))
+        if (string.IsNullOrWhiteSpace(assemblyPath))
         {
             return null;
         }
 
         var assemblyDirectory = Path.GetDirectoryName(assemblyPath);
-        if(string.IsNullOrWhiteSpace(assemblyDirectory))
+        if (string.IsNullOrWhiteSpace(assemblyDirectory))
         {
             return null;
         }

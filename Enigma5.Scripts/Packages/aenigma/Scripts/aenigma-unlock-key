@@ -20,8 +20,10 @@
 
 set -Eeuo pipefail
 
+umask 077
+
 SERVICE_USER="aenigma"
-KEYS_DIR="/usr/local/etc/$SERVICE_USER"
+KEYS_DIR="/var/lib/$SERVICE_USER"
 PRIVATE_KEY_FILE="$KEYS_DIR/private-key.pem"
 PRIVATE_KEY_UNLOCKED_FILE="$KEYS_DIR/private-key-unlocked.pem"
 

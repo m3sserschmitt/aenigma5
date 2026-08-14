@@ -21,29 +21,31 @@
 set -Eeuo pipefail
 
 show_help() {
-    echo "Usage: $0 -s SERVICE_NAME"
+    echo "Usage: $0 -s SERVICE_NAME -u AUTHORIZED_USER"
     echo ""
     echo "Options:"
     echo "  -s SERVICE_NAME     Name of configured Onion Service."
+    echo "  -u AUTHORIZED_USER  Name of the authorized user to retrieve access key."
     echo ""
     echo "Example:"
-    echo "  sudo $0 -s aenigma-dashboard"
+    echo "  sudo $0 -s aenigma-dashboard -u admin"
     exit 1
 }
  
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
  
 # Parse command line arguments
-while getopts "s:h" opt; do
+while getopts "s:u:h" opt; do
     case $opt in
         s) SERVICE_NAME=$OPTARG ;;
+        u) AUTHORIZED_USER=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
 done
  
-if [[ ! -v SERVICE_NAME ]]; then
-    echo "Error: SERVICE_NAME is required."
+if [[ ! -v SERVICE_NAME || ! -v AUTHORIZED_USER ]]; then
+    echo "Error: AUTHORIZED_USER and SERVICE_NAME are required."
     show_help
 fi
  
@@ -54,17 +56,14 @@ if [[ ! -d "$AUTHORIZED_CLIENTS_DIR" ]]; then
     echo "Error: $AUTHORIZED_CLIENTS_DIR not found. It seems like Tor was not configured."
     exit 1
 fi
- 
-found_any=0
-for auth_path in "$AUTHORIZED_CLIENTS_DIR"/*.auth.private; do
-    [[ -f "$auth_path" ]] || continue
-    auth_name="$(basename "$auth_path")"
-    echo "name: $auth_name"
-    echo "access key:  $(cat "$auth_path")"
-    echo ""
-    found_any=1
-done
- 
-if [[ $found_any -eq 0 ]]; then
-    echo "No authentication keys found for service: $SERVICE_NAME"
+
+AUTH_FILE_PRIVATE="$AUTHORIZED_CLIENTS_DIR/$AUTHORIZED_USER.auth.private"
+
+if [[ ! -f "$AUTH_FILE_PRIVATE" ]]; then
+    echo "Error: No authorization key configured for this service and user."
+    exit 1
 fi
+
+echo "Access key:  $(cat "$AUTH_FILE_PRIVATE")"
+
+exit 0

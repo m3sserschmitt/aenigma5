@@ -78,8 +78,8 @@ ONION_SERVICE_ADDRESS_FILE="$TOR_SERVICE_DIR/hostname"
 # 2. Install Tor if missing
 # ------------------------------
 if ! command -v tor >/dev/null 2>&1; then
-    apt update
-    apt install -y tor
+    apt-get update -qq
+    apt-get install -y tor
 fi
 
 # ------------------------------

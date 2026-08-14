@@ -67,10 +67,11 @@ mkdir -p "$CLIENT_DIR"
  
 "$EASYRSA" --batch gen-req "$CLIENT_NAME" nopass
 "$EASYRSA" --batch sign-req client "$CLIENT_NAME"
- 
 cp -v "$EASYRSA_PKI/ca.crt"                   "$CLIENT_DIR/"
 cp -v "$EASYRSA_PKI/issued/$CLIENT_NAME.crt"  "$CLIENT_DIR/"
 cp -v "$EASYRSA_PKI/private/$CLIENT_NAME.key" "$CLIENT_DIR/"
+chmod 700 "$EASYRSA_PKI/private"
+chmod 600 "$EASYRSA_PKI/private"/*.key
 chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
 chmod -v 700 "$CLIENT_DIR/$CLIENT_NAME.key"
  

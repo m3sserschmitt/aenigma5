@@ -22,7 +22,7 @@ set -Eeuo pipefail
 
 SERVICE_USER="aenigma"
 SERVICE_NAME="aenigma"
-CONFIGS_DIR="/usr/local/etc/$SERVICE_NAME"
+CONFIGS_DIR="/etc/$SERVICE_NAME"
 CONFIG_FILE="$CONFIGS_DIR/appsettings.json"
 
 # Usage function
@@ -88,8 +88,6 @@ case "$TYPE" in
 esac
 
 mv "$TEMPFILE" "$CONFIG_FILE"
-chown -v "$SERVICE_USER":"$SERVICE_USER" $CONFIG_FILE
-chmod -v 700 "$CONFIG_FILE"
 
 echo "Updated property '$PROPERTY' in '$CONFIG_FILE' to '$NEW_VALUE' ($TYPE)"
 exit 0

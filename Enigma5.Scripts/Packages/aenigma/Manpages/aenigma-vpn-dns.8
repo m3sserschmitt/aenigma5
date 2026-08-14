@@ -1,0 +1,202 @@
+.TH AENIGMA-VPN-DNS 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-vpn-dns \- configure dnsmasq DNS resolution over an OpenVPN
+interface
+.SH SYNOPSIS
+.B aenigma-vpn-dns
+.B \-d
+.I DOMAIN
+.B \-i
+.I DNS_IP
+.B \-f
+.I INTERFACE
+.RB [ \-c
+.IR CNAME ]
+.br
+.B aenigma-vpn-dns
+.B \-h
+.SH DESCRIPTION
+.B aenigma-vpn-dns
+installs and configures
+.BR dnsmasq (8)
+to serve DNS on a given VPN network interface, and adds
+DHCP-option push directives for DNS server and search domain to an
+OpenVPN configuration file associated with
+.IR DOMAIN .
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Installs the
+.B dnsmasq
+package via
+.B apt-get
+if not already present.
+.IP \(bu 2
+Creates (if not already present) a hosts file at
+.IR /etc/openvpn/ DOMAIN /dnsmasq\-hosts ,
+used by
+.B dnsmasq
+as an additional hosts source.
+.IP \(bu 2
+Writes a
+.B dnsmasq
+configuration file to
+.IR /etc/dnsmasq.d/ DOMAIN .conf,
+binding
+.B dnsmasq
+to
+.I INTERFACE
+and pointing it at the hosts file above. If
+.B \-c
+is given, also adds a
+.B cname
+directive mapping
+.I DOMAIN
+to
+.IR CNAME .
+This file is fully overwritten on each run.
+.IP \(bu 2
+Appends
+.B "push \(dqdhcp-option DNS ...\(dq"
+and
+.B "push \(dqdhcp-option DOMAIN ...\(dq"
+directives to
+.IR /etc/openvpn/ DOMAIN .conf
+if matching directives are not already present in that file.
+.IP \(bu 2
+Enables and restarts
+.BR dnsmasq ,
+then restarts the
+.B openvpn@ DOMAIN
+systemd service instance so the updated configuration takes effect.
+.PP
+.B aenigma-vpn-dns
+must be run as root.
+.SH OPTIONS
+.TP
+.BI \-d " DOMAIN"
+Domain name identifying the OpenVPN configuration to modify and the
+.B dnsmasq
+configuration/hosts files to create, e.g.
+.IR vpn.example.com .
+Required.
+.TP
+.BI \-i " DNS_IP"
+IP address to be pushed to VPN clients as their DNS server, e.g.
+.IR 10.8.0.1 .
+Required.
+.TP
+.BI \-f " INTERFACE"
+Network interface
+.B dnsmasq
+should bind to, e.g.
+.IR tun0 .
+Required.
+.TP
+.BI \-c " CNAME"
+Optional. If given, configures
+.B dnsmasq
+to treat
+.I DOMAIN
+as a CNAME alias for
+.IR CNAME .
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+DNS configuration was written and
+.B dnsmasq
+/
+.B openvpn@ DOMAIN
+were restarted successfully.
+.TP
+.B 1
+Invalid or missing arguments, or the script was not run as root.
+.SH FILES
+.TP
+.I /etc/openvpn/ DOMAIN /dnsmasq\-hosts
+Additional hosts file consulted by
+.BR dnsmasq .
+Created empty if absent; its parent directory is expected to already
+exist and is not created by this script.
+.TP
+.I /etc/dnsmasq.d/ DOMAIN .conf
+Generated
+.B dnsmasq
+configuration for this interface/domain. Overwritten in full on each
+run.
+.TP
+.I /etc/openvpn/ DOMAIN .conf
+OpenVPN configuration file. DHCP-option push directives are appended
+to this file if not already present; the file itself is not created
+by this script and is expected to already exist.
+.SH EXAMPLES
+Configure DNS push and local resolution for a VPN server on
+.IR tun0 :
+.PP
+.RS
+.EX
+sudo aenigma-vpn-dns \-d vpn.example.com \-i 10.8.0.1 \-f tun0
+.EE
+.RE
+.PP
+The same, with a CNAME alias:
+.PP
+.RS
+.EX
+sudo aenigma-vpn-dns \-d vpn.example.com \-i 10.8.0.1 \-f tun0 \e
+    \-c vpn-endpoint.example.com
+.EE
+.RE
+.SH NOTES
+The
+.B push
+directives written by this script are only meaningful in an OpenVPN
+.B server
+configuration; they have no effect in a
+.B client
+configuration. Confirm that
+.IR /etc/openvpn/ DOMAIN .conf
+is in fact an OpenVPN server configuration for the
+.I DOMAIN
+given, and not a client configuration file of the same name, before
+running this script against it.
+.PP
+The check used to decide whether to append the DNS push directive
+.RB ( "grep -q \(dqdhcp-option DNS\(dq" )
+matches on the directive name only, not on its value. Re-running
+this script against the same
+.I DOMAIN
+with a different
+.I DNS_IP
+will therefore
+.B not
+update the previously pushed DNS server address; the existing
+.B "push \(dqdhcp-option DNS ...\(dq"
+line is left unchanged, even though the script reports the newly
+requested
+.I DNS_IP
+as the value that was pushed. To change a previously configured DNS
+push value, the corresponding line must be edited or removed from
+.IR /etc/openvpn/ DOMAIN .conf
+manually before re-running this script.
+.PP
+If
+.IR /etc/openvpn/ DOMAIN .conf
+does not already exist when this script runs, the
+.B grep
+check against it fails, and the subsequent
+.B >>
+redirection creates a new file containing only the two
+.B push
+directives, with none of the other OpenVPN configuration a working
+server (or client) configuration requires.
+.SH SEE ALSO
+.BR dnsmasq (8),
+.BR openvpn (8),
+.BR systemctl (1),
+.BR aenigma-vpn-client (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

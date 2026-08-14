@@ -1,0 +1,166 @@
+.TH AENIGMA-TOR-AUTH 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-tor-auth \- add Tor client authorization for an onion service
+.SH SYNOPSIS
+.B aenigma-tor-auth
+.B \-s
+.I SERVICE_NAME
+.B \-u
+.I AUTHORIZED_USER
+.br
+.B aenigma-tor-auth
+.B \-h
+.SH DESCRIPTION
+.B aenigma-tor-auth
+generates a new
+.B x25519
+key pair and registers it as a Tor client authorization credential
+for a hidden service, allowing only clients possessing the
+corresponding private key to connect to that onion service.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Generates an
+.B x25519
+key pair in a private, root-only temporary directory using
+.BR openssl (1).
+.IP \(bu 2
+Extracts the raw 32-byte public and private key material from the
+generated PEM files and encodes each as unpadded
+.BR base32 ,
+matching the format Tor expects for client authorization.
+.IP \(bu 2
+Writes the public half to
+.IR /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth,
+in the form
+.BR descriptor:x25519: PUBLIC_KEY,
+so that Tor will only serve descriptors for this hidden service to
+clients presenting the matching private key.
+.IP \(bu 2
+Writes the private half to
+.IR /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth.private,
+which must be distributed to the authorized client and configured
+in their own Tor client for them to reach the service.
+.IP \(bu 2
+Sets ownership of the
+.I authorized_clients
+directory and its contents to
+.B debian-tor:debian-tor
+and permissions to
+.BR 700 .
+.IP \(bu 2
+Restarts the
+.B tor
+systemd service so the new authorization takes effect.
+.PP
+This script is also invoked automatically by
+.BR aenigma-tor (8)
+when its
+.B \-u
+option is supplied.
+.PP
+.B aenigma-tor-auth
+must be run as root.
+.SH OPTIONS
+.TP
+.BI \-s " SERVICE_NAME"
+Name of the already-configured onion service (as created by
+.BR aenigma-tor (8))
+to add client authorization to. Required.
+.TP
+.BI \-u " AUTHORIZED_USER"
+Identifier for the client being authorized; used as the base
+filename for the generated
+.I .auth
+/
+.I .auth.private
+files. Required.
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The authorization key pair was generated, installed, and Tor was
+restarted successfully.
+.TP
+.B 1
+Invalid or missing arguments, the script was not run as root, or
+.BR openssl (1)
+failed.
+.SH FILES
+.TP
+.I /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth
+The public authorization credential, read by the
+.B tor
+daemon itself. Owned by
+.B debian-tor:debian-tor
+with mode
+.BR 700 .
+.TP
+.I /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth.private
+The private authorization credential. Must be securely transferred
+to the authorized client and placed in their own Tor client
+configuration; it is not used by the server-side
+.B tor
+daemon. Owned by
+.B debian-tor:debian-tor
+with mode
+.BR 700 .
+.SH EXAMPLES
+Authorize a client named
+.I admin
+to access the
+.I aenigma-dashboard
+onion service:
+.PP
+.RS
+.EX
+sudo aenigma-tor-auth \-s aenigma-dashboard \-u admin
+.EE
+.RE
+.SH NOTES
+.B aenigma-tor-auth
+does not check whether an authorization file already exists for the
+given
+.I SERVICE_NAME
+/
+.I AUTHORIZED_USER
+pair before running. Re-running it for the same pair
+.B silently overwrites
+the existing key pair with a newly generated one; any client
+already configured with the previous private key will lose access
+once Tor is restarted, with no warning given.
+.PP
+The private authorization credential
+.RI ( AUTHORIZED_USER .auth.private)
+is printed to standard output as a file path at the end of a
+successful run, and is written unencrypted to disk under
+.IR /var/lib/tor .
+Retrieval and secure delivery of this file to the intended client is
+left entirely to the operator; the script provides no mechanism for
+this, and the file remains root/​
+.B debian-tor
+readable on the server indefinitely once created.
+.PP
+Ownership and permissions are set with
+.B chown -R
+/
+.B chmod -R
+across the entire
+.I authorized_clients
+directory on every run, not just the newly created files. This
+re-applies the intended ownership to all existing authorization
+files for the service each time the script runs for any user, which
+is generally harmless but means the script's effect is not scoped
+strictly to the
+.I AUTHORIZED_USER
+being added.
+.SH SEE ALSO
+.BR openssl (1),
+.BR tor (8),
+.BR aenigma-tor (8),
+.BR aenigma-tor-get-auth (8),
+.BR base32 (1)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

@@ -20,4 +20,4 @@
 
 set -Eeuo pipefail
 
-/usr/local/aenigma/Enigma5.App --config /usr/local/etc/aenigma/appsettings.json
+exec /usr/lib/aenigma/Enigma5.App --config /etc/aenigma/appsettings.json

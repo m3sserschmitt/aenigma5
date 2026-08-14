@@ -22,8 +22,8 @@ set -e
 
 SERVICE_NAME="aenigma"
 APP_USER="aenigma"
-APP_INSTALL_DIR="/usr/local/$SERVICE_NAME"
-CONFIG_DIR="/usr/local/etc/$SERVICE_NAME"
+APP_INSTALL_DIR="/usr/lib/$SERVICE_NAME"
+APP_SETTINGS_DIR="/etc/$SERVICE_NAME"
 VAR_LIB="/var/lib/$SERVICE_NAME"
 LOGS_DIR="/var/log/$SERVICE_NAME"
 UPLOADS_DIR="/srv/$SERVICE_NAME"
@@ -58,22 +58,6 @@ safe_rm_dir() {
   rm -rf --one-file-system "$DIR"
 }
 
-stop_service() {
-  systemctl stop "$SERVICE_NAME.service" 2>/dev/null || true
-  systemctl disable "$SERVICE_NAME.service" 2>/dev/null || true
-  systemctl daemon-reload
-}
-
-remove_symlinks() {
-  log "Removing symlinks from /usr/local/bin"
-  find /usr/local/bin \
-    -maxdepth 1 \
-    -type l \
-    -name "$SERVICE_NAME-*" \
-    -print \
-    -delete || true
-}
-
 remove_user() {
   if id "$APP_USER" >/dev/null 2>&1; then
     log "Removing user $APP_USER"
@@ -83,17 +67,12 @@ remove_user() {
 
 case "$ACTION" in
   remove)
-    stop_service
-    remove_symlinks
     safe_rm_dir "$APP_INSTALL_DIR"
     ;;
 
   purge)
-    stop_service
-    remove_symlinks
-
     safe_rm_dir "$APP_INSTALL_DIR"
-    safe_rm_dir "$CONFIG_DIR"
+    safe_rm_dir "$APP_SETTINGS_DIR"
     safe_rm_dir "$VAR_LIB"
     safe_rm_dir "$LOGS_DIR"
     safe_rm_dir "$UPLOADS_DIR"
@@ -104,9 +83,15 @@ case "$ACTION" in
     log "Upgrade path detected: no cleanup required"
     ;;
 
+  disappear)
+    log "Package disappeared (replaced): no cleanup required"
+    ;;
+
   *)
     log "postrm called with unknown action: $ACTION"
     ;;
 esac
+
+#DEBHELPER#
 
 exit 0

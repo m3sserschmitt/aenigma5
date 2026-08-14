@@ -20,17 +20,8 @@
 
 set -Eeuo pipefail
 
-SERVICES="aenigma-standard-setup.service regenerate-ssh-host-keys.service"
-LIB_SYSTEMD_DIR="/usr/lib/systemd/system"
-SYSTEMD_DIR="/etc/systemd/system"
-
-for service_name in $SERVICES; do
-    chmod -v 644 $LIB_SYSTEMD_DIR/$service_name
-
-    if systemctl is-active --quiet $service_name; then
-        systemctl enable $service_name
-        systemctl restart $service_name
-    fi
-done
+#DEBHELPER#
 
 echo "Done."
+
+exit 0

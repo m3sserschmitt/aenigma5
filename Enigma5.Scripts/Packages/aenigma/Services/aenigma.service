@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Environment=DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-WorkingDirectory=/usr/local/aenigma
-ExecStart=/usr/local/bin/aenigma-launcher
+WorkingDirectory=/usr/lib/aenigma
+ExecStart=/usr/bin/aenigma-launcher
 Restart=always
 RestartSec=10
 User=aenigma

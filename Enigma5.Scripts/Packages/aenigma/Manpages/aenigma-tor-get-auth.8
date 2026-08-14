@@ -1,0 +1,116 @@
+.TH AENIGMA-TOR-GET-AUTH 8 "2026-08-12" "aenigma-tools 1.0.0" "Aenigma Administration Tools"
+.SH NAME
+aenigma-tor-get-auth \- display a single Tor client authorization
+private key for an onion service
+.SH SYNOPSIS
+.B aenigma-tor-get-auth
+.B \-s
+.I SERVICE_NAME
+.B \-u
+.I AUTHORIZED_USER
+.br
+.B aenigma-tor-get-auth
+.B \-h
+.SH DESCRIPTION
+.B aenigma-tor-get-auth
+prints the private Tor client authorization key previously generated
+by
+.BR aenigma-tor-auth (8)
+for a single, specified client of a given onion service, so an
+operator can retrieve and hand it to that authorized client.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Verifies that
+.IR /var/lib/tor/ SERVICE_NAME /authorized_clients
+exists, and exits with an error if it does not.
+.IP \(bu 2
+Verifies that
+.IR /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth.private
+exists, and exits with an error if it does not.
+.IP \(bu 2
+Prints the private key contents of that single file.
+.PP
+Only the key belonging to
+.I AUTHORIZED_USER
+is ever displayed; keys belonging to other clients authorized for
+the same service are not read or shown.
+.PP
+.B aenigma-tor-get-auth
+must be run as root, since
+.I authorized_clients
+and its contents are owned by
+.B debian-tor
+and are not otherwise readable.
+.SH OPTIONS
+.TP
+.BI \-s " SERVICE_NAME"
+Name of the onion service (as configured by
+.BR aenigma-tor (8))
+that
+.I AUTHORIZED_USER
+was authorized for. Required.
+.TP
+.BI \-u " AUTHORIZED_USER"
+Name of the authorized client whose private key should be
+displayed, matching the
+.I AUTHORIZED_USER
+originally given to
+.BR aenigma-tor-auth (8)
+when the credential was issued. Required.
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The private key for
+.I AUTHORIZED_USER
+was found and printed.
+.TP
+.B 1
+Missing
+.I \-s
+or
+.I \-u
+argument, the script was not run as root,
+.I /var/lib/tor/ SERVICE_NAME /authorized_clients
+does not exist, or no key file exists for the given
+.I AUTHORIZED_USER
+on that service.
+.SH FILES
+.TP
+.I /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth.private
+Private Tor client authorization key for the specified user, read
+and printed verbatim to standard output by this script. Not
+modified.
+.SH EXAMPLES
+Display the client authorization private key for user
+.I admin
+on the
+.I aenigma-dashboard
+service:
+.PP
+.RS
+.EX
+sudo aenigma-tor-get-auth \-s aenigma-dashboard \-u admin
+.EE
+.RE
+.SH SECURITY CONSIDERATIONS
+This script prints private key material directly to standard
+output. Depending on how the terminal session is configured, output
+may be captured in shell history substitutes, terminal scrollback
+buffers, screen/tmux logging, or session recording tools, and may be
+visible to anyone able to view the screen at the time it is run.
+Consider the exposure of the terminal session used before running
+this command, particularly over a shared or recorded connection.
+.PP
+Output is scoped to the single client named by
+.IR \-u ;
+keys belonging to other clients authorized for the same service are
+never read or displayed by a given invocation.
+.SH SEE ALSO
+.BR aenigma-tor-auth (8),
+.BR aenigma-tor (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

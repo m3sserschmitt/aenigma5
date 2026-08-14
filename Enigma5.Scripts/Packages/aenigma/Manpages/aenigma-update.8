@@ -1,0 +1,107 @@
+.TH AENIGMA-UPDATE 8 "2026-08-13" "aenigma-tools 1.0.0" "Aenigma Administration Tools"
+.SH NAME
+aenigma-update \- refresh the package index and install the latest
+available Aenigma package
+.SH SYNOPSIS
+.B aenigma-update
+.SH DESCRIPTION
+.B aenigma-update
+refreshes the local package index and installs the latest available
+version of the
+.B aenigma
+package via
+.BR apt-get (8).
+It takes no options or arguments.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Runs
+.B "apt-get update"
+to refresh the package index.
+.IP \(bu 2
+Runs
+.B "apt-get install aenigma"
+non-interactively to install
+.B aenigma
+if not already present, or upgrade it to the latest version
+available from the currently configured package sources.
+.PP
+.B aenigma-update
+performs no version comparison and takes no action on the
+.B aenigma
+service itself; whether and how the service is restarted after an
+upgrade is left entirely to the
+.B aenigma
+package's own maintainer scripts.
+.PP
+.B aenigma-update
+is shipped as part of the main
+.B aenigma
+package. It is intended to be invoked periodically by the
+.B aenigma-update.timer
+/
+.B aenigma-update.service
+unit pair, which are packaged separately in the optional
+.B aenigma-auto-update
+package; installing
+.B aenigma
+alone does not enable automatic updates.
+.PP
+.B aenigma-update
+must be run as root.
+.SH OPTIONS
+.B aenigma-update
+takes no command-line options.
+.SH EXIT STATUS
+.TP
+.B 0
+The package index was refreshed and
+.B "apt-get install aenigma"
+completed successfully, whether or not a new version was actually
+installed.
+.TP
+.B 1
+The script was not run as root, or either
+.B apt-get
+invocation failed.
+.SH EXAMPLES
+Check for and apply the latest available
+.B aenigma
+package:
+.PP
+.RS
+.EX
+sudo aenigma-update
+.EE
+.RE
+.SH NOTES
+Any restart of the
+.B aenigma
+service following an installed upgrade is handled by the
+.B aenigma
+package's own
+.B postinst
+maintainer script (via
+.BR dh_installsystemd (1)'s
+default upgrade behavior), not by
+.BR aenigma-update
+itself. This script only ensures the package is present and
+up to date; it does not verify that the service is running, or
+report whether a version change actually occurred.
+.PP
+This script does not pin, hold back, or otherwise limit which
+version of
+.B aenigma
+.B apt-get
+considers the latest available; it always installs whatever version
+is newest according to the currently configured package sources at
+the time it runs.
+.PP
+For scheduled, unattended execution, see the
+.B aenigma-auto-update
+package, which installs a systemd timer running this script daily.
+.SH SEE ALSO
+.BR apt-get (8),
+.BR aenigma-start (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

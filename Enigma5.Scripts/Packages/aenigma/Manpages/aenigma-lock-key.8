@@ -1,0 +1,137 @@
+.TH AENIGMA-LOCK-KEY 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-lock-key \- encrypt the Aenigma service's private key with a
+passphrase
+.SH SYNOPSIS
+.B aenigma-lock-key
+.SH DESCRIPTION
+.B aenigma-lock-key
+re-encrypts the Aenigma service's RSA private key,
+.IR /var/lib/aenigma/private\-key.pem ,
+using
+.BR openssl (1),
+protecting it with a passphrase under
+.BR AES\-256 .
+It takes no options or arguments.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Reads the existing private key from
+.IR /var/lib/aenigma/private\-key.pem .
+If the key currently on disk is
+.B already
+passphrase-protected,
+.BR openssl (1)
+first prompts for the
+.B current
+passphrase in order to decrypt it.
+.IP \(bu 2
+Writes a new
+.B AES\-256
+encrypted copy of the key to a temporary file,
+.IR /var/lib/aenigma/private\-key\-locked.pem ,
+prompting interactively for a
+.B new
+passphrase (and confirmation).
+.IP \(bu 2
+Replaces the original
+.I private\-key.pem
+with the newly encrypted file.
+.IP \(bu 2
+Resets ownership to
+.B aenigma:aenigma
+and permissions to
+.B 700
+on the resulting file.
+.PP
+.B aenigma-lock-key
+must be run as root, and requires that
+.I private\-key.pem
+already exists (typically created beforehand by
+.BR aenigma-keys (8)).
+.SH OPTIONS
+.B aenigma-lock-key
+takes no command-line options.
+.SH EXIT STATUS
+.TP
+.B 0
+The private key was encrypted and stored successfully.
+.TP
+.B 1
+The script was not run as root,
+.I private\-key.pem
+does not exist, or
+.BR openssl (1)
+failed (for example, an incorrect current passphrase or an aborted
+prompt).
+.SH FILES
+.TP
+.I /var/lib/aenigma/private\-key.pem
+The Aenigma service's RSA private key. Read to obtain the key
+material, then overwritten in place with the newly encrypted
+version. Owned by
+.B aenigma:aenigma
+with mode
+.B 700
+after the operation.
+.TP
+.I /var/lib/aenigma/private\-key\-locked.pem
+Temporary file used to hold the newly encrypted key before it
+replaces
+.IR private\-key.pem .
+Not expected to persist after a successful run.
+.SH EXAMPLES
+Encrypt the private key, supplying the current passphrase (if any)
+and a new one when prompted:
+.PP
+.RS
+.EX
+sudo aenigma-lock-key
+.EE
+.RE
+.SH NOTES
+.BR openssl (1)
+is invoked without first checking whether
+.I private\-key.pem
+is currently encrypted or in plaintext, so the number of passphrase
+prompts shown (one for the new passphrase only, or one for the
+current passphrase followed by one for the new passphrase) depends
+silently on the key's existing state.
+.PP
+.B aenigma-lock-key
+takes no backup of the previous
+.I private\-key.pem
+before overwriting it. If the new passphrase is lost or mistyped and
+confirmed, or if the wrong current passphrase is supplied and the
+operation nonetheless proceeds with unexpected results, there is no
+built-in way to recover the previous key file's exact prior state
+from this script alone.
+.PP
+The intermediate file
+.I private\-key\-locked.pem
+is created by
+.BR openssl (1)
+using the process's default permissions (governed by the calling
+shell's umask) and is not restricted to mode
+.B 700
+until
+.B after
+it has replaced
+.IR private\-key.pem .
+Depending on the umask in effect when this script runs, the newly
+encrypted key material may be briefly readable by users other than
+.B aenigma
+between its creation and the final
+.BR chmod .
+.PP
+If the script is interrupted (for example, killed) between writing
+.I private\-key\-locked.pem
+and the subsequent
+.BR mv ,
+the temporary file may be left behind on disk and will not be
+automatically cleaned up on a later run.
+.SH SEE ALSO
+.BR openssl (1),
+.BR aenigma-keys (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

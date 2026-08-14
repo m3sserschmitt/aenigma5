@@ -19,7 +19,7 @@
     <None Update="runtimes/linux-arm64/native/libaenigma.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="runtimes/linux-x64/native/libaenigma.so">
+    <None Update="runtimes/linux-amd64/native/libaenigma.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

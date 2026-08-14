@@ -1,0 +1,169 @@
+.TH AENIGMA-PROXY 8 "2026-08-10" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-proxy \- configure an Apache reverse proxy virtual host for
+an Aenigma application
+.SH SYNOPSIS
+.B aenigma-proxy
+.B \-d
+.I DOMAIN
+.B \-l
+.I LOCAL_ADDRESS
+.RB [ \-c
+.IR CONFIG_ADDRESS ]
+.RB [ \-b
+.IR BIND_ADDRESS ]
+.br
+.B aenigma-proxy
+.B \-h
+.SH DESCRIPTION
+.B aenigma-proxy
+installs and configures Apache HTTP Server, if not already present,
+as a reverse proxy in front of a locally running ASP.NET
+application, including WebSocket (SignalR) passthrough.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Installs the
+.B apache2
+package via
+.B apt
+if not already present.
+.IP \(bu 2
+Enables the Apache modules
+.BR rewrite ,
+.BR proxy ,
+.BR proxy_http ,
+and
+.B proxy_wstunnel
+required for reverse proxying and WebSocket upgrades.
+.IP \(bu 2
+Writes an Apache virtual host configuration to
+.I /etc/apache2/sites-available/aenigma.conf
+that proxies HTTP and WebSocket traffic on
+.B / and /OnionRouting
+to
+.IR LOCAL_ADDRESS ,
+transparently upgrading WebSocket connections.
+.IP \(bu 2
+Enables the new site with
+.BR a2ensite (8)
+and disables the Apache default site.
+.IP \(bu 2
+Restarts and enables Apache, and, if
+.BR ufw (8)
+is installed, opens the firewall for the
+.B "Apache Full"
+profile.
+.IP \(bu 2
+If requested via
+.BR \-c ,
+records the configured domain in the Aenigma application
+configuration.
+.PP
+Each run of
+.B aenigma-proxy
+overwrites
+.I /etc/apache2/sites-available/aenigma.conf
+in full with the values given on the command line.
+.PP
+.B aenigma-proxy
+must be run as root.
+.SH OPTIONS
+.TP
+.BI \-d " DOMAIN"
+The domain name the reverse proxy will serve, e.g.
+.IR example.com .
+Used as the
+.B ServerName
+of the generated virtual host. Required.
+.TP
+.BI \-l " LOCAL_ADDRESS"
+The local address and port on which the ASP.NET application is
+listening, e.g.
+.IR 127.0.0.1:8080 .
+All proxied HTTP and WebSocket traffic is forwarded here. Required.
+.TP
+.BI \-c " CONFIG_ADDRESS"
+If set to
+.IR 1 ,
+the configured domain is recorded in the Aenigma application
+configuration by invoking
+.BR aenigma-config (8)
+with the
+.B Hostname
+property, using
+.IR http://DOMAIN
+as the value. If set to
+.I 0
+or omitted, the configuration step is skipped. Optional.
+.TP
+.BI \-b " BIND_ADDRESS"
+The interface or IP address the virtual host should bind to, e.g.
+.IR 192.168.1.50 .
+Used as the address portion of the generated
+.B VirtualHost
+directive
+.RI ( BIND_ADDRESS:80 ).
+If omitted, defaults to
+.I *
+(all interfaces), matching Apache's usual catch-all virtual host
+binding. Optional.
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The reverse proxy was configured and Apache restarted successfully.
+.TP
+.B 1
+Invalid or missing arguments, or the script was not run as root.
+.SH FILES
+.TP
+.I /etc/apache2/sites-available/aenigma.conf
+Generated Apache virtual host configuration; overwritten on each
+run.
+.TP
+.I /var/log/apache2/aenigma-error.log
+Apache error log for the configured virtual host.
+.TP
+.I /var/log/apache2/aenigma-access.log
+Apache access log for the configured virtual host, using the
+.B combined
+log format.
+.SH EXAMPLES
+Configure a reverse proxy for
+.I example.com
+in front of a local application on port 8080:
+.PP
+.RS
+.EX
+sudo aenigma-proxy \-d example.com \-l 127.0.0.1:8080
+.EE
+.RE
+.PP
+Bind the virtual host to a specific interface and record the
+hostname in the Aenigma configuration:
+.PP
+.RS
+.EX
+sudo aenigma-proxy \-d example.com \-l 127.0.0.1:8080 \e
+    \-b 192.168.1.50 \-c 1
+.EE
+.RE
+.SH NOTES
+Ensure that any address given via
+.B \-b
+is already assigned to a network interface on the host before
+running the script; if Apache cannot bind to
+.I BIND_ADDRESS
+the subsequent restart will fail.
+.SH SEE ALSO
+.BR apache2 (8),
+.BR aenigma-tor (8),
+.BR aenigma-config (8),
+.BR a2ensite (8),
+.BR a2enmod (8),
+.BR ufw (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

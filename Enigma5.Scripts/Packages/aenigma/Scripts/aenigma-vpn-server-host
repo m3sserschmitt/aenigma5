@@ -71,7 +71,7 @@ echo "ifconfig-push $IP $NETMASK" >> "$CLIENT_CONFIGS_DIRECTORY/$CLIENT_NAME"
  
 # Add hostname entry to dnsmasq hosts file if dnsmasq is configured
 if [[ -f "$DNSMASQ_HOSTS" ]]; then
-    if ! grep -q "$HOSTNAME" "$DNSMASQ_HOSTS"; then
+    if ! grep -qE "[[:space:]]${HOSTNAME}$" "$DNSMASQ_HOSTS"; then
         echo "$IP  $HOSTNAME" >> "$DNSMASQ_HOSTS"
     fi
     systemctl restart dnsmasq

@@ -93,9 +93,10 @@ fi
  
 "$EASYRSA" --batch gen-req "$DOMAIN" nopass
 "$EASYRSA" --batch sign-req server "$DOMAIN"
- 
 cp -v "${EASYRSA_PKI}/issued/${DOMAIN}.crt"  "$SERVER_DIRECTORY/"
 cp -v "${EASYRSA_PKI}/private/${DOMAIN}.key" "$SERVER_DIRECTORY/"
+chmod 700 "$EASYRSA_PKI/private"
+chmod 600 "$EASYRSA_PKI/private"/*.key
 chown -v "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/${DOMAIN}.key"
 chmod -v 700 "$SERVER_DIRECTORY/${DOMAIN}.key"
  

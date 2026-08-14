@@ -1,0 +1,140 @@
+.TH AENIGMA-STANDARD-SETUP 8 "2026-08-13" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-standard-setup \- configure the default onion services for
+Aenigma and its dashboard
+.SH SYNOPSIS
+.B aenigma-standard-setup
+.SH DESCRIPTION
+.B aenigma-standard-setup
+configures the two Tor onion services used in a standard Aenigma
+deployment, by invoking
+.BR aenigma-tor (8)
+with a fixed, opinionated set of arguments for each. It takes no
+options or arguments of its own.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+If
+.I /var/lib/tor/aenigma/hostname
+does not already exist, configures an onion service named
+.B aenigma
+mapping local address
+.I 127.0.0.1:8080
+to onion port
+.BR 80 ,
+and records the resulting onion address in the Aenigma application
+configuration (equivalent to
+.BR "aenigma-tor \-l 127.0.0.1:8080 \-o 80 \-s aenigma \-c 1" ).
+.IP \(bu 2
+If
+.I /var/lib/tor/aenigma\-dashboard/hostname
+does not already exist, configures a second onion service named
+.B aenigma-dashboard
+mapping local address
+.I 127.0.0.1:8081
+to onion port
+.BR 80 ,
+with Tor client authorization (stealth mode) enabled for a client
+named
+.B aenigma-dashboard
+(equivalent to
+.BR "aenigma-tor \-l 127.0.0.1:8081 \-o 80 \-s aenigma-dashboard \-u aenigma-dashboard" ).
+.PP
+Each of the two onion services is only configured if its
+.I hostname
+file does not already exist; this is this script's own idempotency
+check, independent of and in addition to
+.BR aenigma-tor (8)'s
+own internal handling of an already-configured
+.IR torrc
+entry.
+.PP
+.B aenigma-standard-setup
+must be run as root.
+.SH OPTIONS
+.B aenigma-standard-setup
+takes no command-line options. The local addresses, ports, service
+names, and authorization user are fixed in the script.
+.SH EXIT STATUS
+.TP
+.B 0
+Both onion services were already configured, or were configured
+successfully by this run.
+.TP
+.B 1
+The script was not run as root, or either underlying
+.BR aenigma-tor (8)
+invocation failed.
+.SH FILES
+.TP
+.I /var/lib/tor/aenigma/hostname
+Checked to decide whether the
+.B aenigma
+onion service still needs to be configured.
+.TP
+.I /var/lib/tor/aenigma\-dashboard/hostname
+Checked to decide whether the
+.B aenigma-dashboard
+onion service still needs to be configured.
+.SH EXAMPLES
+Configure both standard onion services on a fresh install:
+.PP
+.RS
+.EX
+sudo aenigma-standard-setup
+.EE
+.RE
+.SH NOTES
+This script only configures onion services for the two standard Tor
+hidden services; it does not generate application keys
+.RB ( aenigma-keys (8)),
+write application configuration
+.RB ( aenigma-config (8)),
+configure a VPN
+.RB ( aenigma-vpn-client (8),
+.BR aenigma-vpn-dns (8)),
+or start the Aenigma service
+.RB ( aenigma-start (8)).
+Despite its name, it covers only the onion-service portion of a full
+deployment; the remaining steps must be run separately, in whatever
+order the overall deployment procedure requires.
+.PP
+Only the
+.B aenigma
+service's resulting onion address is recorded in the application
+configuration (via
+.BR \-c " 1);"
+the
+.B aenigma-dashboard
+service's address is not. An operator wanting the dashboard's
+.I .onion
+address must retrieve it separately, for example via
+.BR aenigma-status (8).
+.PP
+The
+.B aenigma-dashboard
+onion service is configured with Tor client authorization for a
+single authorized client whose name is identical to the service
+name itself
+.RB ( "aenigma-dashboard" ).
+This is a fixed convention of this script, not a name chosen per
+deployment or per operator.
+.PP
+Because each onion service is only (re-)configured when its
+.I hostname
+file is absent, running this script a second time after either
+onion service has already started has no effect, even if the
+underlying
+.I torrc
+entry, local address, port, or authorization has since changed by
+other means. It is intended for initial setup, not as a general
+reconciliation or repair command.
+.SH SEE ALSO
+.BR aenigma-tor (8),
+.BR aenigma-tor-auth (8),
+.BR aenigma-status (8),
+.BR aenigma-config (8),
+.BR aenigma-keys (8),
+.BR aenigma-start (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

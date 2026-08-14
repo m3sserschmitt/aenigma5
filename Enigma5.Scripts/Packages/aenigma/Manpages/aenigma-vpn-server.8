@@ -1,0 +1,231 @@
+.TH AENIGMA-VPN-SERVER 8 "2026-08-13" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-vpn-server \- initialize a PKI and configure an OpenVPN
+server
+.SH SYNOPSIS
+.B aenigma-vpn-server
+.B \-d
+.I DOMAIN
+.B \-p
+.I PORT
+.B \-a
+.I ADDRESS
+.B \-n
+.I NETMASK
+.br
+.B aenigma-vpn-server
+.B \-h
+.SH DESCRIPTION
+.B aenigma-vpn-server
+installs OpenVPN and Easy-RSA, if not already present, initializes a
+certificate authority (on first run only), issues a server
+certificate, and writes and starts an OpenVPN server configuration.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Installs the
+.B openvpn
+and
+.B easy-rsa
+packages via
+.BR apt .
+.IP \(bu 2
+Creates an unprivileged, login-disabled system user
+.B openvpn
+if it does not already exist.
+.IP \(bu 2
+Creates the server's working directory
+.RI ( /etc/openvpn/ DOMAIN ),
+its client-config-dir
+.RI ( /etc/openvpn/ccd/ DOMAIN ),
+and its log directory
+.RI ( /var/log/openvpn/ DOMAIN ).
+.IP \(bu 2
+.B Only if
+.I /etc/openvpn/easy\-rsa/pki/ca.crt
+does not already exist: initializes a new Easy-RSA PKI directory,
+generates a certificate authority (with no CA private key
+passphrase), and generates Diffie-Hellman parameters, copying the
+resulting
+.I ca.crt
+and
+.I dh.pem
+to
+.IR /etc/openvpn .
+This step is skipped on subsequent runs, so all domains configured
+on the same host with this script share a single certificate
+authority.
+.IP \(bu 2
+.B On every run,
+unconditionally: generates a new certificate signing request for
+.I DOMAIN
+(with no key passphrase) and signs it as a server certificate using
+the CA, replacing any previously issued certificate/key for the same
+.IR DOMAIN .
+.IP \(bu 2
+Copies the newly issued certificate and key into the server's
+directory, restricting the private key's ownership to
+.B openvpn:openvpn
+and permissions to
+.BR 700 .
+.IP \(bu 2
+Generates a new TLS authentication static key
+.RI ( ta.key )
+and applies the same ownership/permission restrictions to it.
+.IP \(bu 2
+Writes an OpenVPN
+.B server
+configuration file to
+.IR /etc/openvpn/ DOMAIN .conf,
+overwriting it in full, and enables and restarts the corresponding
+.B openvpn@ DOMAIN
+systemd service instance.
+.PP
+.B aenigma-vpn-server
+must be run as root.
+.SH OPTIONS
+.TP
+.BI \-d " DOMAIN"
+Domain name (or address) clients will use to reach this server, e.g.
+.IR example.com .
+Also used as the certificate common name, and as the base name of
+the generated server directory, configuration file, and
+.B openvpn@
+systemd instance. Required.
+.TP
+.BI \-p " PORT"
+UDP port the server should listen on, e.g.
+.IR 1194 .
+Required.
+.TP
+.BI \-a " ADDRESS"
+VPN network address to serve to clients, e.g.
+.IR 10.8.0.0 .
+Required.
+.TP
+.BI \-n " NETMASK"
+Netmask for the VPN network, e.g.
+.IR 255.255.255.0 .
+Required.
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The server certificate was issued (or reissued) and the
+.B openvpn@ DOMAIN
+service started successfully.
+.TP
+.B 1
+Invalid or missing arguments, the script was not run as root, or an
+.B easy-rsa
+or
+.B openvpn
+command failed.
+.SH FILES
+.TP
+.I /etc/openvpn/easy\-rsa/pki/
+Easy-RSA PKI directory, including the certificate authority's own
+key and certificate. Created only if absent; shared across every
+domain configured with this script on the same host.
+.TP
+.I /etc/openvpn/ca.crt ", " /etc/openvpn/dh.pem
+Copies of the CA certificate and Diffie-Hellman parameters, shared
+across all server domains configured on this host.
+.TP
+.I /etc/openvpn/ DOMAIN /
+Per-domain server directory, containing the issued server
+certificate and key, the TLS authentication key, and the
+client-IP-pool persistence file.
+.TP
+.I /etc/openvpn/ DOMAIN .conf
+Generated OpenVPN
+.B server
+configuration file. Overwritten in full on each run.
+.TP
+.I /etc/openvpn/ccd/ DOMAIN /
+Per-client configuration directory for this server, referenced by
+.B client-config-dir
+in the generated configuration.
+.TP
+.I /var/log/openvpn/ DOMAIN /
+Log and status file directory for this server instance.
+.SH EXAMPLES
+Initialize the PKI (on first run) and start a VPN server:
+.PP
+.RS
+.EX
+sudo aenigma-vpn-server \-d example.com \-p 1194 \e
+    \-a 10.8.0.0 \-n 255.255.255.0
+.EE
+.RE
+.SH SECURITY CONSIDERATIONS
+The certificate authority's private key is generated with
+.B nopass
+(no passphrase) and is not otherwise encrypted at rest. Anyone able
+to read
+.I /etc/openvpn/easy\-rsa/pki/private/ca.key
+can issue arbitrary client or server certificates trusted by every
+VPN endpoint using this CA. This directory should be protected
+accordingly, and ideally kept on infrastructure separate from
+routine client-management operations if a stronger security posture
+than this script provides by default is required.
+.PP
+The server's own private key is likewise generated with no
+passphrase; possession of the file alone is sufficient to
+impersonate this server to connecting clients.
+.SH NOTES
+The
+.I /etc/openvpn/ DOMAIN .conf
+path written by this script is the same naming convention used by
+.BR aenigma-vpn-client (8)
+for its
+.B client
+configuration file, and is required by
+.BR aenigma-vpn-dns (8)
+to already exist as a
+.B server
+configuration when appending its DHCP-option push directives.
+.BR aenigma-vpn-server (8)
+and
+.BR aenigma-vpn-client (8)
+are intended to run on different hosts (the VPN server and a VPN
+client, respectively); running both against the same
+.I DOMAIN
+on the same host will result in whichever script runs last
+overwriting the other's configuration at the same path, silently
+converting the host from a VPN server into a VPN client or vice
+versa.
+.PP
+Unlike CA and Diffie-Hellman parameter generation, which are guarded
+and only performed on first run, the server certificate and key are
+regenerated
+.B unconditionally
+on every invocation of this script for the same
+.IR DOMAIN .
+Re-running this script issues a new server certificate, discards the
+previous one, and restarts the service, interrupting any active VPN
+sessions. Client certificates signed against the same CA remain
+valid, since only the server's own certificate is replaced.
+.PP
+Only the server's private key and TLS authentication key have their
+ownership and permissions explicitly restricted by this script;
+.I ca.crt
+and
+.I dh.pem
+are left with whatever ownership and permissions
+.BR easy-rsa (1)
+and the subsequent
+.B cp
+produce, which is appropriate since both are public material, but
+worth noting for consistency with the private key handling described
+above.
+.SH SEE ALSO
+.BR openvpn (8),
+.BR easyrsa (1),
+.BR systemctl (1),
+.BR aenigma-vpn-client (8),
+.BR aenigma-vpn-dns (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

@@ -1,0 +1,183 @@
+.TH AENIGMA-VPN-SERVER-HOST 8 "2026-08-13" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-vpn-server-host \- assign a static VPN IP and DNS hostname
+to an OpenVPN client
+.SH SYNOPSIS
+.B aenigma-vpn-server-host
+.B \-c
+.I CLIENT_NAME
+.B \-d
+.I DOMAIN
+.B \-i
+.I IP
+.B \-n
+.I NETMASK
+.br
+.B aenigma-vpn-server-host
+.B \-h
+.SH DESCRIPTION
+.B aenigma-vpn-server-host
+assigns a fixed VPN IP address to a specific client via OpenVPN's
+client-config-dir mechanism, and, if
+.BR dnsmasq (8)
+has been configured for the server's domain by
+.BR aenigma-vpn-dns (8),
+registers a corresponding hostname for that client in the local
+hosts file used by
+.BR dnsmasq .
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Verifies that the server's client-config-dir,
+.IR /etc/openvpn/ccd/ DOMAIN ,
+already exists, and exits with an error if it does not, since it
+must have been created by
+.BR aenigma-vpn-server (8)
+beforehand.
+.IP \(bu 2
+Creates (if absent) or updates the per-client configuration file
+.IR /etc/openvpn/ccd/ DOMAIN / CLIENT_NAME .
+Any existing
+.B ifconfig-push
+line in that file is removed, and a new one is appended assigning
+.I IP
+and
+.I NETMASK
+to the client; any other directives already present in the file are
+left untouched.
+.IP \(bu 2
+If
+.IR /etc/openvpn/ DOMAIN /dnsmasq\-hosts
+exists (indicating
+.BR dnsmasq (8)
+has been configured for this domain via
+.BR aenigma-vpn-dns (8)),
+adds an entry mapping
+.I IP
+to the hostname
+.IR CLIENT_NAME . DOMAIN ,
+unless a matching entry already exists, and restarts
+.BR dnsmasq .
+If that file does not exist, DNS hostname registration is skipped
+with a notice, and the rest of the script still completes normally.
+.PP
+.B aenigma-vpn-server-host
+must be run as root, and is intended to be run on the VPN
+.B server
+host, after the corresponding client certificate has already been
+issued via
+.BR aenigma-vpn-server-client (8).
+.SH OPTIONS
+.TP
+.BI \-c " CLIENT_NAME"
+Name of the client to assign a static IP to. Must match the common
+name used when the client's certificate was issued via
+.BR aenigma-vpn-server-client (8)
+for OpenVPN to apply this configuration to the correct connecting
+client. Required.
+.TP
+.BI \-d " DOMAIN"
+Domain name of the already-configured VPN server (as set up by
+.BR aenigma-vpn-server (8)).
+Required.
+.TP
+.BI \-i " IP"
+Static VPN IP address to assign to the client, e.g.
+.IR 10.8.0.10 .
+Required.
+.TP
+.BI \-n " NETMASK"
+Netmask for the VPN network, e.g.
+.IR 255.255.255.0 .
+Should match the netmask used when the server was configured via
+.BR aenigma-vpn-server (8).
+Required.
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The client's static IP was assigned successfully, whether or not DNS
+hostname registration was applicable.
+.TP
+.B 1
+Invalid or missing arguments, the script was not run as root, or
+.I /etc/openvpn/ccd/ DOMAIN
+does not exist.
+.SH FILES
+.TP
+.I /etc/openvpn/ccd/ DOMAIN / CLIENT_NAME
+Per-client OpenVPN configuration file. Created if absent; its
+.B ifconfig-push
+directive is replaced on each run, other directives are preserved.
+.TP
+.I /etc/openvpn/ DOMAIN /dnsmasq\-hosts
+Additional hosts file consulted by
+.BR dnsmasq ,
+as configured by
+.BR aenigma-vpn-dns (8).
+An entry for
+.IR CLIENT_NAME . DOMAIN
+is appended if not already present. Not created by this script if
+absent.
+.SH EXAMPLES
+Assign a static IP and hostname to a client named
+.I john
+on server
+.IR example.com :
+.PP
+.RS
+.EX
+sudo aenigma-vpn-server-host \-c john \-d example.com \e
+    \-i 10.8.0.10 \-n 255.255.255.0
+.EE
+.RE
+.SH NOTES
+Neither
+.I CLIENT_NAME
+nor
+.I IP
+is validated against the client certificates already issued via
+.BR aenigma-vpn-server-client (8),
+nor against other static IP assignments already made via this
+script for the same
+.IR DOMAIN .
+It is the operator's responsibility to ensure
+.I CLIENT_NAME
+matches an existing, issued client certificate, and that
+.I IP
+is not already assigned to a different client; this script does not
+detect or warn about duplicate IP assignments across the
+client-config-dir.
+.PP
+The hostname-existence check against
+.I dnsmasq\-hosts
+.RB ( "grep -q \(dq$HOSTNAME\(dq" )
+matches the hostname text anywhere in the file, not as a
+whole-line or whole-field match. A hostname that is a substring of
+another already-registered hostname (or vice versa) may be
+incorrectly treated as already present, silently skipping the
+intended new entry.
+.PP
+If a client's static IP needs to change, re-running this script with
+a new
+.I IP
+value correctly replaces the
+.B ifconfig-push
+line in the client's ccd file, but does
+.B not
+remove or update the client's
+.B previous
+IP-to-hostname mapping in
+.IR dnsmasq\-hosts ;
+the old entry is left in place alongside whatever new entry (if any)
+results, potentially leaving a stale or duplicate hostname mapping.
+.SH SEE ALSO
+.BR openvpn (8),
+.BR dnsmasq (8),
+.BR aenigma-vpn-server (8),
+.BR aenigma-vpn-server-client (8),
+.BR aenigma-vpn-dns (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

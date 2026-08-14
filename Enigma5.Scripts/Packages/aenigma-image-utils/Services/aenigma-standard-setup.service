@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/aenigma-standard-setup
+ExecStart=/usr/bin/aenigma-standard-setup
 RemainAfterExit=yes
 
 [Install]

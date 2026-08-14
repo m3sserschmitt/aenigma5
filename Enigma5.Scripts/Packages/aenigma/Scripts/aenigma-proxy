@@ -24,11 +24,13 @@ SERVICE_NAME="aenigma"
 
 # Function to display usage/help message
 show_help() {
-    echo "Usage: $0 -d DOMAIN -l LOCAL_ADDRESS"
+    echo "Usage: $0 -d DOMAIN -l LOCAL_ADDRESS [ -c CONFIG_ADDRESS ] [ -b BIND_ADDRESS ]"
     echo ""
     echo "Options:"
     echo "  -d DOMAIN           The domain name for the reverse proxy (e.g., example.com)"
     echo "  -l LOCAL_ADDRESS    Local address on which the ASP.NET application is listening (e.g., 127.0.0.1:8080)"
+    echo "  -c CONFIG_ADDRESS   Add hostname to aenigma config (1 -> update, 0 -> do not update)."
+    echo "  -b BIND_ADDRESS     Interface/IP for the VirtualHost to bind to (e.g., 192.168.1.50). Defaults to * (all interfaces)."
     echo ""
     echo "Example:"
     echo "  sudo $0 -d example.com -l 127.0.0.1:8080"
@@ -43,14 +45,19 @@ if [ "$#" -lt 4 ]; then
 fi
 
 # Parse command line arguments
-while getopts "d:l:h" opt; do
+while getopts "d:l:c:b:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
         l) LOCAL_ADDRESS=$OPTARG ;;
+        c) CONFIG_ADDRESS=$OPTARG ;;
+        b) BIND_ADDRESS=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
 done
+
+# Default bind address to all interfaces if not specified
+BIND_ADDRESS="${BIND_ADDRESS:-*}"
 
 # Check if DOMAIN and APP_PORT are provided
 if [[ ! -v DOMAIN || ! -v LOCAL_ADDRESS ]]; then
@@ -65,7 +72,7 @@ LOG_DIR="/var/log/apache2"
 
 # Define the virtual host configuration
 VIRTUAL_HOST_CONF=$(cat <<EOF
-<VirtualHost *:80>
+<VirtualHost ${BIND_ADDRESS}:80>
     ServerName $DOMAIN
 
     RewriteEngine On
@@ -93,8 +100,8 @@ EOF
 )
 
 # Update and install Apache if not already installed
-apt update
-apt install -y apache2
+apt-get update -qq
+apt-get install -y apache2
 
 # Enable Apache modules required for reverse proxying and WebSockets
 a2enmod rewrite
@@ -125,7 +132,10 @@ if command -v ufw >/dev/null 2>&1; then
     ufw allow 'Apache Full'
 fi
 
-echo "Apache reverse proxy setup completed for $DOMAIN with local address $LOCAL_ADDRESS"
+echo "Apache reverse proxy setup completed for $DOMAIN with local address $LOCAL_ADDRESS (bound to ${BIND_ADDRESS}:80)"
 
+if [[ -v CONFIG_ADDRESS && ${CONFIG_ADDRESS} -eq 1 ]]; then
 aenigma-config -p Hostname -v "http://$DOMAIN"
+fi
+
 exit 0

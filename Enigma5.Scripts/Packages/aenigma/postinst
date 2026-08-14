@@ -22,77 +22,53 @@ set -Eeuo pipefail
 
 SERVICE_NAME="aenigma"
 SERVICE_USER="aenigma"
-APP_INSTALL_DIR="/usr/local/$SERVICE_NAME"
 LOG_DIR="/var/log/$SERVICE_NAME"
-CONFIGS_DIR="/usr/local/etc/$SERVICE_NAME"
-CONFIG_FILE="$CONFIGS_DIR/appsettings.json"
 SRV_DIR="/srv/$SERVICE_NAME"
 UPLOADS_DIR="$SRV_DIR/uploads"
 LIB_DIR="/var/lib/$SERVICE_NAME"
 DATABASE_DIR="$LIB_DIR/db"
-SCRIPTS_DIR="$APP_INSTALL_DIR/Scripts"
-LIB_SYSTEMD_DIR="/usr/lib/systemd/system"
-LIB_SERVICE_FILE="$LIB_SYSTEMD_DIR/$SERVICE_NAME.service"
+PRIVATE_KEY_FILE="$LIB_DIR/private-key.pem"
 
-filename_without_ext() {
-    local fullpath="$1"
-    local filename="${fullpath##*/}"
-    echo "${filename%.*}"
-}
+case "$1" in
+  configure)
+    if ! id "$SERVICE_USER" >/dev/null 2>&1; then
+      echo "Creating user '$SERVICE_USER' for the service..."
+      useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+    fi
 
-create_symlinks() {
-    for script in "$SCRIPTS_DIR"/*.sh; do
-        [ -e "$script" ] || continue
-        link="/usr/local/bin/$(filename_without_ext "$script")"
-        ln -sfv "$script" "$link"
-        chmod 755 "$link"
-    done
-}
+    mkdir -pv "$LOG_DIR"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
+    chmod 755 "$LOG_DIR"
 
-if ! id "$SERVICE_USER" &>/dev/null; then
-    echo "Creating user '$SERVICE_USER' for the service... "
-    useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
-fi
+    mkdir -pv "$LIB_DIR"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$LIB_DIR"
+    chmod 755 "$LIB_DIR"
 
-mkdir -pv "$LOG_DIR"
-mkdir -pv "$LIB_DIR"
-mkdir -pv "$DATABASE_DIR"
-mkdir -pv "$SRV_DIR"
-mkdir -pv "$UPLOADS_DIR"
-mkdir -pv "$CONFIGS_DIR"
+    mkdir -pv "$DATABASE_DIR"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
+    chmod 755 "$DATABASE_DIR"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Copying configuration file to $CONFIG_FILE..."
-    mkdir -pv $CONFIGS_DIR
-    cp -v $APP_INSTALL_DIR/appsettings.json $CONFIG_FILE
-fi
+    mkdir -pv "$SRV_DIR"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$SRV_DIR"
+    chmod 755 "$SRV_DIR"
 
-chmod -v 644 "$LIB_SERVICE_FILE"
+    mkdir -pv "$UPLOADS_DIR"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
+    chmod 755 "$UPLOADS_DIR"
 
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
-chmod -v 755 "$LOG_DIR"
+    if [ ! -f "$PRIVATE_KEY_FILE" ]; then
+      touch "$PRIVATE_KEY_FILE"
+    fi
 
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_INSTALL_DIR"
-chmod -R 755 "$APP_INSTALL_DIR"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
+    chmod 600 "$PRIVATE_KEY_FILE"
+    ;;
+  abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+  *)
+    ;;
+esac
 
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$LIB_DIR"
-chmod -R 700 "$LIB_DIR"
+#DEBHELPER#
 
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$SRV_DIR"
-chmod -R 700 "$SRV_DIR"
-
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$CONFIGS_DIR"
-chmod -R 700 "$CONFIGS_DIR"
-
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$SCRIPTS_DIR"
-chmod -R 755 "$SCRIPTS_DIR"
-
-create_symlinks
-
-if systemctl is-active --quiet "$SERVICE_NAME"; then
-    echo "Enable and restart $SERVICE_NAME.service"
-    systemctl enable "$SERVICE_NAME"
-    systemctl restart "$SERVICE_NAME"
-fi
-
-echo "Done."
+exit 0

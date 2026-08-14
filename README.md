@@ -57,7 +57,7 @@ Depending on your environment, you might want to change the default configuratio
 
 ## Debian package
 
-The debian package available into this repository will install the app and and the `.NET Runtime` into `/usr/local/aenigma/`. Use `sudo dpkg -i aenigma_<version>.deb` to install the package. Make sure to replace `<version>` with the the actual version you want to install.
+The debian package available into this repository will install the app and and the `.NET Runtime` into `/usr/lib//aenigma/`. Use `sudo dpkg -i aenigma_<version>.deb` to install the package. Make sure to replace `<version>` with the the actual version you want to install.
 
 ## Authors
 
