@@ -45,7 +45,16 @@ internal static partial class Native
     internal static partial bool SetMasterPassphraseName([MarshalAs(UnmanagedType.LPStr)] string name);
 
     [LibraryImport(App.Common.Constants.Libaenigma)]
+    internal static partial int SearchPersistentMasterPassphrase();
+
+    [LibraryImport(App.Common.Constants.Libaenigma)]
+    internal static partial int SearchMasterPassphrase();
+
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial int CreateMasterPassphrase([In] byte[] passphrase);
+
+    [LibraryImport(App.Common.Constants.Libaenigma)]
+    internal static partial int CreatePersistentMasterPassphrase([In] byte[] passphrase);
 
     [LibraryImport(App.Common.Constants.Libaenigma)]
     [return: MarshalAs(UnmanagedType.Bool)]

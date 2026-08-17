@@ -19,6 +19,7 @@
 */
 
 using System.Text;
+using Enigma5.App.Common.Enums;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Models;
@@ -80,16 +81,40 @@ public sealed class CertificateManager(
         }
     }
 
+    private int SearchMasterPassphrase() => _configuration.GetPassphrasePersistence() switch
+    {
+        PassphrasePersistence.Persistent => SealProvider.SearchPersistentMasterPassphrase(),
+        PassphrasePersistence.Ephemeral => SealProvider.SearchMasterPassphrase(),
+        _ => 0
+    };
+    
     public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.CreateMasterPassphrase(passphrase) > 0, _logger);
+    => _simpleSingleThreadRunner.RunAsync(() =>
+    {
+        SearchMasterPassphrase();
+        SealProvider.RemoveMasterPassphrase();
+        return SealProvider.CreatePersistentMasterPassphrase(passphrase) > 0;
+    }, _logger);
 
-    public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(SealProvider.RemoveMasterPassphrase, _logger);
+    public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(() =>
+    {
+        SearchMasterPassphrase();
+        return SealProvider.RemoveMasterPassphrase();
+    }, _logger);
 
     public Task<IEnvelopeUnsealer> CreateUnsealerAsync()
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
+    => _simpleSingleThreadRunner.RunAsync(() =>
+    {
+        SearchMasterPassphrase();
+        return SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty);
+    }, _logger);
 
     public Task<IEnvelopeSigner> CreateSignerAsync()
-    => _simpleSingleThreadRunner.RunAsync(() => SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty), _logger);
+    => _simpleSingleThreadRunner.RunAsync(() =>
+    {
+        SearchMasterPassphrase();
+        return SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty);
+    }, _logger);
 
     public async Task<bool> SetupAsync(char[] passphrase)
     {

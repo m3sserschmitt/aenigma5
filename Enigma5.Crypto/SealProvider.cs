@@ -133,7 +133,13 @@ public sealed class SealProvider :
 
     public static bool SetMasterPassphraseName(string name) => Native.SetMasterPassphraseName(name);
 
+    public static int SearchPersistentMasterPassphrase() => Native.SearchPersistentMasterPassphrase();
+
+    public static int SearchMasterPassphrase() => Native.SearchMasterPassphrase();
+
     public static int CreateMasterPassphrase(byte[] passphrase) => Native.CreateMasterPassphrase(passphrase);
+
+    public static int CreatePersistentMasterPassphrase(byte[] passphrase) => Native.CreatePersistentMasterPassphrase(passphrase);
 
     public static bool RemoveMasterPassphrase() => Native.RemoveMasterPassphrase();
 

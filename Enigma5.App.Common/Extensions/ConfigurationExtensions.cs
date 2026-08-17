@@ -157,4 +157,7 @@ public static class ConfigurationExtensions
 
     public static long GetSharedDataMaxSize(this IConfiguration configuration)
     => configuration.GetValue("SharedDataMaxSize", Constants.DefaultSharedDataMaxSize);
+
+    public static PassphrasePersistence GetPassphrasePersistence(this IConfiguration configuration)
+    => configuration.GetValue("PassphrasePersistence", PassphrasePersistence.Persistent);
 }
