@@ -21,7 +21,7 @@
 set -Eeuo pipefail
  
 OPENVPN_DIRECTORY="/etc/openvpn"
- 
+
 show_help() {
     echo "Usage: $0 -d DOMAIN -i DNS_IP -f INTERFACE [-c CNAME]"
     echo ""
@@ -35,13 +35,13 @@ show_help() {
     echo "  sudo $0 -d vpn.example.com -i 10.8.0.1 -f tun0 -c vpn-endpoint.example.com"
     exit 1
 }
- 
+
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
- 
+
 if [ "$#" -lt 6 ]; then
     show_help
 fi
- 
+
 while getopts "d:i:f:c:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
@@ -52,21 +52,24 @@ while getopts "d:i:f:c:h" opt; do
         *) show_help ;;
     esac
 done
- 
+
 if [[ ! -v DOMAIN || ! -v DNS_IP || ! -v INTERFACE ]]; then
     echo "Error: DOMAIN, DNS_IP and INTERFACE are required."
     show_help
 fi
- 
+
 SERVER_DIRECTORY="$OPENVPN_DIRECTORY/$DOMAIN"
 DNSMASQ_HOSTS="$SERVER_DIRECTORY/dnsmasq-hosts"
+SERVER_CONF="$OPENVPN_DIRECTORY/$DOMAIN.conf"
+
+[[ ! -f "$SERVER_CONF" ]] && { echo "ERROR: $SERVER_CONF not found. Setup the VPN server for '$DOMAIN' first."; exit 1; }
  
 apt-get update -qq
 apt-get install -y dnsmasq
- 
-# Create empty hosts file if it does not exist
+# Create empty hosts file if it does not exist. Populated by
+# aenigma-vpn-server-host with per-client hostname entries.
 touch "$DNSMASQ_HOSTS"
- 
+
 # Build dnsmasq config
 DNSMASQ_CONF="/etc/dnsmasq.d/$DOMAIN.conf"
 cat > "$DNSMASQ_CONF" << CONF
@@ -74,25 +77,26 @@ interface=$INTERFACE
 bind-interfaces
 addn-hosts=$DNSMASQ_HOSTS
 CONF
- 
-# If CNAME provided, add cname directive; otherwise add IP entry to hosts file
+
+# If CNAME provided, add cname directive
 if [[ -v CNAME ]]; then
     echo "cname=$DOMAIN,$CNAME" >> "$DNSMASQ_CONF"
 fi
- 
-# Add push directives to server config if not already present
-SERVER_CONF="$OPENVPN_DIRECTORY/$DOMAIN.conf"
-if ! grep -q "dhcp-option DNS" "$SERVER_CONF"; then
-    echo "push \"dhcp-option DNS $DNS_IP\"" >> "$SERVER_CONF"
-fi
-if ! grep -q "dhcp-option DOMAIN" "$SERVER_CONF"; then
-    echo "push \"dhcp-option DOMAIN $DOMAIN\"" >> "$SERVER_CONF"
-fi
- 
+
+# Add push directives to server config. Existing lines are always
+# removed and re-added rather than skipped-if-present, so re-running
+# with a changed DNS_IP (or a manually commented-out directive) does not
+# leave a stale or disabled value behind.
+sed -i '/push "dhcp-option DOMAIN /d' "$SERVER_CONF"
+echo "push \"dhcp-option DOMAIN $DOMAIN\"" >> "$SERVER_CONF"
+
+sed -i '/push "dhcp-option DNS /d' "$SERVER_CONF"
+echo "push \"dhcp-option DNS $DNS_IP\"" >> "$SERVER_CONF"
+
 systemctl enable dnsmasq
 systemctl restart dnsmasq
 systemctl restart "openvpn@${DOMAIN}"
- 
+
 echo ""
 echo "DNS setup complete."
 echo "  dnsmasq config: $DNSMASQ_CONF"

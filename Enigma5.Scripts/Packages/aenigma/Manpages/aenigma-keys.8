@@ -1,113 +1,87 @@
-.TH AENIGMA-KEYS 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.TH AENIGMA-KEYS 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
 .SH NAME
-aenigma-keys \- generate an RSA key pair for the Aenigma service
+aenigma-keys \- generate an RSA keypair for the aenigma service
 .SH SYNOPSIS
 .B aenigma-keys
 .SH DESCRIPTION
 .B aenigma-keys
-generates a new RSA private/public key pair for the Aenigma service
-using
-.BR openssl (1).
-It takes no options or arguments.
+generates a new 4096-bit RSA private key, encrypted with AES-256, together
+with its corresponding public key, for use by the
+.I aenigma
+service user. The private key is generated first via
+.BR openssl (1),
+the public key is then derived from it, and both files are placed under
+the service's key directory, owned by the
+.I aenigma
+user, with permissions restricted to that user only.
 .PP
-The script performs the following actions:
-.IP \(bu 2
-Creates the directory
+The script takes no options or arguments and always generates a key of the
+same fixed size into the same fixed location.
+.B aenigma-keys
+must be run as root, since it creates
 .I /var/lib/aenigma
-if it does not already exist.
-.IP \(bu 2
-Generates a
-.B 4096
-bit RSA private key, encrypted with
-.B AES-256
-under a passphrase, and writes it to
-.IR /var/lib/aenigma/private\-key.pem .
-Because the private key is encrypted,
-.BR openssl (1)
-interactively prompts for a passphrase (and confirmation) on the
-controlling terminal; this step cannot be run fully unattended
-without additional input redirection.
-.IP \(bu 2
-Derives the corresponding public key from the private key and
-writes it, unencrypted, to
-.IR /var/lib/aenigma/public\-key.pem .
-.IP \(bu 2
-Sets ownership of both files to
-.B aenigma:aenigma
-and permissions to
-.BR 700 ,
-restricting read access to the
-.B aenigma
-user only.
+if missing and changes ownership of the generated key files to the
+.I aenigma
+service account.
 .PP
-.B aenigma-keys
-must be run as root.
-.SH OPTIONS
-.B aenigma-keys
-takes no command-line options.
+Because the private key is AES-256 encrypted,
+.BR openssl (1)
+will interactively prompt for a passphrase (and its confirmation) during
+generation. This script is not suitable for unattended/non-interactive
+use as written.
+.SH FILES
+.TP
+.I /var/lib/aenigma
+Key storage directory, created if it does not already exist.
+.TP
+.I /var/lib/aenigma/private-key.pem
+Generated RSA private key, 4096 bits, AES-256 encrypted, PEM format.
+Owned by
+.IR aenigma:aenigma ,
+mode 0600.
+.TP
+.I /var/lib/aenigma/public-key.pem
+RSA public key derived from the private key, PEM format. Owned by
+.IR aenigma:aenigma ,
+mode 0600.
 .SH EXIT STATUS
 .TP
 .B 0
-The key pair was generated and stored successfully.
+Success; both keys were generated and their ownership/permissions set.
 .TP
 .B 1
-The script was not run as root, or
+The script was not invoked as root.
+.PP
+Any failure from
 .BR openssl (1)
-failed (for example, if the passphrase prompt was aborted).
-.SH FILES
-.TP
-.I /var/lib/aenigma/private\-key.pem
-The generated RSA private key, AES-256 encrypted under a
-user-supplied passphrase. Owned by
-.B aenigma:aenigma
-with mode
-.BR 700 .
-.TP
-.I /var/lib/aenigma/public\-key.pem
-The corresponding RSA public key, unencrypted. Owned by
-.B aenigma:aenigma
-with mode
-.BR 700 .
-.SH EXAMPLES
-Generate a new key pair, entering a passphrase when prompted:
-.PP
-.RS
-.EX
-sudo aenigma-keys
-.EE
-.RE
+(for example, a mismatched or empty passphrase) causes the script to abort
+immediately, since it runs with
+.B set -e
+and does not trap or ignore command failures.
 .SH NOTES
+.IP \(bu 2
 .B aenigma-keys
-does not check whether a key pair already exists before running.
-Re-running it
-.B overwrites
-.I private\-key.pem
-and
-.I public\-key.pem
-unconditionally with a newly generated pair and a new passphrase,
-with no backup and no confirmation prompt. Any data encrypted, or
-peers trusting, the previous key pair will no longer validate
-against the new one. Back up the existing key files before
-re-running this script if the previous key pair must be preserved.
-.PP
-Mode
-.B 700
-on
-.I public\-key.pem
-means only the
-.B aenigma
-user can read the public key, even though public keys are not
-normally treated as secret; if another user or service needs to
-read the public key directly from disk, its permissions will need
-to be relaxed separately.
-.PP
-Because the private key is passphrase-protected, any service or
-process that loads it at startup must be supplied with that
-passphrase through some out-of-band mechanism (interactive prompt,
-environment variable, secrets manager, etc.); this script does not
-address key loading, only generation.
+does not check whether
+.I private-key.pem
+or
+.I public-key.pem
+already exist before generating new ones.
+.BR openssl (1)
+will overwrite existing files at those paths without prompting for
+confirmation. Back up any existing keypair before re-running this script
+if it must be preserved.
+.IP \(bu 2
+The private key passphrase is supplied interactively at the OpenSSL
+prompt and is never written to disk, logged, or accepted as a command-line
+argument by this script.
+.IP \(bu 2
+.B umask 077
+is set for the duration of the script, so any files it creates default to
+owner-only access even before the explicit
+.BR chmod (1)
+calls run.
 .SH SEE ALSO
 .BR openssl (1),
-.BR aenigma-config (8)
+.BR umask (2)
 .SH AUTHOR
-Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

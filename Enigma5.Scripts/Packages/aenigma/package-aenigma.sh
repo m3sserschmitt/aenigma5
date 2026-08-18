@@ -132,9 +132,9 @@ cat <<EOF > $PKG_DIR/debian/rules
 override_dh_install:
 	dh_install
 	find debian/$SERVICE_NAME/usr/lib/$SERVICE_NAME/runtimes -mindepth 1 -maxdepth 1 ! -name "linux-$ARCH" -exec rm -rf {} +
-	find debian/$SERVICE_NAME/usr/lib/$SERVICE_NAME -name '*.dll' -exec chmod 644 {} +
 	find debian/$SERVICE_NAME/usr/lib/$SERVICE_NAME  -type d -exec chmod 755 {} +
 	find debian/$SERVICE_NAME/usr/lib/$SERVICE_NAME  -type f -exec chmod 644 {} +
+	find debian/$SERVICE_NAME/usr/lib/$SERVICE_NAME -name '*.dll' -exec chmod 644 {} +
 	chmod 755 debian/$SERVICE_NAME/usr/lib/$SERVICE_NAME/$EXECUTABLE_NAME
 
 override_dh_shlibdeps:
@@ -169,9 +169,9 @@ etc/$SERVICE_NAME
 EOF
 
 chmod 755 $PKG_DIR/debian/rules \
-$PKG_DIR/debian/postinst \
-$PKG_DIR/debian/postrm \
-$PKG_DIR/usr/bin/*
+ $PKG_DIR/debian/postinst \
+ $PKG_DIR/debian/postrm \
+ $PKG_DIR/usr/bin/*
 
 (cd $PKG_DIR && DEB_BUILD_OPTIONS=crossbuildcanrunhostbinaries dpkg-buildpackage -us -uc -b -a$ARCH)
 lintian $DEB_FILE

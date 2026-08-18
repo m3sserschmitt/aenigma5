@@ -26,7 +26,7 @@ EASYRSA_DIRECTORY="$OPENVPN_DIRECTORY/easy-rsa"
 EASYRSA="$EASYRSA_DIRECTORY/easyrsa"
 EASYRSA_PKI="$EASYRSA_DIRECTORY/pki"
 export EASYRSA_PKI
- 
+
 show_help() {
     echo "Usage: $0 -d DOMAIN -p PORT -a ADDRESS -n NETMASK"
     echo ""
@@ -40,13 +40,13 @@ show_help() {
     echo "  sudo $0 -d example.com -p 1194 -a 10.8.0.0 -n 255.255.255.0"
     exit 1
 }
- 
+
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
- 
+
 if [ "$#" -lt 8 ]; then
     show_help
 fi
- 
+
 while getopts "d:p:a:n:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
@@ -57,90 +57,106 @@ while getopts "d:p:a:n:h" opt; do
         *) show_help ;;
     esac
 done
- 
+
 if [[ ! -v DOMAIN || ! -v PORT || ! -v ADDRESS || ! -v NETMASK ]]; then
     echo "Error: DOMAIN, PORT, ADDRESS, NETMASK are required."
     show_help
 fi
- 
+
 LOG_DIRECTORY="/var/log/openvpn/$DOMAIN"
 CLIENT_CONFIGS_DIRECTORY="$OPENVPN_DIRECTORY/ccd/$DOMAIN"
 SERVER_DIRECTORY="$OPENVPN_DIRECTORY/$DOMAIN"
- 
+
 apt-get update -qq
 apt-get install -y openvpn easy-rsa
- 
+
 # Create unprivileged openvpn user/group if they don't exist
 if ! id "$SERVICE_USER" &>/dev/null; then
     echo "Creating user '$SERVICE_USER' for the service..."
     useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
- 
+
 # Create required directories
 mkdir -p "$SERVER_DIRECTORY"
 mkdir -p "$CLIENT_CONFIGS_DIRECTORY"
 mkdir -p "$LOG_DIRECTORY"
- 
+
 # First run: initialise PKI, build CA and generate DH params
 if [[ ! -f "${EASYRSA_PKI}/ca.crt" ]]; then
     make-cadir "$EASYRSA_DIRECTORY"
     "$EASYRSA" --batch init-pki
-    "$EASYRSA" --batch build-ca nopass
+    # CA private key is passphrase-protected: you will be prompted to set
+    # and confirm it now, and prompted again to unlock it every time a new
+    # domain's server certificate is signed in the future.
+    "$EASYRSA" --batch build-ca
     "$EASYRSA" --batch gen-dh
     cp -v "${EASYRSA_PKI}/ca.crt" "$OPENVPN_DIRECTORY/"
     cp -v "${EASYRSA_PKI}/dh.pem" "$OPENVPN_DIRECTORY/"
 fi
- 
+
+# Refuse to regenerate an already-issued server certificate: re-running
+# gen-req for an existing DOMAIN would silently overwrite its private key
+# with a new, unrelated one, and the following sign-req would then fail
+# because a certificate for that CN already exists - leaving the PKI in
+# an inconsistent state.
+if [[ -f "${EASYRSA_PKI}/issued/${DOMAIN}.crt" ]]; then
+    echo "ERROR: A certificate for '$DOMAIN' is already issued at ${EASYRSA_PKI}/issued/${DOMAIN}.crt"
+    echo "Refusing to regenerate it, as this would invalidate the existing private key."
+    echo "Revoke the existing certificate with easyrsa first if you need to reissue it."
+    exit 1
+fi
+
 "$EASYRSA" --batch gen-req "$DOMAIN" nopass
+# CA is passphrase-protected: you will be prompted for the CA passphrase
+# to sign this new server certificate.
 "$EASYRSA" --batch sign-req server "$DOMAIN"
 cp -v "${EASYRSA_PKI}/issued/${DOMAIN}.crt"  "$SERVER_DIRECTORY/"
 cp -v "${EASYRSA_PKI}/private/${DOMAIN}.key" "$SERVER_DIRECTORY/"
 chmod 700 "$EASYRSA_PKI/private"
 chmod 600 "$EASYRSA_PKI/private"/*.key
 chown -v "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/${DOMAIN}.key"
-chmod -v 700 "$SERVER_DIRECTORY/${DOMAIN}.key"
- 
+chmod -v 600 "$SERVER_DIRECTORY/${DOMAIN}.key"
 openvpn --genkey secret "$SERVER_DIRECTORY/ta.key"
 chown -v "$SERVICE_USER:$SERVICE_USER" "$SERVER_DIRECTORY/ta.key"
-chmod -v 700 "$SERVER_DIRECTORY/ta.key"
- 
+chmod -v 600 "$SERVER_DIRECTORY/ta.key"
+
 cat > "$OPENVPN_DIRECTORY/$DOMAIN.conf" << CONF
 port $PORT
 proto udp
 dev tun
 tun-mtu 1378
- 
+
 ca   $OPENVPN_DIRECTORY/ca.crt
 cert $SERVER_DIRECTORY/$DOMAIN.crt
 key  $SERVER_DIRECTORY/$DOMAIN.key
 dh   $OPENVPN_DIRECTORY/dh.pem
- 
+
 topology subnet
- 
+
 server $ADDRESS $NETMASK
 ifconfig-pool-persist $SERVER_DIRECTORY/ipp.txt
 status $LOG_DIRECTORY/openvpn-status.log
-
+ 
 client-config-dir $CLIENT_CONFIGS_DIRECTORY
 client-to-client
- 
+
 keepalive 10 120
- 
+
 tls-auth $SERVER_DIRECTORY/ta.key 0
- 
+
 user $SERVICE_USER
 group $SERVICE_USER
- 
+
 persist-key
 persist-tun
- 
+
 explicit-exit-notify 1
 verb 3
 CONF
- 
+
 systemctl enable "openvpn@${DOMAIN}"
 systemctl restart  "openvpn@${DOMAIN}"
- 
+
 echo ""
 echo "Server setup complete."
 echo "  Config file:      $OPENVPN_DIRECTORY/$DOMAIN.conf"

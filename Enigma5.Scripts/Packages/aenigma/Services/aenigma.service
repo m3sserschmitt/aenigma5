@@ -10,6 +10,12 @@ Restart=always
 RestartSec=10
 User=aenigma
 Group=aenigma
+KeyringMode=private
+NoNewPrivileges=yes
+LimitCORE=0
+ProtectProc=invisible
+CapabilityBoundingSet=
+AmbientCapabilities=
 
 [Install]
 WantedBy=multi-user.target

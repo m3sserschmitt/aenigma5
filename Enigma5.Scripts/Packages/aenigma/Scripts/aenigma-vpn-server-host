@@ -19,9 +19,9 @@
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
 set -Eeuo pipefail
- 
+
 OPENVPN_DIRECTORY="/etc/openvpn"
- 
+
 show_help() {
     echo "Usage: $0 -c CLIENT_NAME -d DOMAIN -i IP -n NETMASK"
     echo ""
@@ -35,13 +35,13 @@ show_help() {
     echo "  sudo $0 -c john -d example.com -i 10.8.0.10 -n 255.255.255.0"
     exit 1
 }
- 
+
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
- 
+
 if [ "$#" -lt 8 ]; then
     show_help
 fi
- 
+
 while getopts "c:d:i:n:h" opt; do
     case $opt in
         c) CLIENT_NAME=$OPTARG ;;
@@ -52,33 +52,33 @@ while getopts "c:d:i:n:h" opt; do
         *) show_help ;;
     esac
 done
- 
+
 if [[ ! -v CLIENT_NAME || ! -v DOMAIN || ! -v IP || ! -v NETMASK ]]; then
     echo "Error: CLIENT_NAME, DOMAIN, IP and NETMASK are required."
     show_help
 fi
- 
+
 CLIENT_CONFIGS_DIRECTORY="$OPENVPN_DIRECTORY/ccd/$DOMAIN"
 DNSMASQ_HOSTS="$OPENVPN_DIRECTORY/$DOMAIN/dnsmasq-hosts"
 HOSTNAME="$CLIENT_NAME.$DOMAIN"
- 
+
 [[ ! -d "$CLIENT_CONFIGS_DIRECTORY" ]] && { echo "ERROR: $CLIENT_CONFIGS_DIRECTORY not found. Make sure to setup vpn server first."; exit 1; }
- 
+
 # Update or create ccd file with static IP, preserving other directives
 touch "$CLIENT_CONFIGS_DIRECTORY/$CLIENT_NAME"
 sed -i '/^ifconfig-push/d' "$CLIENT_CONFIGS_DIRECTORY/$CLIENT_NAME"
 echo "ifconfig-push $IP $NETMASK" >> "$CLIENT_CONFIGS_DIRECTORY/$CLIENT_NAME"
- 
-# Add hostname entry to dnsmasq hosts file if dnsmasq is configured
+# Add or refresh hostname entry in dnsmasq hosts file if dnsmasq is configured.
+# Any existing entry for this hostname is removed first so a client's IP
+# reassignment doesn't leave a stale, mismatched entry behind.
 if [[ -f "$DNSMASQ_HOSTS" ]]; then
-    if ! grep -qE "[[:space:]]${HOSTNAME}$" "$DNSMASQ_HOSTS"; then
-        echo "$IP  $HOSTNAME" >> "$DNSMASQ_HOSTS"
-    fi
+    sed -i "/[[:space:]]${HOSTNAME}$/d" "$DNSMASQ_HOSTS"
+    echo "$IP  $HOSTNAME" >> "$DNSMASQ_HOSTS"
     systemctl restart dnsmasq
 else
     echo "Note: $DNSMASQ_HOSTS not found, skipping DNS hostname registration."
 fi
- 
+
 echo ""
 echo "Client host configured."
 echo "  CCD file:    $CLIENT_CONFIGS_DIRECTORY/$CLIENT_NAME"

@@ -28,7 +28,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -d DOMAIN           The domain name for the reverse proxy (e.g., example.com)"
-    echo "  -l LOCAL_ADDRESS    Local address on which the ASP.NET application is listening (e.g., 127.0.0.1:8080)"
+    echo "  -l LOCAL_ADDRESS    Local address on which the application is listening (e.g., 127.0.0.1:8080)"
     echo "  -c CONFIG_ADDRESS   Add hostname to aenigma config (1 -> update, 0 -> do not update)."
     echo "  -b BIND_ADDRESS     Interface/IP for the VirtualHost to bind to (e.g., 192.168.1.50). Defaults to * (all interfaces)."
     echo ""
@@ -135,7 +135,7 @@ fi
 echo "Apache reverse proxy setup completed for $DOMAIN with local address $LOCAL_ADDRESS (bound to ${BIND_ADDRESS}:80)"
 
 if [[ -v CONFIG_ADDRESS && ${CONFIG_ADDRESS} -eq 1 ]]; then
-aenigma-config -p Hostname -v "http://$DOMAIN"
+    aenigma-config -p Hostname -v "http://$DOMAIN"
 fi
 
 exit 0

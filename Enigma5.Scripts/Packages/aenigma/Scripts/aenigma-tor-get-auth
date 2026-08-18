@@ -31,9 +31,14 @@ show_help() {
     echo "  sudo $0 -s aenigma-dashboard -u admin"
     exit 1
 }
- 
+
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
- 
+
+# Check if the script is run with sufficient arguments
+if [ "$#" -lt 4 ]; then
+    show_help
+fi
+
 # Parse command line arguments
 while getopts "s:u:h" opt; do
     case $opt in
@@ -43,27 +48,27 @@ while getopts "s:u:h" opt; do
         *) show_help ;;
     esac
 done
- 
+
 if [[ ! -v SERVICE_NAME || ! -v AUTHORIZED_USER ]]; then
     echo "Error: AUTHORIZED_USER and SERVICE_NAME are required."
     show_help
 fi
- 
+
 TOR_SERVICE_DIR="/var/lib/tor/$SERVICE_NAME"
 AUTHORIZED_CLIENTS_DIR="$TOR_SERVICE_DIR/authorized_clients"
- 
+
 if [[ ! -d "$AUTHORIZED_CLIENTS_DIR" ]]; then
     echo "Error: $AUTHORIZED_CLIENTS_DIR not found. It seems like Tor was not configured."
     exit 1
 fi
 
-AUTH_FILE_PRIVATE="$AUTHORIZED_CLIENTS_DIR/$AUTHORIZED_USER.auth.private"
+AUTH_FILE_PRIVATE="$AUTHORIZED_CLIENTS_DIR/$AUTHORIZED_USER.auth_private"
 
 if [[ ! -f "$AUTH_FILE_PRIVATE" ]]; then
     echo "Error: No authorization key configured for this service and user."
     exit 1
 fi
 
-echo "Access key:  $(cat "$AUTH_FILE_PRIVATE")"
+echo "Access key: $(cat "$AUTH_FILE_PRIVATE")"
 
 exit 0

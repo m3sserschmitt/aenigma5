@@ -88,6 +88,7 @@ case "$TYPE" in
 esac
 
 mv "$TEMPFILE" "$CONFIG_FILE"
+chmod -v 644 "$CONFIG_FILE"
 
 echo "Updated property '$PROPERTY' in '$CONFIG_FILE' to '$NEW_VALUE' ($TYPE)"
 exit 0

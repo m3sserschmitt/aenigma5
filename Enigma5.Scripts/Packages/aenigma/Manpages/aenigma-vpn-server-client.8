@@ -1,7 +1,6 @@
-.TH AENIGMA-VPN-SERVER-CLIENT 8 "2026-08-13" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.TH AENIGMA-VPN-SERVER-CLIENT 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
 .SH NAME
-aenigma-vpn-server-client \- issue an OpenVPN client certificate from
-the Aenigma VPN server's CA
+aenigma-vpn-server-client \- issue a new OpenVPN client certificate on the server
 .SH SYNOPSIS
 .B aenigma-vpn-server-client
 .B \-c
@@ -13,152 +12,107 @@ the Aenigma VPN server's CA
 .B \-h
 .SH DESCRIPTION
 .B aenigma-vpn-server-client
-issues a new client certificate, signed by the Easy-RSA certificate
-authority previously initialized by
+issues a new client certificate signed by the shared certificate
+authority previously created by
 .BR aenigma-vpn-server (8),
-and assembles the certificate, key, CA certificate, and TLS
-authentication key into a directory ready to be copied onto the
-client machine for use with
-.BR aenigma-vpn-client (8).
+and assembles the file bundle a client machine needs to connect: the
+client's certificate and private key, the CA certificate, and a copy of
+the server's shared TLS-auth key.
 .PP
-The script performs the following actions:
-.IP \(bu 2
-Verifies that
-.I /etc/openvpn/easy\-rsa/pki/ca.crt
-exists, and exits with an error if it does not, since a certificate
-authority must already have been initialized by
-.BR aenigma-vpn-server (8)
-before a client certificate can be issued.
-.IP \(bu 2
-Creates the client's directory,
-.IR /etc/openvpn/clients/ CLIENT_NAME .
-.IP \(bu 2
-Generates a new certificate signing request for
-.I CLIENT_NAME
-(with no key passphrase) and signs it as a client certificate using
-the CA.
-.IP \(bu 2
-Copies the CA certificate, the newly issued client certificate, and
-the newly issued client private key into the client's directory,
-restricting the private key's ownership to
-.B openvpn:openvpn
-and permissions to
-.BR 700 .
-.IP \(bu 2
-Copies the TLS authentication key
-.RI ( ta.key )
-from the server directory for
-.I DOMAIN
-.RI ( /etc/openvpn/ DOMAIN /ta.key)
-into the client's directory, applying the same ownership and
-permission restrictions.
-.PP
-The resulting directory,
-.IR /etc/openvpn/clients/ CLIENT_NAME ,
-is intended to be transferred to the client machine and placed at
-the same relative path there, for consumption by
-.BR aenigma-vpn-client (8).
+This script is intended to run on the
+.B VPN server
+machine, where the certificate authority's private key resides. The
+resulting bundle is written to
+.IB /etc/openvpn/clients/ CLIENT_NAME
+and must then be transferred out of band to the client machine, into the
+same relative path, before running
+.BR aenigma-vpn-client (8)
+there.
 .PP
 .B aenigma-vpn-server-client
-must be run as root, and is intended to be run on the VPN
-.B server
-host, not on a VPN client host.
+must be run as root, since it reads the certificate authority's private
+key material and changes ownership of the generated client key files.
 .SH OPTIONS
 .TP
 .BI \-c " CLIENT_NAME"
-Name identifying the client certificate to issue, e.g.
+Identifier for the new client identity, e.g.
 .IR john .
-Used as the certificate common name and as the destination directory
-name under
-.IR /etc/openvpn/clients .
-Required.
+Used as the certificate's common name and as the name of the output
+directory. Required.
 .TP
 .BI \-d " DOMAIN"
-Domain name of the already-configured VPN server (as set up by
-.BR aenigma-vpn-server (8))
-whose TLS authentication key should be bundled with this client's
-files. Required.
+Name of the previously provisioned VPN server instance (as passed to
+.BR aenigma-vpn-server (8)
+via its
+.B \-d
+option) that this client will connect to. Used to locate that server's
+shared TLS-auth key. Required.
 .TP
 .B \-h
-Display a usage summary and exit.
+Display usage information and exit.
+.SH INTERACTIVE PROMPTS
+The certificate authority's private key is passphrase-protected. Signing
+the new client certificate requires unlocking it, so this script will
+interactively prompt for the CA passphrase during
+.B sign-req .
 .SH EXIT STATUS
 .TP
 .B 0
-The client certificate was issued and its files assembled
-successfully.
+Success; the client certificate was issued and its file bundle was
+assembled.
 .TP
 .B 1
-Invalid or missing arguments, the script was not run as root, the
-CA has not yet been initialized, or an
-.B easy-rsa
-command failed.
+Invoked without root privileges, called with insufficient or invalid
+arguments, the certificate authority has not been set up yet, the target
+server instance's TLS-auth key could not be found, or a certificate
+already exists for the given
+.IR CLIENT_NAME .
 .SH FILES
 .TP
-.I /etc/openvpn/easy\-rsa/pki/
-Existing Easy-RSA PKI directory; read to issue the new client
-certificate. Not created by this script.
+.I /etc/openvpn/easy-rsa/pki
+Shared Easy-RSA PKI, created by
+.BR aenigma-vpn-server (8).
+Must already exist; this script does not create a certificate authority.
 .TP
-.I /etc/openvpn/ DOMAIN /ta.key
-Existing server TLS authentication key, copied into the client's
-directory. Must already exist (created by
-.BR aenigma-vpn-server (8)).
+.IB /etc/openvpn/ DOMAIN /ta.key
+The target server instance's shared TLS-auth key, copied into the client
+bundle. Must already exist.
 .TP
-.I /etc/openvpn/clients/ CLIENT_NAME /
-Destination directory assembled by this script, containing
-.IR ca.crt ,
-.IR CLIENT_NAME .crt,
-.IR CLIENT_NAME .key,
-and
-.IR ta.key .
-This is the directory
-.BR aenigma-vpn-client (8)
-expects to already be present, at the same relative path, on the
-client machine.
-.SH EXAMPLES
-Issue a client certificate named
-.I john
-for the server
-.IR example.com :
-.PP
-.RS
-.EX
-sudo aenigma-vpn-server-client \-c john \-d example.com
-.EE
-.RE
-.SH SECURITY CONSIDERATIONS
-The client's private key and the copied TLS authentication key are
-generated and assembled on the
-.B server
-host, with no passphrase, before being transferred elsewhere. The
-transfer mechanism itself (how
-.IR /etc/openvpn/clients/ CLIENT_NAME
-is actually delivered to the client machine) is entirely outside the
-scope of this script; it must be carried out over a channel that
-itself protects this key material in transit, since the files are
-plaintext, unencrypted private key material from the moment they are
-created.
+.IB /etc/openvpn/clients/ CLIENT_NAME
+Output directory containing the assembled client bundle:
+.BR ca.crt ", "
+.IB CLIENT_NAME .crt ", "
+.IB CLIENT_NAME .key " (mode 0600, owned by " openvpn "), and "
+.BR ta.key " (mode 0600, owned by " openvpn ).
 .SH NOTES
-This script does not check whether a certificate or directory
-already exists for the given
+.IP \(bu 2
+Re-running
+.B aenigma-vpn-server-client
+for a
 .I CLIENT_NAME
-before running.
-.B easy-rsa
-may prompt, fail, or silently overwrite an existing request
-depending on its own state and version; re-running this script for a
-.I CLIENT_NAME
-that was already issued a certificate should be treated as
-potentially replacing that client's credentials, invalidating the
-previously issued certificate and key pair for that name.
-.PP
-Client certificate revocation is not handled by this script, or, as
-far as documented here, by any other Aenigma script; a client whose
-access should be revoked requires manual
-.B easy-rsa
-CRL management outside this toolset.
+that has already been issued a certificate is refused: the script detects
+the existing issued certificate and exits with an error rather than
+proceeding, since regenerating the certificate request would silently
+overwrite the existing private key while the subsequent signing step
+would then fail against the already-issued certificate, leaving the PKI
+in an inconsistent state. To reissue a certificate for an existing client,
+first revoke the existing one using
+.BR easyrsa (1)
+directly.
+.IP \(bu 2
+The generated bundle contains unencrypted private key material
+(\fICLIENT_NAME\fR.key and \fBta.key\fR). It should be transferred to the
+client machine over a secure, out-of-band channel.
+.IP \(bu 2
+.B umask 077
+is set for the duration of the script, so the output directory and files
+are created with restricted access from the moment they are written, even
+before the explicit
+.BR chmod (1)
+calls run.
 .SH SEE ALSO
-.BR easyrsa (1),
-.BR openvpn (8),
 .BR aenigma-vpn-server (8),
-.BR aenigma-vpn-client (8)
+.BR aenigma-vpn-client (8),
+.BR easyrsa (1)
 .SH AUTHOR
-Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

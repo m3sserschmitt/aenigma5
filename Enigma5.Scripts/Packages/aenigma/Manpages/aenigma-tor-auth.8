@@ -1,6 +1,6 @@
-.TH AENIGMA-TOR-AUTH 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.TH AENIGMA-TOR-AUTH 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
 .SH NAME
-aenigma-tor-auth \- add Tor client authorization for an onion service
+aenigma-tor-auth \- add v3 onion service client authorization for a user
 .SH SYNOPSIS
 .B aenigma-tor-auth
 .B \-s
@@ -12,155 +12,144 @@ aenigma-tor-auth \- add Tor client authorization for an onion service
 .B \-h
 .SH DESCRIPTION
 .B aenigma-tor-auth
-generates a new
-.B x25519
-key pair and registers it as a Tor client authorization credential
-for a hidden service, allowing only clients possessing the
-corresponding private key to connect to that onion service.
+generates a new x25519 client-authorization keypair for a v3 Tor onion
+service previously configured with
+.BR aenigma-tor (8),
+installs the public half as an authorized client of that service, and
+produces a ready-to-distribute private key file for the client.
 .PP
-The script performs the following actions:
-.IP \(bu 2
-Generates an
-.B x25519
-key pair in a private, root-only temporary directory using
-.BR openssl (1).
-.IP \(bu 2
-Extracts the raw 32-byte public and private key material from the
-generated PEM files and encodes each as unpadded
-.BR base32 ,
-matching the format Tor expects for client authorization.
-.IP \(bu 2
-Writes the public half to
-.IR /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth,
-in the form
-.BR descriptor:x25519: PUBLIC_KEY,
-so that Tor will only serve descriptors for this hidden service to
-clients presenting the matching private key.
-.IP \(bu 2
-Writes the private half to
-.IR /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth.private,
-which must be distributed to the authorized client and configured
-in their own Tor client for them to reach the service.
-.IP \(bu 2
-Sets ownership of the
-.I authorized_clients
-directory and its contents to
-.B debian-tor:debian-tor
-and permissions to
-.BR 700 .
-.IP \(bu 2
-Restarts the
-.B tor
-systemd service so the new authorization takes effect.
-.PP
-This script is also invoked automatically by
-.BR aenigma-tor (8)
-when its
-.B \-u
-option is supplied.
+The public key is written to
+.IB AUTHORIZED_CLIENTS_DIR/ AUTHORIZED_USER .auth
+in the format Tor expects for service-side authorization
+(\fBdescriptor:x25519:<base32-public-key>\fR), granting that client access
+once Tor is restarted. The private key is written to
+.IB AUTHORIZED_CLIENTS_DIR/ AUTHORIZED_USER .auth_private
+in the format Tor Browser and Tor clients expect for
+.B ClientOnionAuthDir
+credentials (\fB<onion-address>:descriptor:x25519:<base32-private-key>\fR),
+so it can be copied as-is into a client's
+.B ClientOnionAuthDir
+without further editing. Tor is then restarted to apply the new
+authorization.
 .PP
 .B aenigma-tor-auth
-must be run as root.
+must be run as root, since it writes into
+.IR /var/lib/tor ,
+changes ownership of the generated key files, and restarts the
+.B tor
+systemd service. It requires that the named onion service has already
+been configured and has finished publishing its address; see
+.SM DIAGNOSTICS
+below.
 .SH OPTIONS
 .TP
 .BI \-s " SERVICE_NAME"
-Name of the already-configured onion service (as created by
-.BR aenigma-tor (8))
-to add client authorization to. Required.
+Name of the onion service to authorize the client for. Must match a
+service already configured via
+.BR aenigma-tor (8);
+its service directory,
+.IR /var/lib/tor/ SERVICE_NAME,
+must already exist and contain a published
+.I hostname
+file. Required.
 .TP
 .BI \-u " AUTHORIZED_USER"
-Identifier for the client being authorized; used as the base
-filename for the generated
+Identifier for the client being authorized, e.g. a username. Used as the
+base filename for the generated
 .I .auth
-/
-.I .auth.private
+and
+.I .auth_private
 files. Required.
 .TP
 .B \-h
-Display a usage summary and exit.
+Display usage information and exit.
 .SH EXIT STATUS
 .TP
 .B 0
-The authorization key pair was generated, installed, and Tor was
-restarted successfully.
+Success; the client keypair was generated, installed, and Tor was
+restarted.
 .TP
 .B 1
-Invalid or missing arguments, the script was not run as root, or
-.BR openssl (1)
-failed.
+Invoked without root privileges, called with insufficient or invalid
+arguments, the named service directory does not exist, or the service's
+.I hostname
+file has not yet been generated.
 .SH FILES
 .TP
-.I /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth
-The public authorization credential, read by the
-.B tor
-daemon itself. Owned by
-.B debian-tor:debian-tor
-with mode
-.BR 700 .
+.IB /var/lib/tor/ SERVICE_NAME
+Service directory created by
+.BR aenigma-tor (8).
+Must already exist.
 .TP
-.I /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth.private
-The private authorization credential. Must be securely transferred
-to the authorized client and placed in their own Tor client
-configuration; it is not used by the server-side
-.B tor
-daemon. Owned by
-.B debian-tor:debian-tor
-with mode
-.BR 700 .
-.SH EXAMPLES
-Authorize a client named
-.I admin
-to access the
-.I aenigma-dashboard
-onion service:
-.PP
-.RS
-.EX
-sudo aenigma-tor-auth \-s aenigma-dashboard \-u admin
-.EE
-.RE
-.SH NOTES
+.IB /var/lib/tor/ SERVICE_NAME /hostname
+The service's published onion address. Its content (minus the trailing
+.B .onion
+suffix) is embedded in the generated private key file. Must already exist.
+.TP
+.IB /var/lib/tor/ SERVICE_NAME /authorized_clients
+Directory holding one keypair per authorized client. Owned by
+.IR debian-tor:debian-tor ,
+mode 0700.
+.TP
+.IB /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth
+Service-side public key file consumed by Tor to authorize the client.
+Mode 0600.
+.TP
+.IB /var/lib/tor/ SERVICE_NAME /authorized_clients/ AUTHORIZED_USER .auth_private
+Client-side private key file, intended for secure out-of-band delivery to
+the authorized client and placement in their
+.B ClientOnionAuthDir
+(or entry into Tor Browser's onion service authorization settings). Mode
+0600.
+.SH DIAGNOSTICS
+If
+.IB /var/lib/tor/ SERVICE_NAME
+does not exist,
 .B aenigma-tor-auth
-does not check whether an authorization file already exists for the
-given
+exits with an error instructing the operator to run
+.BR aenigma-tor (8)
+for that service first.
+.PP
+If the service directory exists but its
+.I hostname
+file is not yet present, Tor has not finished generating and publishing
+the service's address.
+.B aenigma-tor-auth
+exits with an error rather than generating a private key file with a
+missing or incorrect address; re-run once
+.BR aenigma-tor (8)
+reports the onion address.
+.SH NOTES
+.IP \(bu 2
+Re-running
+.B aenigma-tor-auth
+for the same
 .I SERVICE_NAME
-/
+and
 .I AUTHORIZED_USER
-pair before running. Re-running it for the same pair
-.B silently overwrites
-the existing key pair with a newly generated one; any client
-already configured with the previous private key will lose access
-once Tor is restarted, with no warning given.
-.PP
-The private authorization credential
-.RI ( AUTHORIZED_USER .auth.private)
-is printed to standard output as a file path at the end of a
-successful run, and is written unencrypted to disk under
-.IR /var/lib/tor .
-Retrieval and secure delivery of this file to the intended client is
-left entirely to the operator; the script provides no mechanism for
-this, and the file remains root/​
-.B debian-tor
-readable on the server indefinitely once created.
-.PP
-Ownership and permissions are set with
-.B chown -R
-/
-.B chmod -R
-across the entire
-.I authorized_clients
-directory on every run, not just the newly created files. This
-re-applies the intended ownership to all existing authorization
-files for the service each time the script runs for any user, which
-is generally harmless but means the script's effect is not scoped
-strictly to the
-.I AUTHORIZED_USER
-being added.
+generates a brand-new keypair and silently overwrites the existing
+.I .auth
+and
+.I .auth_private
+files. Any previously distributed private key for that user immediately
+stops working once Tor is restarted, since only the new public key
+remains installed as authorized.
+.IP \(bu 2
+The generated
+.I .auth_private
+file contains unencrypted key material. It should be transferred to the
+authorized client over a secure, out-of-band channel and removed from the
+server once delivered; it is not needed there for the service to keep
+functioning.
+.IP \(bu 2
+.B umask 077
+is set for the duration of the script, so intermediate files in its
+working temporary directory are created with owner-only access before
+being discarded.
 .SH SEE ALSO
-.BR openssl (1),
-.BR tor (8),
 .BR aenigma-tor (8),
-.BR aenigma-tor-get-auth (8),
-.BR base32 (1)
+.BR openssl (1),
+.BR tor (1),
+.BR torrc (5)
 .SH AUTHOR
-Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

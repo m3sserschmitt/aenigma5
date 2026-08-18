@@ -25,7 +25,7 @@ TOR_USER="debian-tor"
 
 # Function to display usage/help message
 show_help() {
-    echo "Usage: $0 -l LOCAL_ADDRESS -o ONION_PORT -s SERVICE_NAME [ -u AUTHORIZED_USER | -c CONFIG_ADDRESS ]"
+    echo "Usage: $0 -l LOCAL_ADDRESS -o ONION_PORT -s SERVICE_NAME [ -u AUTHORIZED_USER ] [ -c CONFIG_ADDRESS ]"
     echo ""
     echo "Options:"
     echo "  -l LOCAL_ADDRESS    The local address your service is running (e.g. 127.0.0.1:8080)."
@@ -39,6 +39,9 @@ show_help() {
     exit 1
 }
 
+# ------------------------------
+# 0. Check root
+# ------------------------------
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
 
 # Check if the script is run with sufficient arguments
@@ -59,71 +62,50 @@ while getopts "l:o:s:u:c:h" opt; do
     esac
 done
 
-# Check if DOMAIN and APP_PORT are provided
+# Check if LOCAL_ADDRESS, ONION_PORT and SERVICE_NAME are provided
 if [[ ! -v LOCAL_ADDRESS || ! -v ONION_PORT || ! -v SERVICE_NAME ]]; then
     echo "Error: LOCAL_ADDRESS, ONION_PORT and SERVICE_NAME are required."
     show_help
-    exit 1
 fi
 
 TOR_SERVICE_DIR="/var/lib/tor/$SERVICE_NAME"
 ONION_SERVICE_ADDRESS_FILE="$TOR_SERVICE_DIR/hostname"
 
 # ------------------------------
-# 1. Check root
+# 1. Install Tor
 # ------------------------------
-[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+apt-get update -qq
+apt-get install -y tor
 
 # ------------------------------
-# 2. Install Tor if missing
+# 3. Ensure onion service directory and permissions
+#    (applied every run, not just on first creation)
 # ------------------------------
-if ! command -v tor >/dev/null 2>&1; then
-    apt-get update -qq
-    apt-get install -y tor
-fi
+mkdir -pv "$TOR_SERVICE_DIR"
+chown -R "$TOR_USER:$TOR_USER" "$TOR_SERVICE_DIR"
+chmod -R 700 "$TOR_SERVICE_DIR"
 
 # ------------------------------
-# 3. Enable and start Tor
+# 4. Configure torrc (idempotent, one port - one service)
 # ------------------------------
-systemctl enable tor
-systemctl start tor
+if grep -Fxq "HiddenServiceDir ${TOR_SERVICE_DIR}" "$TORRC_FILE"; then
+    echo "Service '${SERVICE_NAME}' is already configured in ${TORRC_FILE}; leaving torrc untouched."
+else
 
-# ------------------------------
-# 4. Ensure onion service directory
-# ------------------------------
-if [[ ! -d "$TOR_SERVICE_DIR" ]]; then
-    mkdir -pv "$TOR_SERVICE_DIR"
-    chown -R "$TOR_USER:$TOR_USER" "$TOR_SERVICE_DIR"
-    chmod g-s "$TOR_SERVICE_DIR"
-    chmod -R 700 "$TOR_SERVICE_DIR"
-fi
-
-# ------------------------------
-# 5. Configure torrc (idempotent)
-# ------------------------------
 ONION_CONFIG="
 HiddenServiceDir ${TOR_SERVICE_DIR}
 HiddenServicePort ${ONION_PORT} ${LOCAL_ADDRESS}"
-
-if [[ -v AUTHORIZED_USER ]]; then
-
-ONION_CONFIG="${ONION_CONFIG}
-HiddenServiceAuthorizeClient stealth ${AUTHORIZED_USER}"
-
-aenigma-tor-auth -s "$SERVICE_NAME" -u "$AUTHORIZED_USER"
-fi
-
-if ! grep -q "HiddenServiceDir ${TOR_SERVICE_DIR}" "$TORRC_FILE"; then
-    echo "$ONION_CONFIG" >> "$TORRC_FILE"
+echo "$ONION_CONFIG" >> "$TORRC_FILE"
 fi
 
 # ------------------------------
-# 6. Restart Tor to apply config
+# 5. Restart Tor to apply config
 # ------------------------------
+systemctl enable tor
 systemctl restart tor
 
 # ------------------------------
-# 7. Wait for hostname generation
+# 6. Wait for hostname generation
 # ------------------------------
 echo "Waiting for onion service address to become available..."
 for i in {1..120}; do
@@ -139,12 +121,22 @@ if [[ ! -f "$ONION_SERVICE_ADDRESS_FILE" ]]; then
 fi
 
 # ------------------------------
+# 7. Configure client authorization (if requested)
+#    Done after the hostname exists, since aenigma-tor-auth requires it
+#    to embed the onion address in the generated private key file.
+# ------------------------------
+if [[ -v AUTHORIZED_USER ]]; then
+    aenigma-tor-auth -s "$SERVICE_NAME" -u "$AUTHORIZED_USER"
+fi
+
+# ------------------------------
 # 8. Output onion address
 # ------------------------------
 ONION_SERVICE_ADDRESS="$(cat "$ONION_SERVICE_ADDRESS_FILE")"
 echo -e "\e[31mOnion service address\e[0m: $ONION_SERVICE_ADDRESS"
+
 if [[ -v CONFIG_ADDRESS && ${CONFIG_ADDRESS} -eq 1 ]]; then
-aenigma-config -p "OnionService" -v "http://$ONION_SERVICE_ADDRESS"
+    aenigma-config -p "OnionService" -v "http://$ONION_SERVICE_ADDRESS"
 fi
 
 exit 0

@@ -20,20 +20,71 @@
 
 set -Eeuo pipefail
 
+SERVICE_NAME="aenigma"
+SERVICE_USER="aenigma"
+LOG_DIR="/var/log/$SERVICE_NAME"
+SRV_DIR="/srv/$SERVICE_NAME"
+UPLOADS_DIR="$SRV_DIR/uploads"
+LIB_DIR="/var/lib/$SERVICE_NAME"
+DATABASE_DIR="$LIB_DIR/db"
+PRIVATE_KEY_FILE="$LIB_DIR/private-key.pem"
 AENIGMA_TOR_SERVICE_NAME="aenigma"
 AENIGMA_DASHBOARD_TOR_SERVICE_NAME="aenigma-dashboard"
 TOR_SERVICES_DIR="/var/lib/tor"
 AENIGMA_TOR_SERVICE_DIR="$TOR_SERVICES_DIR/$AENIGMA_TOR_SERVICE_NAME"
 AENIGMA_DASHBOARD_TOR_SERVICE_DIR="$TOR_SERVICES_DIR/$AENIGMA_DASHBOARD_TOR_SERVICE_NAME"
+SERVICE_RESTART_REQUIRED=0
 
 [[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+
+if ! id "$SERVICE_USER" >/dev/null 2>&1; then
+    echo "Creating user '$SERVICE_USER' for the service..."
+    useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+    SERVICE_RESTART_REQUIRED=1
+fi
 
 if [[ ! -f "$AENIGMA_TOR_SERVICE_DIR/hostname" ]]; then
     echo "Configuring onion service for aenigma service..."
     aenigma-tor -l 127.0.0.1:8080 -o 80 -s "$AENIGMA_TOR_SERVICE_NAME" -c 1
+    SERVICE_RESTART_REQUIRED=1
 fi
 
 if [[ ! -f "$AENIGMA_DASHBOARD_TOR_SERVICE_DIR/hostname" ]]; then
     echo "Configuring onion service for aenigma dashboard service..."
-    aenigma-tor -l 127.0.0.1:8081 -o 80 -s "$AENIGMA_DASHBOARD_TOR_SERVICE_NAME" -u "$AENIGMA_DASHBOARD_TOR_SERVICE_NAME"
+    aenigma-tor -l 127.0.0.1:8081 -o 80 -s "$AENIGMA_DASHBOARD_TOR_SERVICE_NAME" -u "$AENIGMA_DASHBOARD_TOR_SERVICE_NAME" -c 0
+    SERVICE_RESTART_REQUIRED=1
 fi
+
+mkdir -pv "$LOG_DIR"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
+chmod -v 755 "$LOG_DIR"
+
+mkdir -pv "$LIB_DIR"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$LIB_DIR"
+chmod -v 700 "$LIB_DIR"
+
+mkdir -pv "$DATABASE_DIR"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$DATABASE_DIR"
+chmod -v 700 "$DATABASE_DIR"
+
+mkdir -pv "$SRV_DIR"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$SRV_DIR"
+chmod -v 700 "$SRV_DIR"
+
+mkdir -pv "$UPLOADS_DIR"
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$UPLOADS_DIR"
+chmod -v 700 "$UPLOADS_DIR"
+
+if [ ! -f "$PRIVATE_KEY_FILE" ]; then
+    touch "$PRIVATE_KEY_FILE"
+    SERVICE_RESTART_REQUIRED=1
+fi
+
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
+chmod -v 600 "$PRIVATE_KEY_FILE"
+
+if [[ -v SERVICE_RESTART_REQUIRED && $SERVICE_RESTART_REQUIRED -eq 1 ]]; then
+    aenigma-start
+fi
+
+exit 0

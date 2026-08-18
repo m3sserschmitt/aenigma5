@@ -50,8 +50,9 @@ echo "Public key: $PUBLIC_KEY_FILE"
 echo "Changing keys ownership to $SERVICE_USER ..."
 chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
 chown -v "$SERVICE_USER":"$SERVICE_USER" "$PUBLIC_KEY_FILE"
-chmod -v 700 "$PRIVATE_KEY_FILE"
-chmod -v 700 "$PUBLIC_KEY_FILE"
+
+chmod -v 600 "$PRIVATE_KEY_FILE"
+chmod -v 600 "$PUBLIC_KEY_FILE"
 
 echo "Done."
 exit 0
