@@ -19,32 +19,25 @@
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
 set -eux
- 
+
 export DEBIAN_FRONTEND=noninteractive
- 
+
 # ── Base update ─────────────────────────────────────────────────────────
-apt update
-apt install -y gnupg ca-certificates curl
- 
-# ── Tor: install straight from Debian's own repo
+apt-get update -qq
+apt-get install -y gnupg ca-certificates curl
+
 # ── Install Aenigma repo
 curl -fsSL https://packages.aenigma.ro/aenigma.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/packages.aenigma.ro.gpg
-echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/packages.aenigma.ro.gpg] \
-https://packages.aenigma.ro stable main" | tee /etc/apt/sources.list.d/packages.aenigma.ro.list
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/trusted.gpg.d/packages.aenigma.ro.gpg] https://packages.aenigma.ro stable main" | tee /etc/apt/sources.list.d/packages.aenigma.ro.list
 
-apt update
-apt install -y tor aenigma aenigma-image-utils
-
-systemctl enable tor
-systemctl enable aenigma
-systemctl enable aenigma-standard-setup
-systemctl enable regenerate-ssh-host-keys
+apt-get update -qq
+curl -sI https://packages.aenigma.ro/dists/stable/Release
+apt-get install --print-uris -y aenigma aenigma-image-utils
+apt-get install -y aenigma aenigma-image-utils
 
 # ── MOTD ──────────────────────────────────────────────────────────────────
-# The aenigma-status script is shipped by the aenigma .deb package and
-# installed at /usr/local/bin/aenigma-status. 
 # Symlink aenigma's status script into the MOTD directory
-ln -sf /usr/local/bin/aenigma-status /etc/update-motd.d/99-zz-aenigma-status
+ln -sf /usr/bin/aenigma-status /etc/update-motd.d/99-zz-aenigma-status
  
 # Ensure PAM's pam_motd module is active for both console and SSH logins
 if ! grep -q "pam_motd" /etc/pam.d/login 2>/dev/null; then

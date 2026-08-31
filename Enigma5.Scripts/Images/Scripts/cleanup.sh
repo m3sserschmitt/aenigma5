@@ -22,19 +22,36 @@
 # (authenticated as the 'vagrant' user on the bento base box).
 
 set -eux
+
+export DEBIAN_FRONTEND=noninteractive
  
 # ── Standard cleanup ──────────────────────────────────────────────────────
 apt-get clean
 apt-get autoremove -y
-rm -rf /tmp/* /var/tmp/* /var/cache/apt/archives/*.deb
-journalctl --vacuum-size=1M 2>/dev/null || true
+apt-get remove -y --purge tor
+
+rm -rvf     /tmp/* /var/tmp/* /var/cache/apt/archives/*.deb
+rm -vf      /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub
+
+rm -vf      /var/log/aenigma/*
+rm -vf      /var/lib/aenigma/public-key.pem
+rm -vf      /var/lib/aenigma/private-key.pem
+rm -vf      /var/lib/aenigma/db/aenigmaDb.sqlite
+rm -vf      /var/lib/aenigma/db/aenigmaDb.sqlite-shm
+rm -vf      /var/lib/aenigma/db/aenigmaDb.sqlite-wal
+
+aenigma-config -p OnionService  -v null
+aenigma-config -p Hostname      -v null
+
+sudo journalctl --vacuum-time=1s 2>/dev/null || true
+sudo find /var/log -type f -exec truncate -s 0 {} \;
 
 # ── Reset machine-id ──────────────────────────────────────────────────────
 # Ensures the client's first boot is correctly detected as a "first boot"
-rm -f /etc/machine-id /var/lib/dbus/machine-id
-touch /etc/machine-id
+rm -vf  /etc/machine-id /var/lib/dbus/machine-id
+touch   /etc/machine-id
  
-# ── Zero free space (helps Vagrant compress the box on export) ────────────
+# ── Zero free space ────────────
 dd if=/dev/zero of=/EMPTY bs=1M 2>/dev/null || true
 rm -f /EMPTY
 sync

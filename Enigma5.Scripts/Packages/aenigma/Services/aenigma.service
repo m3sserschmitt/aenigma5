@@ -3,6 +3,7 @@ Description=Aenigma - Federated messaging system
 After=network.target
 
 [Service]
+UMask=0077
 Environment=DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 WorkingDirectory=/usr/lib/aenigma
 ExecStart=/usr/bin/aenigma-launcher

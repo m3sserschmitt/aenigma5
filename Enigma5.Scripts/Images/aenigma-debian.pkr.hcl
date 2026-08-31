@@ -53,4 +53,10 @@ build {
       "Scripts/cleanup.sh"
     ]
   }
+
+  post-processor "shell-local" {
+    inline = [
+      "mv Virtualbox/package.box Virtualbox/aenigma-virtualbox.box"
+    ]
+  }
 }
