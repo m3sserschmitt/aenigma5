@@ -18,11 +18,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 
-# Get the directory of the running script
+set -Eeuo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LIBAENIGMA_DIR="$SCRIPT_DIR/../Libaenigma7"
 
-# Combine it with the relative path "../Scripts"
-SCRIPTS_PATH="$SCRIPT_DIR/../Enigma5.App"
+$LIBAENIGMA_DIR/build.sh
+$LIBAENIGMA_DIR/build-arm64.sh
 
-openssl genrsa -aes256 -out ../Enigma5.App/private-key.pem -passout pass:1234 2048
-openssl rsa -in ../Enigma5.App/private-key.pem -outform PEM -pubout -out ../Enigma5.App/public-key.pem -passin pass:1234
+cp -v $LIBAENIGMA_DIR/build/libaenigma.so $LIBAENIGMA_DIR/../Enigma5.Crypto/runtimes/linux-$(dpkg --print-architecture)/native/
+cp -v $LIBAENIGMA_DIR/build-arm64/libaenigma.so $LIBAENIGMA_DIR/../Enigma5.Crypto/runtimes/linux-arm64/native/
+
+exit 0
