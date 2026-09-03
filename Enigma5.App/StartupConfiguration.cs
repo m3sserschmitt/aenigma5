@@ -40,6 +40,7 @@ using Enigma5.App.UI;
 using System.Text.Json.Serialization;
 using Enigma5.App.Middlewares;
 using Enigma5.App.Common.Utils;
+using Enigma5.App.Models;
 
 namespace Enigma5.App;
 
@@ -87,14 +88,22 @@ public class StartupConfiguration(IConfiguration configuration)
         services.SetupDbWriter(_configuration);
         services.SetupMediatR();
         services.AddAntiforgery();
+        services.AddOpenApi();
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         });
     }
 
-    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IConfiguration configuration)
+    public static void Configure(IApplicationBuilder app, IServiceProvider serviceProvider, IWebHostEnvironment env, IConfiguration configuration)
     {
+        if (env.IsDevelopment())
+        {
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint(Constants.OpenApiEndpoint, Constants.OpenApiName);
+            });
+        }
         app.UseRouting();
         app.UseAntiforgery();
         app.UseStaticFiles();
@@ -102,29 +111,91 @@ public class StartupConfiguration(IConfiguration configuration)
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
+
             endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint, options =>
             {
                 options.AllowStatefulReconnects = true;
             });
-            endpoints.MapGet("/", Api.GetInfo);
-            endpoints.MapGet(Constants.InfoEndpoint, Api.GetInfo);
+
+            endpoints.MapGet(Constants.RootEndpoint, Api.GetInfo)
+            .Produces<ServerInfoDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Returns basic node info. Alias for the info endpoint.");
+
+            endpoints.MapGet(Constants.InfoEndpoint, Api.GetInfo)
+            .Produces<ServerInfoDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Returns basic node info.");
+
             endpoints.MapPost(Constants.ShareEndpoint, Api.PostShare)
-                .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedDataMaxSize()));
-            endpoints.MapGet(Constants.ShareEndpoint, Api.GetShare);
-            endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount);
-            endpoints.MapGet(Constants.VerticesEndpoint, Api.GetVertices);
-            endpoints.MapGet(Constants.VertexEndpoint, Api.GetVertex);
-            endpoints.MapGet(Constants.LocalVertexEndpoint, Api.GetLocalVertex);
+            .Accepts<SharedDataCreateDto>("application/json")
+            .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedDataMaxSize()))
+            .Produces<SharedDataDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Create a new shared data object.");
+
+            endpoints.MapGet(Constants.ShareEndpoint, Api.GetShare)
+            .Produces<SharedDataDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Returns shared data object by its identification tag.");
+
+            endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount)
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Increment shared data current access count. When current access count equals maximum access count the object is scheduled for removal.");
+
+            endpoints.MapGet(Constants.VerticesEndpoint, Api.GetVertices)
+            .Produces<List<VertexDto>>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Returns a list of all available nodes in the local ledger.");
+
+            endpoints.MapGet(Constants.VertexEndpoint, Api.GetVertex)
+            .Produces<VertexDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Returns the node object identified by the given address.");
+
+            endpoints.MapGet(Constants.LocalVertexEndpoint, Api.GetLocalVertex)
+            .Produces<VertexDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Returns local node object.");
+
             endpoints.MapPost(Constants.FileEndpoint, Api.PostFile)
-                .Accepts<IFormFile>("multipart/form-data")
-                .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
-                .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedFileMaxSize()))
-                .WithMetadata(new RequestFormLimitsAttribute
-                {
-                    MultipartBodyLengthLimit = configuration.GetSharedFileMaxSize()
-                }).DisableAntiforgery();
-            endpoints.MapGet(Constants.FileEndpoint, Api.GetFile);
-            endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount);
+            .Accepts<IFormFile>("multipart/form-data")
+            .WithMetadata(new IgnoreAntiforgeryTokenAttribute())
+            .WithMetadata(new RequestSizeLimitAttribute(configuration.GetSharedFileMaxSize()))
+            .WithMetadata(new RequestFormLimitsAttribute
+            {
+                MultipartBodyLengthLimit = configuration.GetSharedFileMaxSize()
+            })
+            .DisableAntiforgery()
+            .Produces<SharedDataDto>(StatusCodes.Status200OK, contentType: "application/json")
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Upload a new file.");
+
+            endpoints.MapGet(Constants.FileEndpoint, Api.GetFile)
+            .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Download a file by its tag.");
+
+            endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount)
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithDescription("Increment file current access count. When current access count equals maximum access count the object is scheduled for removal.");
+
+            if (env.IsDevelopment())
+            {
+                endpoints.MapOpenApi();
+            }
         });
         serviceProvider.UseAsHangfireActivator();
         serviceProvider.MigrateDatabase();

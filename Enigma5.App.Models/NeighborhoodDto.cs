@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.Contracts;
@@ -33,14 +34,19 @@ public class NeighborhoodDto(
     HashSet<string>? neighbors = null,
     DateTimeOffset? lastUpdate = null) : IValidatable
 {
+    [Description("Sha256 derived form node public key.")]
     public string? Address { get; private set; } = address;
 
+    [Description("Base API address.")]
     public string? Hostname { get; private set; } = hostname;
 
+    [Description("Onion service base API address.")]
     public string? OnionService { get; private set; } = onionService;
 
+    [Description("Node adjacency list containing sha256 addresses of its neighbors.")]
     public HashSet<string>? Neighbors { get; private set; } = neighbors;
 
+    [Description("Date and time when this object was updated.")]
     public DateTimeOffset? LastUpdate { get; private set; } = lastUpdate;
 
     public HashSet<ErrorDto> Validate()

@@ -60,6 +60,12 @@ public static class Constants
 
     public const string OnionRoutingEndpoint = "OnionRouting";
 
+    public const string OpenApiName = "Aenigma API";
+
+    public const string OpenApiEndpoint = "/openapi/v1.json";
+
+    public const string RootEndpoint = "/";
+
     public const string InfoEndpoint = "Info";
 
     public const string VerticesEndpoint = "Vertices";

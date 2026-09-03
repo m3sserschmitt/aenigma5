@@ -18,13 +18,18 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel;
+
 namespace Enigma5.App.Models;
 
 public class VertexDto
 {
+    [Description("Node public key in PEM format.")]
     public string? PublicKey { get; set; }
 
+    [Description($"{nameof(Neighborhood)} serialized data with signature in base64.")]
     public string? SignedData { get; set; }
 
+    [Description("Node neighborhood info.")]
     public NeighborhoodDto? Neighborhood { get; set; }
 }

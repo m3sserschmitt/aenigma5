@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
@@ -51,6 +53,8 @@ public static class Api
     }
 
     public static async Task<IResult> GetShare(
+        [Required]
+        [Description("Shared data identifier in GUID format.")]
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
@@ -64,6 +68,8 @@ public static class Api
     }
 
     public static async Task<IResult> IncrementSharedDataAccessCount(
+        [Required]
+        [Description("Shared data identifier in GUID format.")]
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
@@ -77,6 +83,8 @@ public static class Api
     }
 
     public static async Task<IResult> GetVertex(
+        [Required]
+        [Description("Vertex address in sha256 format derived from its public key.")]
         [FromQuery] string? address,
         [FromServices] IMediator commandRouter)
     {
@@ -96,7 +104,7 @@ public static class Api
         var localAddress = await certificateManager.GetAddressAsync();
         if (string.IsNullOrWhiteSpace(localAddress))
         {
-            return Results.Problem();
+            return Results.Problem(statusCode: 500);
         }
         var result = await commandRouter.Send(new GetVertexQuery(localAddress));
         return result.CreateGetResponse();
@@ -109,18 +117,26 @@ public static class Api
     }
 
     public static async Task<IResult> PostFile(
-        [FromForm] IFormFile file,
-        [FromForm] int maxAccessCount,
+        [Required]
+        [Description("File to be uploaded.")]
+        [FromForm] IFormFile? file,
+        [Required]
+        [Description("Maximum access file access count controlling how many times the file can be retrieved.")]
+        [FromForm] int? maxAccessCount,
         [FromServices] IMediator commandRouter)
     {
-        if (file == null || file.Length == 0)
+        if (file == null || file.Length == 0 || maxAccessCount == null)
+        {
             return Results.BadRequest();
+        }
 
-        var result = await commandRouter.Send(new CreateFileCommand(file, maxAccessCount));
+        var result = await commandRouter.Send(new CreateFileCommand(file, maxAccessCount.Value));
         return result.CreatePostResponse();
     }
 
     public static async Task<IResult> GetFile(
+        [Required]
+        [Description("File identifier in GUID format.")]
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
@@ -143,6 +159,8 @@ public static class Api
     }
 
     public static async Task<IResult> IncrementFileAccessCount(
+        [Required]
+        [Description("File identifier in GUID format.")]
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {

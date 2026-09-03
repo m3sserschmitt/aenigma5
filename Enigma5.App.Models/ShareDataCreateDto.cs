@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.Contracts;
@@ -26,12 +28,18 @@ using Enigma5.App.Models.Extensions;
 namespace Enigma5.App.Models;
 
 [method: JsonConstructor]
-public class SharedDataCreateDto(string? publicKey = null, string? signedData = null, int? accessCount = 1): IValidatable
+public class SharedDataCreateDto([Required]string? publicKey = null, string? signedData = null, int? accessCount = 1): IValidatable
 {
+
+    [Description("Public key of the user creating the shared data in PEM format.")]
     public string? PublicKey { get; private set; } = publicKey;
 
+
+    [Description("Shared data with attached signature in base64 format.")]
     public string? SignedData { get; private set; } = signedData;
 
+
+    [Description("Maximum data access count controlling how many times the data can be retrieved.")]
     public int? AccessCount { get; private set; } = accessCount;
 
     public HashSet<ErrorDto> Validate()

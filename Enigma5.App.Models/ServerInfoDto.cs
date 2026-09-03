@@ -18,17 +18,24 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel;
+
 namespace Enigma5.App.Models;
 
 public class ServerInfoDto
 {
+    [Description("Server public key in PEM format.")]
     public string? PublicKey { get; set; }
 
+    [Description("Sha256 derived from public key.")]
     public string? Address { get; set; }
 
+    [Description("Sha256 derived from local ledger.")]
     public string? GraphVersion { get; set; }
 
+    [Description("Onion service base API address.")]
     public string? OnionService { get; set; }
 
+    [Description("Base API address.")]
     public string? Hostname { get; set; }
 }
