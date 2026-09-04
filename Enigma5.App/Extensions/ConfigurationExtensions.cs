@@ -71,7 +71,7 @@ public static class ConfigurationExtensions
         var blacklists = configuration.GetHubBlacklists();
         if (blacklists.Count == 0)
         {
-            return false;
+            return true;
         }
         
         var httpContext = hubInvocationContext.Context.GetHttpContext();
