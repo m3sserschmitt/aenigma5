@@ -26,6 +26,7 @@ SERVICE_NAME="aenigma"
 EXECUTABLE_NAME="Enigma5.App"
 CHANGELOG_FILE="$SCRIPT_DIR/changelog"
 COPYRIGHT_FILE="$SCRIPT_DIR/copyright"
+LINTIAN_OVERRIDES_FILE="$SCRIPT_DIR/$SERVICE_NAME.lintian-overrides"
 MANPAGES_FILE="$SCRIPT_DIR/$SERVICE_NAME.manpages"
 POSTINST_SCRIPT="$SCRIPT_DIR/postinst"
 POSTRM_SCRIPT="$SCRIPT_DIR/postrm"
@@ -96,6 +97,7 @@ dotnet publish $PROJECT_FILE -c Release -r linux-$ARCH --self-contained true -o 
 # Step 4: Copy application files to /usr/lib/APP_NAME
 cp -v $POSTINST_SCRIPT $PKG_DIR/debian/postinst
 cp -v $POSTRM_SCRIPT $PKG_DIR/debian/postrm
+cp -v $LINTIAN_OVERRIDES_FILE $PKG_DIR/debian
 cp -v $CHANGELOG_FILE $PKG_DIR/debian/changelog
 cp -v $COPYRIGHT_FILE $PKG_DIR/debian/copyright
 cp -v $MANPAGES_FILE $PKG_DIR/debian
