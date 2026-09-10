@@ -9,13 +9,13 @@
           "name": "virtualbox",
           "url": "https://github.com/m3sserschmitt/aenigma-boxes/releases/download/v1.0.0/aenigma-virtualbox.box",
           "checksum_type": "sha256",
-          "checksum": "940d4d137bb5a8cd926e8babe2a45eb339377d6a705a9601f92fde612eae22e4"
+          "checksum": "31d482d2e85101520fccff3bde456e2f6deae201d90a43ba249eb0537233f214"
         },
         {
           "name": "libvirt",
           "url": "https://github.com/m3sserschmitt/aenigma-boxes/releases/download/v1.0.0/aenigma-qemu.box",
           "checksum_type": "sha256",
-          "checksum": "e49e5e38749adfb96e3bf169549b68eda7038ea015158d56fbe240b777f887a1"
+          "checksum": "56453c4174bc060bc1ecffc6efb7db17be17acd1444e916dec1c883f0adc8308"
         }
       ]
     }
