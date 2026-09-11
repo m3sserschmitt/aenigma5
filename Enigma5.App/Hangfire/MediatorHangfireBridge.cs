@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -35,7 +35,7 @@ public class MediatorHangfireBridge(
 
     public Task Send<T>(IRequest<T> command)
     {
-        _logger.LogInformation("Executing {CommandName} for Hangfire Job: {@Command}", command.GetType().Name, command);
+        _logger.LogDebug($"Executing command {{@{Common.Constants.Serilog.CommandKey}}} for Hangfire Job.", command);
         return _mediator.Send(command);
     }
 }

@@ -1,0 +1,75 @@
+.TH AENIGMA-START 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-start \- enable and start the Aenigma systemd service
+.SH SYNOPSIS
+.B aenigma-start
+.SH DESCRIPTION
+.B aenigma-start
+enables the
+.B aenigma
+systemd service so that it starts automatically on boot, then
+(re)starts it immediately. It takes no options or arguments.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Runs
+.B systemctl enable aenigma
+so the service is started automatically on future boots.
+.IP \(bu 2
+Runs
+.B systemctl restart aenigma
+to start the service now. If the service is already running, it is
+stopped and started again rather than left untouched.
+.PP
+.B aenigma-start
+must be run as root.
+.SH OPTIONS
+.B aenigma-start
+takes no command-line options.
+.SH EXIT STATUS
+.TP
+.B 0
+The service was enabled and (re)started successfully.
+.TP
+.B 1
+The script was not run as root, or either
+.B systemctl
+invocation failed (for example, if the
+.B aenigma
+unit file is missing or the service fails to start).
+.SH EXAMPLES
+Enable the service for boot and start it now:
+.PP
+.RS
+.EX
+sudo aenigma-start
+.EE
+.RE
+.SH NOTES
+.B aenigma-start
+uses
+.B systemctl restart
+rather than
+.BR "systemctl start" .
+Running this script against an already-running service therefore
+causes a brief service interruption (the running process is
+stopped, then started again) rather than a no-op; this is worth
+being aware of if the script is invoked as part of an automated
+provisioning flow that may run against an already-active service.
+.PP
+No verification is performed after either
+.B systemctl
+call beyond its own exit status; the script does not check, for
+example via
+.BR "systemctl is-active" ,
+that the service actually reached a running state. A unit that
+starts and then immediately crashes may not be reflected as a
+failure of this script, depending on the unit's
+.B Type=
+and restart configuration.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR aenigma-stop (8),
+.BR aenigma-config (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

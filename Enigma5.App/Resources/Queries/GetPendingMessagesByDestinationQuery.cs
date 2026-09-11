@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -24,8 +24,12 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Queries;
 
-public class GetPendingMessagesByDestinationQuery(string destination)
+public class GetPendingMessagesByDestinationQuery(string destination, long? infId, int pageSize)
 : IRequest<CommandResult<List<PendingMessageDto>>>
 {
     public string Destination { get; private set; } = destination;
+
+    public long? InfId { get; private set; } = infId;
+
+    public int PageSize { get; private set; } = pageSize;
 }

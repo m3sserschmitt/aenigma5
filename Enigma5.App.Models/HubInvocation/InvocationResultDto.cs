@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -18,25 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models.Contracts.Hubs;
+
 namespace Enigma5.App.Models.HubInvocation;
 
-public class InvocationResultDto<T>
+public class InvocationResultDto<T>(T? data, HashSet<ErrorDto> errors, bool success) : IInvocationResult
 {
-    public InvocationResultDto(T? data)
-    {
-        Data = data;
-        Errors = [];
-    }
+    public T? Data { get; set; } = data;
 
-    public InvocationResultDto()
-    {
-        Data = default;
-        Errors = [];
-    }
+    public bool Success { get; } = success;
 
-    public T? Data { get; set; }
-
-    public virtual bool Success { get; set; }
-
-    public HashSet<ErrorDto> Errors { get; set; }
+    public HashSet<ErrorDto> Errors { get; }  = errors;
 }

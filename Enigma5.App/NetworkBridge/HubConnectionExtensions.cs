@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -72,6 +72,18 @@ internal static class HubConnectionExtensions
     public static async Task<bool> StartAuthenticationAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
     {
         var results = await Task.WhenAll(connections.Select(async connection => await connection.StartAuthenticationAsync(cancellationToken)));
+        return results.All(result => result);
+    }
+
+    public static async Task<bool> CleanupAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.CleanupAsync(cancellationToken)));
+        return results.All(result => result);
+    }
+
+    public static async Task<bool> SyncMessagesAsync(this IEnumerable<ConnectionVector> connections, CancellationToken cancellationToken = default)
+    {
+        var results = await Task.WhenAll(connections.Select(async connection => await connection.SyncMessagesAsync(cancellationToken)));
         return results.All(result => result);
     }
 }

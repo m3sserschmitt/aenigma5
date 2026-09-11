@@ -1,0 +1,12 @@
+[Unit]
+Description=Setup service to ensure Aenigma standard setup is properly performed at boot.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/aenigma-standard-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

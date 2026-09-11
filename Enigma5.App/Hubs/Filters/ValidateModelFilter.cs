@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -36,18 +36,17 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        // TODO: refactor this to support any number of arguments;
         var data = invocationContext.MethodInvocationArgument<IValidatable>(0);
 
         if (data is null)
         {
             _logger.LogDebug(
-                $"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} invocation on connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}; arguments list: {{@{nameof(invocationContext.HubMethodArguments)}}}.",
+                $"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; arguments list: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
                 );
-            return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+            return ErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
         }
 
         var errors = data.Validate();
@@ -55,16 +54,16 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
         if (errors.Count != 0)
         {
             _logger.LogDebug(
-                $"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} invocation on connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}; arguments list: {{@{nameof(invocationContext.HubMethodArguments)}}}.",
+                $"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; arguments list: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId,
                 invocationContext.HubMethodArguments
                 );
-            return new EmptyErrorResultDto(errors);
+            return new ErrorResultDto(errors);
         }
 
         _logger.LogDebug(
-            $"Request model successfully validated for {{{nameof(invocationContext.HubMethodName)}}} invocation on connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.",
+            $"Request model successfully validated for {{{Common.Constants.Serilog.HubMethodNameKey}}} invocation on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
             invocationContext.HubMethodName,
             invocationContext.Context.ConnectionId
             );

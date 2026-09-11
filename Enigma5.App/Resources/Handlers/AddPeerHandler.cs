@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -22,15 +22,19 @@ using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<AddPeerCommand, CommandResult<PeerDto>>
+public class AddPeerHandler(
+    IMediator mediator,
+    IDbWriter dbWriter
+) : IRequestHandler<AddPeerCommand, CommandResult<PeerDto>>
 {
-    private readonly EnigmaDbContext _dbContext = dbContext;
-
     private readonly IMediator _mediator = mediator;
+
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<PeerDto>> Handle(AddPeerCommand request, CancellationToken cancellationToken = default)
     {
@@ -41,15 +45,16 @@ public class AddPeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRe
                 Host = parsedUri.ToString(),
                 Address = request.Address
             };
-            await _dbContext.AddAsync(peer, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var result = await _dbWriter.CreatePeerAsync(peer, cancellationToken);
             await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-            return CommandResult.CreateResultSuccess(new PeerDto
+
+            return result > 0 ? CommandResult.CreateResultSuccess(new PeerDto
             {
                 Id = peer.Id,
                 Host = peer.Host,
                 Address = peer.Address
-            });
+            }) : CommandResult.CreateResultFailure<PeerDto>();
         }
         return CommandResult.CreateResultFailure<PeerDto>();
     }

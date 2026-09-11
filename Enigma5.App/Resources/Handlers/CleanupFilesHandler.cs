@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -21,24 +21,30 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupFilesHandler(EnigmaDbContext context, IConfiguration configuration)
-: IRequestHandler<CleanupFilesCommand, CommandResult<int>>
+public class CleanupFilesHandler(
+    EnigmaDbContext context,
+    IConfiguration configuration,
+    IDbWriter dbWriter
+) : IRequestHandler<CleanupFilesCommand, CommandResult<int>>
 {
     private readonly IConfiguration _configuration = configuration;
-    
+
     private readonly EnigmaDbContext _context = context;
+
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(CleanupFilesCommand request, CancellationToken cancellationToken)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
         var webContentDirectory = _configuration.GetWebContentDirectory();
         var filesToBeRemoved = await _context.Files.Where(item => time > item.Timestamp).ToListAsync(cancellationToken: cancellationToken);
+        var result = 0;
         foreach (var fileToBeRemoved in filesToBeRemoved)
         {
             if (!string.IsNullOrEmpty(webContentDirectory) && Directory.Exists(webContentDirectory))
@@ -49,8 +55,8 @@ public class CleanupFilesHandler(EnigmaDbContext context, IConfiguration configu
                     File.Delete(fullPath);
                 }
             }
-            _context.Remove(fileToBeRemoved);
+            result += await _dbWriter.RemoveFileAsync(fileToBeRemoved, cancellationToken);
         }
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        return CommandResult.CreateResultSuccess(result);
     }
 }

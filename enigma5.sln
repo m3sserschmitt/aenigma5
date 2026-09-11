@@ -27,8 +27,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.Tests.Base", "Enigm
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{B0A10AD0-8D6E-48C4-885A-90CB83C6AA59}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enigma5.Scripts", "Enigma5.Scripts\Enigma5.Scripts.csproj", "{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -183,18 +181,6 @@ Global
 		{B0A10AD0-8D6E-48C4-885A-90CB83C6AA59}.Release|x64.Build.0 = Release|Any CPU
 		{B0A10AD0-8D6E-48C4-885A-90CB83C6AA59}.Release|x86.ActiveCfg = Release|Any CPU
 		{B0A10AD0-8D6E-48C4-885A-90CB83C6AA59}.Release|x86.Build.0 = Release|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Debug|x64.Build.0 = Debug|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Debug|x86.Build.0 = Debug|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Release|x64.ActiveCfg = Release|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Release|x64.Build.0 = Release|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Release|x86.ActiveCfg = Release|Any CPU
-		{218C7DAC-7D0B-41D1-BE9C-15A546787AA6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

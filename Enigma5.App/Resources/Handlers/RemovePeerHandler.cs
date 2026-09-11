@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,26 +20,34 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class RemovePeerHandler(IMediator mediator, EnigmaDbContext dbContext) : IRequestHandler<RemovePeerCommand, CommandResult<bool>>
+public class RemovePeerHandler(
+    IMediator mediator,
+    EnigmaDbContext dbContext,
+    IDbWriter dbWriter
+) : IRequestHandler<RemovePeerCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _dbContext = dbContext;
 
     private readonly IMediator _mediator = mediator;
 
-    public async Task<CommandResult<bool>> Handle(RemovePeerCommand request, CancellationToken cancellationToken = default)
+    private readonly IDbWriter _dbWriter = dbWriter;
+
+    public async Task<CommandResult<int>> Handle(RemovePeerCommand request, CancellationToken cancellationToken = default)
     {
         var peer = await _dbContext.Peers.FindAsync([request.Id], cancellationToken: cancellationToken);
+
         if (peer == null)
         {
-            return CommandResult.CreateResultFailure(false);
+            return CommandResult.CreateResultFailure<int>();
         }
-        _dbContext.Remove(peer);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var result = await _dbWriter.RemovePeerAsync(peer, cancellationToken);
         await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-        return CommandResult.CreateResultSuccess(true);
+        return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
     }
 }

@@ -1,0 +1,87 @@
+.TH AENIGMA-KEYS 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-keys \- generate an RSA keypair for the aenigma service
+.SH SYNOPSIS
+.B aenigma-keys
+.SH DESCRIPTION
+.B aenigma-keys
+generates a new 4096-bit RSA private key, encrypted with AES-256, together
+with its corresponding public key, for use by the
+.I aenigma
+service user. The private key is generated first via
+.BR openssl (1),
+the public key is then derived from it, and both files are placed under
+the service's key directory, owned by the
+.I aenigma
+user, with permissions restricted to that user only.
+.PP
+The script takes no options or arguments and always generates a key of the
+same fixed size into the same fixed location.
+.B aenigma-keys
+must be run as root, since it creates
+.I /var/lib/aenigma
+if missing and changes ownership of the generated key files to the
+.I aenigma
+service account.
+.PP
+Because the private key is AES-256 encrypted,
+.BR openssl (1)
+will interactively prompt for a passphrase (and its confirmation) during
+generation. This script is not suitable for unattended/non-interactive
+use as written.
+.SH FILES
+.TP
+.I /var/lib/aenigma
+Key storage directory, created if it does not already exist.
+.TP
+.I /var/lib/aenigma/private-key.pem
+Generated RSA private key, 4096 bits, AES-256 encrypted, PEM format.
+Owned by
+.IR aenigma:aenigma ,
+mode 0600.
+.TP
+.I /var/lib/aenigma/public-key.pem
+RSA public key derived from the private key, PEM format. Owned by
+.IR aenigma:aenigma ,
+mode 0600.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; both keys were generated and their ownership/permissions set.
+.TP
+.B 1
+The script was not invoked as root.
+.PP
+Any failure from
+.BR openssl (1)
+(for example, a mismatched or empty passphrase) causes the script to abort
+immediately, since it runs with
+.B set -e
+and does not trap or ignore command failures.
+.SH NOTES
+.IP \(bu 2
+.B aenigma-keys
+does not check whether
+.I private-key.pem
+or
+.I public-key.pem
+already exist before generating new ones.
+.BR openssl (1)
+will overwrite existing files at those paths without prompting for
+confirmation. Back up any existing keypair before re-running this script
+if it must be preserved.
+.IP \(bu 2
+The private key passphrase is supplied interactively at the OpenSSL
+prompt and is never written to disk, logged, or accepted as a command-line
+argument by this script.
+.IP \(bu 2
+.B umask 077
+is set for the duration of the script, so any files it creates default to
+owner-only access even before the explicit
+.BR chmod (1)
+calls run.
+.SH SEE ALSO
+.BR openssl (1),
+.BR umask (2)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -40,9 +40,10 @@ public class AuthenticatedFilter(
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        if (_sessionManager.TryGetAddress(invocationContext.Context.ConnectionId, out string? address))
+        var address = await _sessionManager.TryGetAddressAsync(invocationContext.Context.ConnectionId);
+        if (address != null)
         {
-            _logger.LogDebug($"ConnectionId {{{nameof(invocationContext.Context.ConnectionId)}}} resolved to address {{address}}.", invocationContext.Context.ConnectionId, address);
+            _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} resolved to address {{{Common.Constants.Serilog.AddressKey}}}.", invocationContext.Context.ConnectionId, address);
             _ = new IdentityHubAdapter(invocationContext.Hub)
             {
                 ClientAddress = address
@@ -50,7 +51,7 @@ public class AuthenticatedFilter(
             return await next(invocationContext);
         }
 
-        _logger.LogDebug($"ConnectionId {{{nameof(invocationContext.Context.ConnectionId)}}} not authenticated thus it cannot be resolved to an address.", invocationContext.Context.ConnectionId);
-        return EmptyErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
+        _logger.LogDebug($"ConnectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} not authenticated thus it cannot be resolved to an address.", invocationContext.Context.ConnectionId);
+        return ErrorResultDto.Create(InvocationErrors.AUTHENTICATION_REQUIRED);
     }
 }

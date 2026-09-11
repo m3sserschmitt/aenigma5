@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -43,22 +43,23 @@ public class OnionRoutingFilter(ISessionManager sessionManager, ILogger<OnionRou
         {
             var onionRouterHub = new OnionRoutingHubAdapter(invocationContext.Hub);
 
-            if(_sessionManager.TryGetConnectionId(onionParserHub.Next, out string? connectionId))
+            var connectionId = await _sessionManager.TryGetConnectionIdAsync(onionParserHub.Next);
+            if(connectionId != null)
             {
                 onionRouterHub.DestinationConnectionId = connectionId;
                 _logger.LogDebug(
-                    $"{{{nameof(onionParserHub.Next)}}} address resolved to connectionId {{{nameof(onionRouterHub.DestinationConnectionId)}}} for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.",
+                    $"{{{Common.Constants.Serilog.AddressKey}}} address resolved to connectionId {{{Common.Constants.Serilog.DestinationConnectionIdKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
                     onionParserHub.Next,
                     onionRouterHub.DestinationConnectionId,
                     invocationContext.Context.ConnectionId);
                 return await next(invocationContext);
             }
 
-            _logger.LogDebug($"ConnectionId not found for next address {{{nameof(onionParserHub.Next)}}}", onionParserHub.Next);
+            _logger.LogDebug($"ConnectionId not found for next address {{{Common.Constants.Serilog.AddressKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.", onionParserHub.Next, invocationContext.Context.ConnectionId);
             return await next(invocationContext);
         }
 
-        _logger.LogDebug($"Onion null next address for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}.", invocationContext.Context.ConnectionId);
-        return EmptyErrorResultDto.Create(InvocationErrors.ONION_ROUTING_FAILED);
+        _logger.LogDebug($"Onion null next address for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.", invocationContext.Context.ConnectionId);
+        return ErrorResultDto.Create(InvocationErrors.ONION_ROUTING_FAILED);
     }
 }

@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Text;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Data.Extensions;
@@ -33,7 +32,7 @@ public class NetworkGraph : IDisposable
 {
     private bool _disposed;
 
-    private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
+    private readonly SimpleSingleThreadRunner _singleThreadRunner;
 
     private readonly ICertificateManager _certificateManager;
 
@@ -53,6 +52,7 @@ public class NetworkGraph : IDisposable
         ICertificateManager certificateManager,
         NetworkGraphValidationPolicy networkGraphValidationPolicy,
         IConfiguration configuration,
+        SimpleSingleThreadRunner singleThreadRunner,
         ILogger<NetworkGraph> logger,
         DashboardUIState dashboardUIState)
     {
@@ -63,6 +63,7 @@ public class NetworkGraph : IDisposable
         _logger = logger;
         _dashboardUIState = dashboardUIState;
         _networkGraphValidationPolicy = networkGraphValidationPolicy;
+        _singleThreadRunner = singleThreadRunner;
     }
 
     ~NetworkGraph()
@@ -96,10 +97,7 @@ public class NetworkGraph : IDisposable
                 return null;
             }
             var serializedGraph = _vertices.Select(v =>
-                new Vertex(
-                    new(v.Neighborhood.Neighbors, v.Neighborhood.Address, v.Neighborhood.Hostname, v.Neighborhood.OnionService, null),
-                    v.PublicKey,
-                    v.SignedData)
+                new Vertex(new(v.Neighborhood.Neighbors, v.Neighborhood.Address, v.Neighborhood.Hostname, v.Neighborhood.OnionService, null), null, null)
                 ).OrderBy(v => v.Neighborhood.Address)
                 .ToList()
                 .CanonicallySerialize();

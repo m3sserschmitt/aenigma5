@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -23,7 +23,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class SetMasterPassphraseCommand(char[]? passphrase): IRequest<CommandResult<bool>>
+public class SetMasterPassphraseCommand(char[] passphrase): IRequest<CommandResult<bool>>
 {
-    public char[]? Passphrase { get; private set; } = passphrase;
+    public char[] Passphrase { get; private set; } = passphrase;
 }

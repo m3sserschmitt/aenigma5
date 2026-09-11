@@ -1,0 +1,151 @@
+.TH AENIGMA-CONFIG 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-config \- set or clear a property in the Aenigma application
+configuration
+.SH SYNOPSIS
+.B aenigma-config
+.B \-p
+.I PROPERTY
+.B \-v
+.I PROPERTY_VALUE
+.br
+.B aenigma-config
+.B \-h
+.SH DESCRIPTION
+.B aenigma-config
+updates a single property in the Aenigma application's JSON
+configuration file,
+.IR /etc/aenigma/appsettings.json ,
+using
+.BR jq (1).
+.PP
+.I PROPERTY
+is a dot-separated path identifying the property to set, e.g.
+.I Logging.LogLevel.Default
+addresses the nested
+.B Default
+key inside
+.B LogLevel
+inside
+.BR Logging .
+If any intermediate object in the path does not already exist,
+.BR jq 's
+.B setpath
+creates it.
+.PP
+.I PROPERTY_VALUE
+is inspected and written to the configuration file with an inferred
+JSON type:
+.RS
+.IP \(bu 2
+the literal string
+.I null
+is written as JSON
+.BR null ;
+.IP \(bu 2
+the literal strings
+.I true
+or
+.I false
+are written as a JSON boolean;
+.IP \(bu 2
+a value matching an integer or decimal number (optionally negative)
+is written as a JSON number;
+.IP \(bu 2
+anything else is written as a JSON string.
+.RE
+.PP
+The configuration file is rewritten via a temporary file and
+.BR mv (1)
+so that
+.I appsettings.json
+is never left partially written. After the update, the file's owner
+is reset to
+.B aenigma:aenigma
+and its permissions to
+.BR 700 .
+.PP
+.B aenigma-config
+must be run as root.
+.SH OPTIONS
+.TP
+.BI \-p " PROPERTY"
+Dot-separated path of the configuration property to set, e.g.
+.IR OnionService " or " Logging.LogLevel.Default .
+Required.
+.TP
+.BI \-v " PROPERTY_VALUE"
+The value to assign to
+.IR PROPERTY .
+Its JSON type (string, number, boolean, or null) is inferred
+automatically from its literal text, as described above. Required.
+.TP
+.B \-h
+Display a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The property was updated successfully.
+.TP
+.B 1
+Missing or invalid arguments, the script was not run as root, or
+.I /etc/aenigma/appsettings.json
+does not exist.
+.SH FILES
+.TP
+.I /etc/aenigma/appsettings.json
+The Aenigma application configuration file; read and rewritten by
+this script. Owned by
+.B aenigma:aenigma
+with mode
+.B 700
+after any update.
+.SH EXAMPLES
+Set the application's onion service hostname:
+.PP
+.RS
+.EX
+sudo aenigma-config \-p OnionService \e
+    \-v "o33eowc56dw2os5qehojnqcdwdqmobmgj76y67b6b3xgc47oedmde4yd.onion"
+.EE
+.RE
+.PP
+Set a nested numeric property:
+.PP
+.RS
+.EX
+sudo aenigma-config \-p Server.Port \-v 8080
+.EE
+.RE
+.PP
+Clear a property by setting it to JSON null:
+.PP
+.RS
+.EX
+sudo aenigma-config \-p FeatureFlags.Beta \-v null
+.EE
+.RE
+.SH NOTES
+There is no built-in validation that
+.I PROPERTY
+corresponds to a key the Aenigma application actually reads, nor
+that
+.I PROPERTY_VALUE
+is well-formed for its intended use (e.g. a valid hostname, port
+number, or enum value); the script only guarantees the write
+produces syntactically valid JSON. Misconfigured properties will not
+be caught until the application is restarted.
+.PP
+Because value type is inferred from literal text, a value that
+should be a JSON string but happens to look like a number, boolean,
+or the word
+.I null
+will be written using that inferred type instead. There is currently
+no way to force a value to be written as a string if its text
+matches one of these patterns.
+.SH SEE ALSO
+.BR jq (1),
+.BR aenigma-tor (8),
+.BR aenigma-proxy (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

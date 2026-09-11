@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -18,15 +18,15 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Resources.Contracts;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<RequestResponseLoggingBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : class
-    where TResponse: new()
+    where TResponse : ICommandResult, new()
 {
     private readonly ILogger<RequestResponseLoggingBehavior<TRequest, TResponse>> _logger = logger;
 
@@ -34,16 +34,25 @@ public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<Request
     {
         try
         {
-            _logger.LogDebug("Handling command {CommandName}: {@Command}", typeof(TRequest).Name, request);
+            _logger.LogDebug($"Handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
             var response = await next();
-            _logger.LogDebug("Command {CommandName} successfully completed with the following response: {@Response}", typeof(TRequest).Name, response);
+            if (response.Success)
+            {
+                _logger.LogDebug($"Command {{@{Common.Constants.Serilog.CommandKey}}} successfully completed with the following response: {{@{Common.Constants.Serilog.CommandResultKey}}}.", request, response);
+            }
+            else
+            {
+                _logger.LogDebug($"Command {{@{Common.Constants.Serilog.CommandKey}}} completed with no success having the following response: {{@{Common.Constants.Serilog.CommandResultKey}}}.", request, response);
+            }
 
             return response;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception occurred while handling command {CommandName}: {@Command}", typeof(TRequest).Name, request);
-            return new TResponse();
+            _logger.LogError(ex, $"Exception occurred while handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
+            var response = new TResponse();
+            response.ToFailure();
+            return response;
         }
     }
 }

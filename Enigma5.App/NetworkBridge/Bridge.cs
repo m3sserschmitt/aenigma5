@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -23,7 +23,11 @@ using Enigma5.App.Common.Utils;
 
 namespace Enigma5.App.NetworkBridge;
 
-public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnectionsProxy) : IDisposable
+public class Bridge(
+    IConfiguration configuration,
+    HubConnectionsProxy hubConnectionsProxy,
+    SimpleSingleThreadRunner singleThreadRunner,
+    ILogger<Bridge> logger) : IDisposable
 {
     private bool _disposed;
 
@@ -31,48 +35,56 @@ public class Bridge(IConfiguration configuration, HubConnectionsProxy hubConnect
 
     private readonly IConfiguration _configuration = configuration;
 
-    private readonly SimpleSingleThreadRunner _singleThreadRunner = new();
+    private readonly ILogger _logger = logger;
+
+    private readonly SimpleSingleThreadRunner _singleThreadRunner = singleThreadRunner;
 
     ~Bridge()
     {
         Dispose(false);
     }
 
-    public async Task<bool> StartAsync() => await _singleThreadRunner.RunAsync(async () =>
-    await _connections.LoadConnections() &&
-        RegisterEvents() &&
-        await _connections.StartAsync() &&
-        await _connections.StartAuthenticationAsync() &&
-        await _connections.TriggerBroadcast()
-    );
-
-    private bool RegisterEvents()
+    public async Task<bool> StartAsync(CancellationToken cancellationToken = default) => await _singleThreadRunner.RunAsync(async () =>
     {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}}...", nameof(StartAsync));
+        var result = await _connections.LoadConnectionsAsync(cancellationToken);
+        RegisterEvents();
+        result &= await _connections.StartAsync(cancellationToken);
+        result &= await _connections.StartAuthenticationAsync(cancellationToken);
+        result &= await _connections.TriggerBroadcastAsync(cancellationToken);
+        result &= await _connections.SyncMessagesAsync(cancellationToken);
+        result &= await _connections.CleanupAsync(cancellationToken);
+        return result;
+    }, _logger);
+
+    private void RegisterEvents()
+    {
+        _connections.OnAnyClosed -= OnConnectionClosedAsync;
         _connections.OnAnyClosed += OnConnectionClosedAsync;
-        return true;
     }
 
-    private Task<bool> RemoveConnection(ConnectionVector connectionVector)
-    => _singleThreadRunner.RunAsync(() => _connections.RemoveConnection(connectionVector));
+    private Task<bool> RemoveConnectionAsync(ConnectionVector connectionVector) => _singleThreadRunner.RunAsync(() =>
+    {
+        _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}} for connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}}...", nameof(RemoveConnectionAsync), connectionVector);
+        return _connections.RemoveConnection(connectionVector);
+    }, _logger);
 
     private async Task OnConnectionClosedAsync(Exception? ex, ConnectionVector connectionVector)
     {
-        await RemoveConnection(connectionVector);
-        for (int i = 0; i < _configuration.GetConnectionRetriesCount(); i++)
+        _logger.LogError(ex, $"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}} for connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} with exception.", nameof(OnConnectionClosedAsync), connectionVector);
+        await RemoveConnectionAsync(connectionVector);
         {
             await Task.Delay(_configuration.GetDelayBetweenConnectionRetries());
             try
             {
                 if (await StartAsync())
                 {
-                    break;
+                    _logger.LogDebug($"Invocation of {{{Common.Constants.Serilog.BridgeMethodNameKey}}} completed successfully. All connections were successfully established.", nameof(StartAsync));
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // TODO: Log failed attempt
-                Console.WriteLine("Failed attempt to reestablish connection.");
-                continue;
+                _logger.LogError(e, $"Exception encountered while invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}}. Retrying...", nameof(StartAsync));
             }
         }
     }

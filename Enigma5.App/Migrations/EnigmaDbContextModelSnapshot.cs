@@ -99,6 +99,10 @@ namespace App.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Uuid");
+
+                    b.HasIndex("Destination", "Sent");
+
                     b.ToTable("Messages");
                 });
 

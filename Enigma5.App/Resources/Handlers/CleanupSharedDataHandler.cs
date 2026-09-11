@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,19 +20,22 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
+using LinqKit;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupSharedDataHandler(EnigmaDbContext context)
-: IRequestHandler<CleanupSharedDataCommand, CommandResult<int>>
+public class CleanupSharedDataHandler(
+    IDbWriter dbWriter
+) : IRequestHandler<CleanupSharedDataCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(CleanupSharedDataCommand request, CancellationToken cancellationToken = default)
     {
-        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        _context.RemoveRange(_context.SharedData.Where(item => time > item.Timestamp));
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        var supTimestamp = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        var predicate = PredicateBuilder.New<SharedData>(item => supTimestamp > item.Timestamp);
+        return CommandResult.CreateResultSuccess(await _dbWriter.RemoveSharedDataAsync(predicate, cancellationToken));
     }
 }

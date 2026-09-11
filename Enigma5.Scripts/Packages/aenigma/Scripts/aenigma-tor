@@ -1,0 +1,142 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -Eeuo pipefail
+
+TORRC_FILE="/etc/tor/torrc"
+TOR_USER="debian-tor"
+
+# Function to display usage/help message
+show_help() {
+    echo "Usage: $0 -l LOCAL_ADDRESS -o ONION_PORT -s SERVICE_NAME [ -u AUTHORIZED_USER ] [ -c CONFIG_ADDRESS ]"
+    echo ""
+    echo "Options:"
+    echo "  -l LOCAL_ADDRESS    The local address your service is running (e.g. 127.0.0.1:8080)."
+    echo "  -o ONION_PORT       The port on which the onion service should accept connections (e.g. 80)."
+    echo "  -s SERVICE_NAME     Name of configured Onion Service (e.g. \"aenigma\")."
+    echo "  -u AUTHORIZED_USER  Add TOR service authorization for user (e.g. \"aenigma\" sets \"HiddenServiceAuthorizeClient stealth aenigma\")."
+    echo "  -c CONFIG_ADDRESS   Add hidden service address to aenigma config (1 -> update, 0 -> do not update)."
+    echo ""
+    echo "Example:"
+    echo "  sudo $0 -l 127.0.0.1:8080 -o 80 -s aenigma-dashboard -u admin"
+    exit 1
+}
+
+# ------------------------------
+# 0. Check root
+# ------------------------------
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+
+# Check if the script is run with sufficient arguments
+if [ "$#" -lt 6 ]; then
+    show_help
+fi
+
+# Parse command line arguments
+while getopts "l:o:s:u:c:h" opt; do
+    case $opt in
+        l) LOCAL_ADDRESS=$OPTARG ;;
+        o) ONION_PORT=$OPTARG ;;
+        s) SERVICE_NAME=$OPTARG ;;
+        u) AUTHORIZED_USER=$OPTARG ;;
+        c) CONFIG_ADDRESS=$OPTARG ;;
+        h) show_help ;;
+        *) show_help ;;
+    esac
+done
+
+# Check if LOCAL_ADDRESS, ONION_PORT and SERVICE_NAME are provided
+if [[ ! -v LOCAL_ADDRESS || ! -v ONION_PORT || ! -v SERVICE_NAME ]]; then
+    echo "Error: LOCAL_ADDRESS, ONION_PORT and SERVICE_NAME are required."
+    show_help
+fi
+
+TOR_SERVICE_DIR="/var/lib/tor/$SERVICE_NAME"
+ONION_SERVICE_ADDRESS_FILE="$TOR_SERVICE_DIR/hostname"
+
+# ------------------------------
+# 1. Install Tor
+# ------------------------------
+apt-get update -qq
+apt-get install -y tor
+
+# ------------------------------
+# 3. Ensure onion service directory and permissions
+#    (applied every run, not just on first creation)
+# ------------------------------
+mkdir -pv "$TOR_SERVICE_DIR"
+chown -R "$TOR_USER:$TOR_USER" "$TOR_SERVICE_DIR"
+chmod -R 700 "$TOR_SERVICE_DIR"
+
+# ------------------------------
+# 4. Configure torrc (idempotent, one port - one service)
+# ------------------------------
+if grep -Fxq "HiddenServiceDir ${TOR_SERVICE_DIR}" "$TORRC_FILE"; then
+    echo "Service '${SERVICE_NAME}' is already configured in ${TORRC_FILE}; leaving torrc untouched."
+else
+
+ONION_CONFIG="
+HiddenServiceDir ${TOR_SERVICE_DIR}
+HiddenServicePort ${ONION_PORT} ${LOCAL_ADDRESS}"
+echo "$ONION_CONFIG" >> "$TORRC_FILE"
+fi
+
+# ------------------------------
+# 5. Restart Tor to apply config
+# ------------------------------
+systemctl enable tor
+systemctl restart tor
+
+# ------------------------------
+# 6. Wait for hostname generation
+# ------------------------------
+echo "Waiting for onion service address to become available..."
+for i in {1..120}; do
+    if [[ -f "$ONION_SERVICE_ADDRESS_FILE" ]]; then
+        break
+    fi
+    sleep 1
+done
+
+if [[ ! -f "$ONION_SERVICE_ADDRESS_FILE" ]]; then
+    echo "Error: Onion service address was not generated."
+    exit 1
+fi
+
+# ------------------------------
+# 7. Configure client authorization (if requested)
+#    Done after the hostname exists, since aenigma-tor-auth requires it
+#    to embed the onion address in the generated private key file.
+# ------------------------------
+if [[ -v AUTHORIZED_USER ]]; then
+    aenigma-tor-auth -s "$SERVICE_NAME" -u "$AUTHORIZED_USER"
+fi
+
+# ------------------------------
+# 8. Output onion address
+# ------------------------------
+ONION_SERVICE_ADDRESS="$(cat "$ONION_SERVICE_ADDRESS_FILE")"
+echo -e "\e[31mOnion service address\e[0m: $ONION_SERVICE_ADDRESS"
+
+if [[ -v CONFIG_ADDRESS && ${CONFIG_ADDRESS} -eq 1 ]]; then
+    aenigma-config -p "OnionService" -v "http://$ONION_SERVICE_ADDRESS"
+fi
+
+exit 0

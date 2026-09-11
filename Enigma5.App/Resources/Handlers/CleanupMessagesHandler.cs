@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,22 +20,25 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
+using LinqKit;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CleanupMessagesHandler(EnigmaDbContext context)
-: IRequestHandler<CleanupMessagesCommand, CommandResult<int>>
+public class CleanupMessagesHandler(
+    IDbWriter dbWriter
+) : IRequestHandler<CleanupMessagesCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(CleanupMessagesCommand request, CancellationToken cancellationToken = default)
     {
-        var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        var deliveredTime = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
-        _context.Messages.RemoveRange(_context.Messages.Where(item =>
-            (!item.Sent && time > item.Timestamp) || (item.Sent && item.SentTimestamp != null && deliveredTime > item.SentTimestamp))
-        );
-        return CommandResult.CreateResultSuccess(await _context.SaveChangesAsync(cancellationToken));
+        var supTimestamp = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
+        var supDeliveredTimeSpan = (DateTimeOffset.UtcNow - request.DeliveredTimeSpan).ToUnixTimeSeconds();
+        var predicate = PredicateBuilder.New<PendingMessage>(item =>
+            (!item.Sent && supTimestamp > item.Timestamp) ||
+            (item.Sent && item.SentTimestamp != null && supDeliveredTimeSpan > item.SentTimestamp));
+        return CommandResult.CreateResultSuccess(await _dbWriter.RemoveMessagesAsync(predicate, cancellationToken));
     }
 }

@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Common.Utils;
 
-public sealed class SimpleSingleThreadRunner : IDisposable
+public class SimpleSingleThreadRunner : IDisposable
 {
     private const string EXCEPTION_MESSAGE = "Exception encountered while doing work on single thread executor";
 

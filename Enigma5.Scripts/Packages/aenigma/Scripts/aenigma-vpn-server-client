@@ -1,0 +1,103 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -Eeuo pipefail
+ 
+umask 077
+ 
+SERVICE_USER="openvpn"
+OPENVPN_DIRECTORY="/etc/openvpn"
+EASYRSA_DIRECTORY="$OPENVPN_DIRECTORY/easy-rsa"
+EASYRSA="$EASYRSA_DIRECTORY/easyrsa"
+EASYRSA_PKI="$EASYRSA_DIRECTORY/pki"
+export EASYRSA_PKI
+
+show_help() {
+    echo "Usage: $0 -c CLIENT_NAME -d DOMAIN"
+    echo ""
+    echo "Options:"
+    echo "  -c CLIENT_NAME  Name for the client certificate (e.g., john)"
+    echo "  -d DOMAIN       The domain name for the server (e.g., example.com)"
+    echo ""
+    echo "Example:"
+    echo "  sudo $0 -c john -d example.com"
+    exit 1
+}
+
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+
+if [ "$#" -lt 4 ]; then
+    show_help
+fi
+
+while getopts "c:d:h" opt; do
+    case $opt in
+        c) CLIENT_NAME=$OPTARG ;;
+        d) DOMAIN=$OPTARG ;;
+        h) show_help ;;
+        *) show_help ;;
+    esac
+done
+
+if [[ ! -v CLIENT_NAME || ! -v DOMAIN ]]; then
+    echo "Error: CLIENT_NAME and DOMAIN are required."
+    show_help
+fi
+
+[[ ! -f "${EASYRSA_PKI}/ca.crt" ]] && { echo "ERROR: CA not found. Setup the server and CA first."; exit 1; }
+
+SERVER_DIRECTORY="$OPENVPN_DIRECTORY/$DOMAIN"
+CLIENT_DIR="$OPENVPN_DIRECTORY/clients/$CLIENT_NAME"
+
+[[ ! -f "$SERVER_DIRECTORY/ta.key" ]] && { echo "ERROR: $SERVER_DIRECTORY/ta.key not found. Setup the server for '$DOMAIN' first."; exit 1; }
+ 
+# Refuse to regenerate an already-issued client certificate: re-running
+# gen-req for an existing CLIENT_NAME would silently overwrite its private
+# key with a new, unrelated one, and the following sign-req would then
+# fail because a certificate for that CN already exists - leaving the PKI
+# in an inconsistent state.
+if [[ -f "${EASYRSA_PKI}/issued/${CLIENT_NAME}.crt" ]]; then
+    echo "ERROR: A certificate for '$CLIENT_NAME' is already issued at ${EASYRSA_PKI}/issued/${CLIENT_NAME}.crt"
+    echo "Refusing to regenerate it, as this would invalidate the existing private key."
+    echo "Revoke the existing certificate with easyrsa first if you need to reissue it."
+    exit 1
+fi
+
+mkdir -p "$CLIENT_DIR"
+
+"$EASYRSA" --batch gen-req "$CLIENT_NAME" nopass
+# CA is passphrase-protected: you will be prompted for the CA passphrase
+# to sign this new client certificate.
+"$EASYRSA" --batch sign-req client "$CLIENT_NAME"
+cp -v "$EASYRSA_PKI/ca.crt"                   "$CLIENT_DIR/"
+cp -v "$EASYRSA_PKI/issued/$CLIENT_NAME.crt"  "$CLIENT_DIR/"
+cp -v "$EASYRSA_PKI/private/$CLIENT_NAME.key" "$CLIENT_DIR/"
+chmod 700 "$EASYRSA_PKI/private"
+chmod 600 "$EASYRSA_PKI/private"/*.key
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
+chmod -v 600 "$CLIENT_DIR/$CLIENT_NAME.key"
+cp -v "$SERVER_DIRECTORY/ta.key" "$CLIENT_DIR/"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
+chmod -v 600 "$CLIENT_DIR/ta.key"
+
+echo ""
+echo "Client certificate created."
+echo "  Files location: $CLIENT_DIR/"
+echo "  Copy this directory to $OPENVPN_DIRECTORY/clients/$CLIENT_NAME/ on the client machine."

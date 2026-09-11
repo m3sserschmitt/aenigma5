@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -37,7 +37,7 @@ public interface ICertificateManager
 
     Task<bool> RemoveMasterPassphraseAsync();
 
-    Task<bool> SetupAsync(char[]? passphrase);
+    Task<bool> SetupAsync(char[] passphrase);
 
     Task<IEnvelopeUnsealer> CreateUnsealerAsync();
 

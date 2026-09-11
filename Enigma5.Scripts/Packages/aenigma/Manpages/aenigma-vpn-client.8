@@ -1,0 +1,150 @@
+.TH AENIGMA-VPN-CLIENT 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-vpn-client \- configure and start an OpenVPN client connection
+.SH SYNOPSIS
+.B aenigma-vpn-client
+.B \-c
+.I CLIENT_NAME
+.B \-d
+.I DOMAIN
+.B \-p
+.I PORT
+.br
+.B aenigma-vpn-client
+.B \-h
+.SH DESCRIPTION
+.B aenigma-vpn-client
+installs OpenVPN and
+.BR openvpn-systemd-resolved (8)
+if necessary, writes an OpenVPN client configuration for a previously
+issued client identity, and enables and starts it as a systemd
+.B openvpn@
+service instance.
+.PP
+This script is intended to run on the client machine, which is expected
+to be
+.B separate
+from the VPN server. It does not generate or sign any certificates
+itself; it expects the client's certificate, private key, the server's
+CA certificate, and the shared TLS-auth key to have already been issued
+on the server (by a separate client-certificate issuance script) and
+copied into place on this machine beforehand.
+.PP
+.B aenigma-vpn-client
+must be run as root, since it creates the unprivileged
+.I openvpn
+system user if it does not already exist, changes ownership of the
+client's private key files, and manages the
+.B openvpn@
+systemd service.
+.SH OPTIONS
+.TP
+.BI \-c " CLIENT_NAME"
+Identifier of the client identity being configured, e.g.
+.IR john .
+Must match the name used when the client certificate was issued, and
+determines where this script looks for the client's files:
+.IR /etc/openvpn/clients/ CLIENT_NAME.
+Required.
+.TP
+.BI \-d " DOMAIN"
+Domain name or address of the VPN server to connect to, e.g.
+.IR example.com .
+Used as the
+.B remote
+target in the generated configuration and to name the resulting
+config file and systemd instance. Required.
+.TP
+.BI \-p " PORT"
+UDP port the VPN server listens on, e.g.
+.IR 1194 .
+Must match the port the server was provisioned with. Required.
+.TP
+.B \-h
+Display usage information and exit.
+.SH PREREQUISITES
+Before running
+.BR aenigma-vpn-client ,
+the following files must already exist under
+.IB /etc/openvpn/clients/ CLIENT_NAME
+on this machine, copied over from the server (or wherever the client
+certificate was issued):
+.RS
+.IP \(bu 2
+.B ca.crt
+\(em the server's certificate authority certificate
+.IP \(bu 2
+.IB CLIENT_NAME .crt
+\(em the client's signed certificate
+.IP \(bu 2
+.IB CLIENT_NAME .key
+\(em the client's private key
+.IP \(bu 2
+.B ta.key
+\(em the shared TLS-auth key generated on the server
+.RE
+.PP
+.B aenigma-vpn-client
+verifies each of these files is present before making any changes, and
+exits with a clear error naming the missing file if one is not found.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; the client configuration was written and the
+.B openvpn@
+service was started.
+.TP
+.B 1
+Invoked without root privileges, called with insufficient or invalid
+arguments, the client's file directory does not exist, or one of the
+required files listed under
+.SM PREREQUISITES
+is missing.
+.SH FILES
+.TP
+.IB /etc/openvpn/clients/ CLIENT_NAME
+Directory expected to already contain the client's certificate, private
+key, CA certificate, and TLS-auth key (see
+.SM PREREQUISITES ).
+The private key and TLS-auth key are set to mode 0600, owned by
+.IR openvpn ,
+by this script.
+.TP
+.IB /etc/openvpn/ DOMAIN .conf
+Generated OpenVPN client configuration.
+.TP
+.I /etc/openvpn/update-systemd-resolved
+DNS update script invoked by the generated configuration's
+.B up
+/
+.B down
+hooks, provided by the
+.I openvpn-systemd-resolved
+package, to keep the system's DNS resolution in sync with what the VPN
+server pushes for the duration of the connection.
+.SH NOTES
+.IP \(bu 2
+The generated configuration file is named after
+.IR DOMAIN ,
+not
+.IR CLIENT_NAME .
+Running this script again for a different
+.I CLIENT_NAME
+against the same
+.I DOMAIN
+overwrites the existing configuration for that domain, switching the
+.B openvpn@ DOMAIN
+service to use the newly specified client identity instead.
+.IP \(bu 2
+This script performs no certificate generation, so re-running it for the
+same
+.I CLIENT_NAME
+and
+.I DOMAIN
+is safe and idempotent: it simply reapplies file ownership/permissions,
+rewrites an equivalent configuration file, and restarts the service.
+.SH SEE ALSO
+.BR openvpn (8),
+.BR systemctl (1)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

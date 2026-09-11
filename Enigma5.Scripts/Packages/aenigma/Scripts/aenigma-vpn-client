@@ -1,0 +1,123 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -Eeuo pipefail
+ 
+SERVICE_USER="openvpn"
+OPENVPN_DIRECTORY="/etc/openvpn"
+
+show_help() {
+    echo "Usage: $0 -c CLIENT_NAME -d DOMAIN -p PORT"
+    echo ""
+    echo "Options:"
+    echo "  -c CLIENT_NAME  Name of the client certificate (e.g., john)"
+    echo "  -d DOMAIN       The domain name of the server (e.g., example.com)"
+    echo "  -p PORT         VPN port (e.g., 1194)"
+    echo ""
+    echo "Example:"
+    echo "  sudo $0 -c john -d example.com -p 1194"
+    exit 1
+}
+
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+
+if [ "$#" -lt 6 ]; then
+    show_help
+fi
+
+while getopts "c:d:p:h" opt; do
+    case $opt in
+        c) CLIENT_NAME=$OPTARG ;;
+        d) DOMAIN=$OPTARG ;;
+        p) PORT=$OPTARG ;;
+        h) show_help ;;
+        *) show_help ;;
+    esac
+done
+
+if [[ ! -v CLIENT_NAME || ! -v DOMAIN || ! -v PORT ]]; then
+    echo "Error: CLIENT_NAME, DOMAIN and PORT are required."
+    show_help
+fi
+
+apt-get update -qq
+apt-get install -y openvpn openvpn-systemd-resolved
+
+CLIENT_DIR="$OPENVPN_DIRECTORY/clients/$CLIENT_NAME"
+[[ ! -d "$CLIENT_DIR" ]] && { echo "ERROR: $CLIENT_DIR not found. Make sure to copy client files from server"; exit 1; }
+
+for REQUIRED_FILE in ca.crt "$CLIENT_NAME.crt" "$CLIENT_NAME.key" ta.key; do
+    if [[ ! -f "$CLIENT_DIR/$REQUIRED_FILE" ]]; then
+        echo "ERROR: $CLIENT_DIR/$REQUIRED_FILE not found. Make sure to copy client files from server"
+        exit 1
+    fi
+done
+ 
+# Create unprivileged openvpn user/group if they don't exist
+if ! id "$SERVICE_USER" &>/dev/null; then
+    echo "Creating user '$SERVICE_USER' for the service..."
+    useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+fi
+
+# Protect private key files
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/$CLIENT_NAME.key"
+chmod -v 600 "$CLIENT_DIR/$CLIENT_NAME.key"
+chown -v "$SERVICE_USER:$SERVICE_USER" "$CLIENT_DIR/ta.key"
+chmod -v 600 "$CLIENT_DIR/ta.key"
+
+cat > "$OPENVPN_DIRECTORY/$DOMAIN.conf" << CONF
+client
+dev tun
+proto udp
+tun-mtu 1378
+
+remote $DOMAIN $PORT
+resolv-retry infinite
+nobind
+
+user $SERVICE_USER
+group $SERVICE_USER
+
+persist-key
+persist-tun
+
+ca   $CLIENT_DIR/ca.crt
+cert $CLIENT_DIR/$CLIENT_NAME.crt
+key  $CLIENT_DIR/$CLIENT_NAME.key
+
+remote-cert-tls server
+tls-auth $CLIENT_DIR/ta.key 1
+ 
+script-security 2
+up /etc/openvpn/update-systemd-resolved
+down /etc/openvpn/update-systemd-resolved
+down-pre
+
+verb 3
+CONF
+
+systemctl enable "openvpn@${DOMAIN}"
+systemctl restart "openvpn@${DOMAIN}"
+
+echo ""
+echo "Client config created and service started."
+echo "  Config file: $OPENVPN_DIRECTORY/$DOMAIN.conf"
+echo "  Service:     openvpn@${DOMAIN}"
+echo "  Check status with: systemctl status openvpn@${DOMAIN}"

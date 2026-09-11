@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,17 +20,22 @@
 
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
-: IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult>
+public class IncrementSharedDataAccessCountHandler(
+    EnigmaDbContext context,
+    IDbWriter dbWriter
+) : IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<int>>
 {
     private readonly EnigmaDbContext _context = context;
 
-    public async Task<CommandResult> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
+    private readonly IDbWriter _dbWriter = dbWriter;
+
+    public async Task<CommandResult<int>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(
             item => item.Tag == request.Tag,
@@ -38,20 +43,10 @@ public class IncrementSharedDataAccessCountHandler(EnigmaDbContext context)
 
         if (sharedData is not null)
         {
-            sharedData.AccessCount += 1;
-            if (sharedData.AccessCount >= sharedData.MaxAccessCount)
-            {
-                _context.Remove(sharedData);
-            }
-            else
-            {
-                _context.Update(sharedData);
-            }
-            
-            await _context.SaveChangesAsync(cancellationToken);
-            return CommandResult.CreateResultSuccess();
+            var result = await _dbWriter.IncrementSharedDataAccessCountAsync(sharedData, cancellationToken);
+            return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
         }
 
-        return CommandResult.CreateResultSuccess();
+        return CommandResult.CreateResultFailure<int>();
     }
 }

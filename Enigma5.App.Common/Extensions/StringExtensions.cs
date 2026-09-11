@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -21,11 +21,32 @@
 using System.Text.RegularExpressions;
 using QRCoder;
 using System.Buffers.Text;
+using System.Net;
 
 namespace Enigma5.App.Common.Extensions;
 
 public static partial class StringExtensions
 {
+    public static bool MatchUrl(this string? url, IPAddress ipAddress, int port)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var parsedUrl))
+        {
+            return false;
+        }
+
+        if (!IPAddress.TryParse(parsedUrl.Host, out var parsedIpAddress))
+        {
+            return false;
+        }
+
+        if (parsedIpAddress.Equals(IPAddress.Any))
+        {
+            return parsedUrl.Port == port;
+        }
+
+        return parsedIpAddress.Normalize().Equals(ipAddress.Normalize()) && parsedUrl.Port == port;
+    }
+
     private static readonly Regex OnionRegex = OnionAddressRegex();
 
     public static bool IsValidOnionAddress(this string? value)

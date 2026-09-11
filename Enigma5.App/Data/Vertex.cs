@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -73,7 +73,7 @@ public class Vertex(Neighborhood neighborhood, string? publicKey, string? signed
         => CreateAsync(certificateManager, [], hostname, onionService);
 
         public static Vertex Create(string? address)
-        => new(new([], address, null, null, DateTimeOffset.Now), null, null);
+        => new(new([], address, null, null, DateTimeOffset.UtcNow), null, null);
 
         public static class Prototype
         {
