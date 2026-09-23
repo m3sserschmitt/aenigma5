@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Models.Contracts.Hubs;
 using Enigma5.App.Models.HubInvocation;
 using Microsoft.AspNetCore.SignalR;
 
@@ -30,13 +31,13 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
     public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         _logger.LogDebug(
-            $"Invoking {{{nameof(invocationContext.HubMethodName)}}} for connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} with the following data: {{@{nameof(invocationContext.HubMethodArguments)}}}.",
+            $"Invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{nameof(Common.Constants.Serilog.ConnectionIdKey)}}} with the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
             invocationContext.HubMethodName,
             invocationContext.Context.ConnectionId,
             invocationContext.HubMethodArguments
         );
 
-        dynamic? result = null;
+        object? result = null;
         try
         {
             result = await next(invocationContext);
@@ -45,34 +46,48 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
         {
             _logger.LogError(
                 ex,
-                $"Exception encountered while invoking {{{nameof(invocationContext.HubMethodName)}}} method on {{{nameof(invocationContext.Context.ConnectionId)}}} connectionId.",
+                $"Exception encountered while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} method on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} with the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
                 invocationContext.HubMethodName,
-                invocationContext.Context.ConnectionId
+                invocationContext.Context.ConnectionId,
+                invocationContext.HubMethodArguments
                 );
         }
 
         if (result is null)
         {
             _logger.LogError(
-                $"Invocation of {{{nameof(invocationContext.HubMethodName)}}} for {{{nameof(invocationContext.Context.ConnectionId)}}} completed with null result.",
+                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with null result having the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
                 invocationContext.HubMethodName,
-                invocationContext.Context.ConnectionId
+                invocationContext.Context.ConnectionId,
+                invocationContext.HubMethodArguments
                 );
-            return EmptyErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
+            return ErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
         }
 
-        if (!result.Success)
+        if (result is IInvocationResult invocationResult)
         {
-            _logger.LogDebug(
-                $"Invocation of {{{nameof(invocationContext.HubMethodName)}}} for {{{nameof(invocationContext.Context.ConnectionId)}}} completed with no success.",
-                invocationContext.HubMethodName,
-                invocationContext.Context.ConnectionId
-                );
+            if (!invocationResult.Success)
+            {
+                _logger.LogDebug(
+                    $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with no success with the following errors {{@{Common.Constants.Serilog.HubMethodInvocationErrorsKey}}}.",
+                    invocationContext.HubMethodName,
+                    invocationContext.Context.ConnectionId,
+                    invocationResult.Errors
+                    );
+            }
+            else
+            {
+                _logger.LogDebug(
+                    $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed successfully.",
+                    invocationContext.HubMethodName,
+                    invocationContext.Context.ConnectionId
+                    );
+            }
         }
         else
         {
-            _logger.LogDebug(
-                $"Invocation of {{{nameof(invocationContext.HubMethodName)}}} for {{{nameof(invocationContext.Context.ConnectionId)}}} completed successfully.",
+            _logger.LogError(
+                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with unexpected result.",
                 invocationContext.HubMethodName,
                 invocationContext.Context.ConnectionId
                 );

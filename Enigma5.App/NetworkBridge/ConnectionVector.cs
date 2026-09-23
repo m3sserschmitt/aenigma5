@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -41,6 +41,10 @@ public class ConnectionVector : IDisposable
 
     private bool _targetAuthenticated;
 
+    private bool _sourceToTargetSynchronized;
+
+    private bool _targetToSourceSynchronized;
+
     private string? _sourceAddress;
 
     private string? _targetAddress;
@@ -58,6 +62,8 @@ public class ConnectionVector : IDisposable
     private readonly NetworkGraphValidationPolicy _networkGraphValidationPolicy;
 
     private readonly ICertificateManager _certificateManager;
+
+    private readonly ILogger _logger;
 
     public string? SourceAddress
     {
@@ -106,13 +112,14 @@ public class ConnectionVector : IDisposable
         string? impersonateServiceAddress,
         NetworkGraphValidationPolicy networkGraphValidationPolicy,
         ICertificateManager certificateManager,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger logger)
     {
         _source = CreateHubConnection(sourceUrl, options =>
         {
             if (!string.IsNullOrWhiteSpace(impersonateServiceAddress))
             {
-                options.Headers.Add(Constants.XImpersonateServiceHeader, impersonateServiceAddress);
+                options.Headers.Add(Constants.XImpersonateServiceHeaderKey, impersonateServiceAddress);
             }
         });
         _target = CreateHubConnection(targetUrl, options =>
@@ -145,6 +152,7 @@ public class ConnectionVector : IDisposable
         _target.Closed += OnTargetClosed;
 
         _impersonateServiceAddress = impersonateServiceAddress;
+        _logger = logger;
     }
 
     private ConnectionVector(ConnectionVector connectionVector, bool reversed)
@@ -157,6 +165,7 @@ public class ConnectionVector : IDisposable
         _certificateManager = connectionVector._certificateManager;
         _impersonateServiceAddress = connectionVector._impersonateServiceAddress;
         _networkGraphValidationPolicy = connectionVector._networkGraphValidationPolicy;
+        _logger = connectionVector._logger;
     }
 
     ~ConnectionVector()
@@ -171,41 +180,48 @@ public class ConnectionVector : IDisposable
     => _source.On(method, handler);
 
     public async Task<bool> InvokeTargetAsync(string method, object? data, CancellationToken cancellationToken = default)
-    => await InvokeAsync(_target, method, data, cancellationToken);
+    {
+        _logger.LogDebug($"Invoking target {{{Constants.Serilog.HubMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}} with the following {{@{Constants.Serilog.HubMethodArgumentsKey}}}.", method, this, data);
+        return await InvokeAsync(_target, method, data, cancellationToken);
+    }
 
     public async Task<bool> InvokeSourceAsync(string method, object? data, CancellationToken cancellationToken = default)
-    => await InvokeAsync(_source, method, data, cancellationToken);
-
-    public async Task<bool> InvokeTargetAsync(string method, CancellationToken cancellationToken = default)
-    => await InvokeAsync(_target, method, cancellationToken);
-
-    public async Task<bool> InvokeSourceAsync(string method, CancellationToken cancellationToken = default)
-    => await InvokeAsync(_source, method, cancellationToken);
-
-    public async Task<bool> StopTargetAsync(CancellationToken cancellationToken = default)
-    => await StopAsync(_target, cancellationToken);
-
-    public async Task<bool> StopSourceAsync(CancellationToken cancellationToken = default)
-    => await StopAsync(_source, cancellationToken);
+    {
+        _logger.LogDebug($"Invoking source {{{Constants.Serilog.HubMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}} with the following {{@{Constants.Serilog.HubMethodArgumentsKey}}}.", method, this, data);
+        return await InvokeAsync(_source, method, data, cancellationToken);
+    }
 
     public async Task<bool> StartAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            if (_source.State == HubConnectionState.Disconnected)
-            {
-                await _source.StartAsync(cancellationToken);
-            }
-
+            _logger.LogDebug($"Invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAsync), this);
             if (_target.State == HubConnectionState.Disconnected)
             {
+                _logger.LogDebug($"Starting target connection for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
                 await _target.StartAsync(cancellationToken);
+            }
+            else
+            {
+                _logger.LogDebug($"Target already started for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+            }
+
+            if (_source.State == HubConnectionState.Disconnected)
+            {
+                _logger.LogDebug($"Starting source connection for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+                await _source.StartAsync(cancellationToken);
+            }
+            else
+            {
+                _logger.LogDebug($"Source already started for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
             }
 
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAsync), this);
+            await OnTargetClosed(ex);
             return false;
         }
     }
@@ -213,15 +229,108 @@ public class ConnectionVector : IDisposable
     public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
 
+    public async Task<bool> CleanupAsync(HubConnection connection, CancellationToken cancellationToken = default)
+    {
+        if (!Authenticated || !Connected)
+        {
+            _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started or synchronized. Aborting...", this);
+            return false;
+        }
+
+        try
+        {
+            var result1 = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Cleanup), cancellationToken);
+            return result1.Success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(CleanupAsync), this);
+            return false;
+        }
+    }
+
+    public async Task<bool> CleanupAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Cleaning up source for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, cancellationToken);
+        _logger.LogDebug($"Cleaning up target for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, cancellationToken);
+        var result = result1 && result2;
+        if (!result)
+        {
+            await StopAsync(cancellationToken);
+        }
+        return result;
+    }
+
+    private async Task<bool> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
+    {
+        if (!Authenticated || !Connected)
+        {
+            _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started. Aborting...", this);
+            return false;
+        }
+
+        try
+        {
+            var pendingMessages = new List<PendingMessageDto>();
+            do
+            {
+                var pullResult = await c1.InvokeAsync<InvocationResultDto<List<PendingMessageDto>>>(nameof(IEnigmaHub.Pull2), new PullRequestDto(pendingMessages.LastOrDefault()?.Id), cancellationToken);
+                if (!pullResult.Success)
+                {
+                    _logger.LogError($"Failed to pull pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                    return false;
+                }
+                pendingMessages = pullResult.Data ?? [];
+                foreach (var message in pendingMessages)
+                {
+                    var routeResult = await c2.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.RouteMessage), new RoutingRequestDto([message.Content], message.Uuid), cancellationToken);
+                    if (!routeResult.Success)
+                    {
+                        _logger.LogError($"Failed to route pending message on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                        return false;
+                    }
+                }
+
+            } while (pendingMessages.Count > 0);
+            _logger.LogDebug($"Pending messages synchronized on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SyncMessagesAsync), this);
+            return false;
+        }
+    }
+
+    public async Task<bool> SyncMessagesAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug($"Syncing source to target pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        _sourceToTargetSynchronized = await SyncMessagesAsync(_source, _target, cancellationToken);
+        _logger.LogDebug($"Syncing target to source pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+        _targetToSourceSynchronized = await SyncMessagesAsync(_target, _source, cancellationToken);
+        var result = _sourceToTargetSynchronized && _targetToSourceSynchronized;
+        if (!result)
+        {
+            await StopAsync(cancellationToken);
+        }
+        return result;
+    }
+
     public async Task<bool> StartAuthenticationAsync(CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug($"Invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAuthenticationAsync), this);
         if (Authenticated)
         {
+            _logger.LogDebug($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} already authenticated. Skipping...", this);
             return true;
         }
 
         if (!Connected)
         {
+            _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started. Aborting...", this);
+            await StopAsync(cancellationToken);
             return false;
         }
 
@@ -231,13 +340,15 @@ public class ConnectionVector : IDisposable
             SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
             SourceAddress = reversedVector.TargetAddress;
 
-            return Authenticated;
+            return Authenticated || (await StopAsync(cancellationToken) && false);
         }
 
         try
         {
-            if (!await RequestTargetVertex(cancellationToken))
+            if (!await RequestTargetVertexAsync(cancellationToken))
             {
+                _logger.LogError($"Requesting target vertex failed for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}. Aborting...", this);
+                await StopAsync(cancellationToken);
                 return false;
             }
 
@@ -245,13 +356,17 @@ public class ConnectionVector : IDisposable
 
             if (!nonce.Success || nonce.Data is null)
             {
+                _logger.LogError($"Invalid nonce returned from target on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                await StopAsync(cancellationToken);
                 return false;
             }
 
-            var signature = await SignToken(nonce.Data);
+            var signature = await SignNonceAsync(nonce.Data);
 
             if (signature is null)
             {
+                _logger.LogError($"Signing nonce failed for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                await StopAsync(cancellationToken);
                 return false;
             }
 
@@ -261,118 +376,144 @@ public class ConnectionVector : IDisposable
                 cancellationToken: cancellationToken);
             TargetAuthenticated = authentication.Success && authentication.Data;
 
+            if (TargetAuthenticated)
+            {
+                _logger.LogDebug($"Target authenticated for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+            }
+            else
+            {
+                _logger.LogError($"Authentication failed for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+            }
+
             if (!IsReversed && TargetAuthenticated)
             {
                 var reversedVector = Reversed();
                 SourceAuthenticated = await reversedVector.StartAuthenticationAsync(cancellationToken);
                 SourceAddress = reversedVector.TargetAddress;
 
-                return Authenticated;
+                return Authenticated || (await StopAsync(cancellationToken) && false);
             }
 
-            return TargetAuthenticated;
+            return TargetAuthenticated || (await StopAsync(cancellationToken) && false);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Error encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StartAuthenticationAsync), this);
+            await StopAsync(cancellationToken);
             return false;
         }
     }
 
-    private async Task<SignatureDto?> SignToken(string nonce)
+    private async Task<SignatureDto?> SignNonceAsync(string nonce)
     {
-        var publicKey = await _certificateManager.GetPublicKeyAsync();
-        if (string.IsNullOrWhiteSpace(publicKey))
+        try
         {
-            return null;
-        }
+            _logger.LogDebug($"Invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SignNonceAsync), this);
 
-        var decodedNonce = Convert.FromBase64String(nonce);
-        if (decodedNonce is null)
-        {
-            return null;
-        }
-
-        using var signer = await _certificateManager.CreateSignerAsync();
-        var data = signer.Sign(decodedNonce);
-
-        if (data == null)
-        {
-            return null;
-        }
-
-        var encodedData = Convert.ToBase64String(data);
-
-        if (encodedData is null)
-        {
-            return null;
-        }
-
-        return new(encodedData, publicKey);
-    }
-
-    private async Task<bool> RequestTargetVertex(CancellationToken cancellationToken = default)
-    {
-        var response = await _target.InvokeAsync<InvocationResultDto<Vertex>>(nameof(IEnigmaHub.GetLocalVertex), cancellationToken);
-        var vertex = response.Data;
-        if (vertex == null || !response.Success)
-        {
-            return false;
-        }
-
-        TargetAddress = vertex?.Neighborhood?.Address;
-        if (!string.IsNullOrWhiteSpace(ImpersonateServiceAddress) && TargetAddress != ImpersonateServiceAddress)
-        {
-            if (TargetAddress != await _certificateManager.GetAddressAsync())
+            var publicKey = await _certificateManager.GetPublicKeyAsync();
+            if (string.IsNullOrWhiteSpace(publicKey))
             {
+                _logger.LogError($"Public key not available while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SignNonceAsync), this);
+                return null;
+            }
+
+            var decodedNonce = Convert.FromBase64String(nonce);
+            if (decodedNonce is null)
+            {
+                _logger.LogError($"Nonce could not be base64 decoded while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SignNonceAsync), this);
+                return null;
+            }
+
+            using var signer = await _certificateManager.CreateSignerAsync();
+            var data = signer.Sign(decodedNonce);
+
+            if (data == null)
+            {
+                _logger.LogError($"Data could not be signed while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SignNonceAsync), this);
+                return null;
+            }
+
+            var encodedData = Convert.ToBase64String(data);
+
+            if (encodedData is null)
+            {
+                _logger.LogError($"Signed data could not be base64 encoded while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SignNonceAsync), this);
+                return null;
+            }
+
+            return new(encodedData, publicKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SignNonceAsync), this);
+            return null;
+        }
+    }
+
+    private async Task<bool> RequestTargetVertexAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug($"Invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(RequestTargetVertexAsync), this);
+            var response = await _target.InvokeAsync<InvocationResultDto<Vertex>>(nameof(IEnigmaHub.GetLocalVertex), cancellationToken);
+            var vertex = response.Data;
+            if (vertex == null || !response.Success)
+            {
+                _logger.LogError($"Invalid response encountered while requesting target vertex on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
                 return false;
             }
+
+            TargetAddress = vertex?.Neighborhood?.Address;
+            if (!string.IsNullOrWhiteSpace(ImpersonateServiceAddress) && TargetAddress != ImpersonateServiceAddress)
+            {
+                if (TargetAddress != await _certificateManager.GetAddressAsync())
+                {
+                    _logger.LogError($"Unexpected target address received on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
+                    return false;
+                }
+            }
+
+            return vertex != null && _networkGraphValidationPolicy.Validate(vertex);
         }
-
-        return vertex != null && _networkGraphValidationPolicy.Validate(vertex);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(RequestTargetVertexAsync), this);
+            return false;
+        }
     }
 
-    private Task OnSourceClosed(Exception? ex)
+    private async Task OnSourceClosed(Exception? ex)
     {
+        _logger.LogError(ex, $"Source closed on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
         SourceAuthenticated = false;
-        return _target.StopAsync();
+        await StopAsync(_target);
     }
 
-    private Task OnTargetClosed(Exception? ex)
+    private async Task OnTargetClosed(Exception? ex)
     {
+        _logger.LogError(ex, $"Target closed on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
         TargetAuthenticated = false;
-        _source.StopAsync();
-        return Closed?.Invoke(ex, this) ?? Task.CompletedTask;
+        await StopAsync(_source);
+        _ = Task.Run(() => Closed?.Invoke(ex, this));
     }
 
     private ConnectionVector Reversed() => new(this, true);
 
-    private static async Task<bool> InvokeAsync(HubConnection connection, string method, object? data, CancellationToken cancellationToken = default)
+    private async Task<bool> InvokeAsync(HubConnection connection, string method, object? data, CancellationToken cancellationToken = default)
     {
         try
         {
             await connection.InvokeAsync(method, data, cancellationToken);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Exception while invoking {{{Constants.Serilog.HubMethodNameKey}}} with the following data {{@{Constants.Serilog.HubMethodArgumentsKey}}}.", method, data);
             return false;
         }
     }
 
-    private static async Task<bool> InvokeAsync(HubConnection connection, string method, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await connection.InvokeAsync(method, cancellationToken);
-            return true;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    }
-
-    private static async Task<bool> StopAsync(HubConnection connection, CancellationToken cancellationToken = default)
+    private async Task<bool> StopAsync(HubConnection connection, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -383,8 +524,9 @@ public class ConnectionVector : IDisposable
 
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, $"Error while invoking {{{Constants.Serilog.HubMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(StopAsync), this);
             return false;
         }
     }
@@ -417,7 +559,8 @@ public class ConnectionVector : IDisposable
         PeerDto peer,
         NetworkGraphValidationPolicy networkGraphValidationPolicy,
         ICertificateManager certificateManager,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger logger)
     => new(
         sourceHubUrl,
         (string.IsNullOrWhiteSpace(peer.Host) ? null : peer.Host)
@@ -425,12 +568,22 @@ public class ConnectionVector : IDisposable
         peer.Address,
         networkGraphValidationPolicy,
         certificateManager,
-        configuration);
+        configuration,
+        logger);
 
     private static HubConnection CreateHubConnection(string baseUrl, Action<HttpConnectionOptions> httpOptions)
-    => new HubConnectionBuilder().WithUrl(
+    {
+        var connection = new HubConnectionBuilder().WithUrl(
         $"{baseUrl.Trim('/')}/{Constants.OnionRoutingEndpoint}",
-        options => httpOptions(options)).Build();
+        options => httpOptions(options))
+        .WithAutomaticReconnect(Constants.SignalRReconnectDelays)
+        .WithKeepAliveInterval(Constants.SignalRKeepAliveInterval)
+        .WithServerTimeout(Constants.SignalRServerTimeoutInterval)
+        .WithStatefulReconnect()
+        .Build();
+        connection.HandshakeTimeout = Constants.SignalRHandshakeTimeout;
+        return connection;
+    }
 
     public static HubConnection CreateHubConnection(string baseUrl) => CreateHubConnection(baseUrl, x => { });
 
@@ -439,9 +592,10 @@ public class ConnectionVector : IDisposable
         List<PeerDto> peers,
         NetworkGraphValidationPolicy networkGraphValidationPolicy,
         ICertificateManager certificateManager,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger logger)
     => [.. peers.Where(item => !string.IsNullOrWhiteSpace(item.Host))
-    .Select(item => Create(sourceUrl, item, networkGraphValidationPolicy, certificateManager, configuration))
+    .Select(item => Create(sourceUrl, item, networkGraphValidationPolicy, certificateManager, configuration, logger))
     ];
 
     public void Dispose()
@@ -463,4 +617,7 @@ public class ConnectionVector : IDisposable
             _disposed = true;
         }
     }
+
+    public override string ToString()
+    => $"{_sourceHubHost} ({(string.IsNullOrWhiteSpace(_sourceAddress) ? "unknown address" : _sourceAddress)}) -> {_targetHubHost} ({(string.IsNullOrWhiteSpace(_targetAddress) ? "unknown address" : _targetAddress)})";
 }

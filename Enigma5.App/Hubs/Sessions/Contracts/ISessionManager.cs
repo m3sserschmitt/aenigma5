@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -22,13 +22,13 @@ namespace Enigma5.App.Hubs.Sessions.Contracts;
 
 public interface ISessionManager
 {
-    string? AddPending(string connectionId);
+    Task<string?> AddPendingAsync(string connectionId);
 
-    bool Authenticate(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
+    Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress);
 
-    bool Remove(string connectionId, out string? address);
+    Task<string?> RemoveAsync(string connectionId);
 
-    bool TryGetConnectionId(string address, out string? connectionId);
+    Task<string?> TryGetConnectionIdAsync(string address);
 
-    bool TryGetAddress(string connectionId, out string? address);
+    Task<string?> TryGetAddressAsync(string connectionId);
 }

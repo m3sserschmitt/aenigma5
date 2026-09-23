@@ -1,0 +1,89 @@
+.TH AENIGMA-LAUNCHER 8 "2026-08-13" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-launcher \- launch the Aenigma application
+.SH SYNOPSIS
+.B aenigma-launcher
+.SH DESCRIPTION
+.B aenigma-launcher
+starts the Aenigma application binary,
+.IR /usr/lib/aenigma/Enigma5.App ,
+pointing it at the standard configuration file,
+.IR /etc/aenigma/appsettings.json .
+It takes no options or arguments of its own.
+.PP
+This script is intended to be invoked by the
+.B aenigma.service
+systemd unit as the service's entry point, rather than run
+interactively, though it may also be run directly for testing or
+troubleshooting.
+.PP
+The script does not fork, daemonize, or redirect output; it runs
+.B Enigma5.App
+in the foreground and exits with whatever status
+.B Enigma5.App
+itself returns.
+.SH OPTIONS
+.B aenigma-launcher
+takes no command-line options. All application configuration is
+read by
+.B Enigma5.App
+itself from
+.IR /etc/aenigma/appsettings.json ,
+which can be modified using
+.BR aenigma-config (8).
+.SH EXIT STATUS
+The exit status is whatever
+.B /usr/lib/aenigma/Enigma5.App
+returns. A non-zero status may also result if the binary or the
+configuration file referenced on its command line cannot be found.
+.SH FILES
+.TP
+.I /usr/lib/aenigma/Enigma5.App
+The Aenigma application binary, invoked by this script.
+.TP
+.I /etc/aenigma/appsettings.json
+The application configuration file, passed to
+.B Enigma5.App
+via its
+.B \-\-config
+option.
+.SH EXAMPLES
+Run the Aenigma application directly, in the foreground:
+.PP
+.RS
+.EX
+aenigma-launcher
+.EE
+.RE
+.PP
+Under systemd, the service is normally started via
+.BR aenigma-start (8)
+rather than by invoking this script directly.
+.SH NOTES
+Unlike the other Aenigma administration scripts, this script does
+.B not
+require and does not check for root privileges; it runs
+.B Enigma5.App
+as whatever user invokes it. When started via
+.BR systemd (1),
+the
+.B aenigma.service
+unit is expected to specify
+.B User=aenigma
+(or equivalent) so that the application runs as the unprivileged
+.B aenigma
+service account rather than as root; this script itself performs no
+privilege check or drop.
+.PP
+Neither the application binary path nor the configuration file path
+is verified to exist before executing; if either is missing, the
+resulting failure is whatever error
+.B Enigma5.App
+(or the shell, if the binary itself is absent) produces, rather than
+a descriptive error from this script.
+.SH SEE ALSO
+.BR aenigma-start (8),
+.BR aenigma-config (8),
+.BR systemctl (1)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -24,17 +24,47 @@ public static class Constants
 {
     public const int AuthTokenSize = 64;
 
-    public static readonly TimeSpan VertexBroadcastMinimumPeriod = new(00, 05, 00);
+    public static readonly TimeSpan DefaultVertexBroadcastMinimumPeriod = TimeSpan.FromMinutes(06);
 
-    public static readonly TimeSpan LeafsLifetimeDefault = new(03, 00, 00, 00);
+    public static readonly TimeSpan DefaultVertexLifetime = TimeSpan.FromMinutes(30);
 
-    public static readonly int MaxSharedFileSize = 100 * 1024 * 1024;
+    public static readonly TimeSpan SignalRHandshakeTimeout = TimeSpan.FromSeconds(15);
 
-    public static readonly int MaxSharedDataSize = 1024 * 512;
+    public static readonly TimeSpan SignalRClientTimeoutInterval = TimeSpan.FromSeconds(90);
 
-    public const string XImpersonateServiceHeader = "X-Impersonate-Service";
+    public static readonly TimeSpan SignalRServerTimeoutInterval = TimeSpan.FromSeconds(90);
+
+    public static readonly TimeSpan SignalRKeepAliveInterval = TimeSpan.FromSeconds(20);
+
+    public static readonly TimeSpan[] SignalRReconnectDelays =
+    [
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+        TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(16),
+    ];
+
+    public const long SignalRStatefulReconnectBufferSize = 1 * 1024 * 1024;
+
+    public const long DefaultSharedFileMaxSize = 64 * 1024 * 1024;
+
+    public const long DefaultSharedDataMaxSize = 16 * 1024;
+
+    public const int MessagesPageSize = 20;
+
+    public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
+
+    public const string HubConnectionLocalIpKey = "HubConnectionLocalIp";
+
+    public const string HubConnectionLocalPortKey = "HubConnectionLocalPort";
 
     public const string OnionRoutingEndpoint = "OnionRouting";
+
+    public const string OpenApiName = "Aenigma API";
+
+    public const string OpenApiEndpoint = "/openapi/v1.json";
+
+    public const string RootEndpoint = "/";
 
     public const string InfoEndpoint = "Info";
 
@@ -43,6 +73,8 @@ public static class Constants
     public const string ShareEndpoint = "Share";
 
     public const string VertexEndpoint = "Vertex";
+
+    public const string LocalVertexEndpoint = "LocalVertex";
 
     public const string FileEndpoint = "File";
 
@@ -66,9 +98,36 @@ public static class Constants
 
     public const string FilesCleanupJobInterval = "*/5 * * * *";
 
-    public const string InvokeNetworkBridgeJobInterval = "*/10 * * * *";
+    public const string InvokeNetworkBridgeJobInterval = "*/5 * * * *";
 
     public const string NativeLibsRelativePathTemplate = "runtimes/{0}/native/{1}";
 
     public const string Libaenigma = "libaenigma.so";
+
+    public static class Serilog
+    {
+        public const string HubMethodNameKey = "HubMethodName";
+
+        public const string HubMethodInvocationErrorsKey = "HubMethodInvocationErrors";
+
+        public const string HubMethodArgumentsKey = "HubMethodArguments";
+
+        public const string ConnectionVectorMethodNameKey = "ConnectionVectorMethodName";
+
+        public const string HubConnectionsProxyMethodNameKey = "HubConnectionsProxyMethodName";
+
+        public const string BridgeMethodNameKey = "BridgeMethodName";
+
+        public const string ConnectionVectorKey = "ConnectionVector";
+
+        public const string ConnectionIdKey = "ConnectionId";
+
+        public const string DestinationConnectionIdKey = "DestinationConnectionId";
+
+        public const string CommandKey = "Command";
+
+        public const string CommandResultKey = "CommendResult";
+
+        public const string AddressKey = "Address";
+    }
 }

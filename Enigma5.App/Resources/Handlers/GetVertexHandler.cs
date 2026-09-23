@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -36,7 +36,7 @@ public class GetVertexHandler(NetworkGraph graph)
 
         if (vertex is null)
         {
-            return CommandResult.CreateResultSuccess<VertexDto>();
+            return CommandResult.CreateResultFailure<VertexDto>();
         }
 
         return CommandResult.CreateResultSuccess(new VertexDto

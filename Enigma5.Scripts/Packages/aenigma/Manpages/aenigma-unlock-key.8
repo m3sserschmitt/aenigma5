@@ -1,0 +1,106 @@
+.TH AENIGMA-UNLOCK-KEY 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-unlock-key \- remove passphrase encryption from the aenigma service's private key
+.SH SYNOPSIS
+.B aenigma-unlock-key
+.SH DESCRIPTION
+.B aenigma-unlock-key
+re-writes the existing
+.I aenigma
+service private key in place, removing its AES-256 passphrase encryption
+via
+.BR openssl (1).
+It is the inverse of
+.BR aenigma-lock-key (8):
+where that script wraps the private key in passphrase-based encryption,
+this script strips it, leaving the key stored as plaintext PEM on disk.
+.PP
+The key is written first to a temporary
+.I unlocked
+file, and only moved over the original private key file once
+.BR openssl (1)
+has succeeded, so a failed or interrupted operation does not leave the
+original private key truncated or corrupted. Ownership and permissions on
+the resulting file are then reset to the
+.I aenigma
+service user, mode 0600.
+.PP
+The script takes no options or arguments; it always operates on the
+service's single, fixed private key path.
+.B aenigma-unlock-key
+must be run as root, since it changes ownership of the private key file to
+the
+.I aenigma
+service account.
+.PP
+If the private key is currently passphrase-protected,
+.BR openssl (1)
+will interactively prompt for that passphrase in order to decrypt it. If
+the key is already unencrypted, the command proceeds without any prompt
+and simply rewrites an equivalent plaintext file.
+.SH FILES
+.TP
+.I /var/lib/aenigma/private-key.pem
+The service's RSA private key. Must already exist; this is both the input
+key that gets decrypted and, on success, the final output location.
+.TP
+.I /var/lib/aenigma/private-key-unlocked.pem
+Temporary file holding the newly decrypted key while
+.BR openssl (1)
+runs. Moved over
+.I private-key.pem
+on success; does not persist afterward.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; the private key was decrypted in place and its ownership/
+permissions were set.
+.TP
+.B 1
+The script was not invoked as root, or
+.I private-key.pem
+does not exist.
+.PP
+Any failure from
+.BR openssl (1)
+(for example, an incorrect passphrase) causes the script to abort
+immediately, since it runs with
+.B set -e
+and does not trap or ignore command failures. Because the original key is
+only overwritten after
+.BR openssl (1)
+succeeds, an aborted run leaves the original private key file untouched.
+.SH SECURITY CONSIDERATIONS
+After running successfully, this script leaves
+.I /var/lib/aenigma/private-key.pem
+as an unencrypted private key on disk, protected only by filesystem
+ownership and the 0600 permission mode \(em not by any passphrase. Anyone
+able to read that file as the
+.I aenigma
+user or as root can use the key directly, with no further authentication
+step. Only run this on a system where storing the key in plaintext is an
+accepted and deliberate trade-off (for example, so an unattended service
+can load the key without interactive input), and consider re-locking the
+key with
+.BR aenigma-lock-key (8)
+if that trade-off no longer applies.
+.SH NOTES
+.IP \(bu 2
+.B aenigma-unlock-key
+does not check whether
+.I private-key.pem
+is already unencrypted before running; in that case the operation is a
+harmless no-op that rewrites an equivalent plaintext file.
+.IP \(bu 2
+.B umask 077
+is set for the duration of the script, so the temporary unlocked-key file
+is created with owner-only access even before the explicit
+.BR chmod (1)
+call runs.
+.SH SEE ALSO
+.BR aenigma-keys (8),
+.BR aenigma-lock-key (8),
+.BR openssl (1),
+.BR umask (2)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -10,7 +10,9 @@
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.17" />
     <PackageReference Include="Hangfire.InMemory" Version="1.0.0" />
+    <PackageReference Include="LinqKit" Version="1.3.11" />
     <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
@@ -20,12 +22,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Enigma5.App.Common/Enigma5.App.Common.csproj" />
     <ProjectReference Include="../Enigma5.App.Models/Enigma5.App.Models.csproj" />
-    <ProjectReference Include="../Enigma5.Scripts/Enigma5.Scripts.csproj" />
     <ProjectReference Include="../Enigma5.Security/Enigma5.Security.csproj" />
     <ProjectReference Include="../Enigma5.Crypto/Enigma5.Crypto.csproj" />
     <ProjectReference Include="../Enigma5.Structures/Enigma5.Structures.csproj" />

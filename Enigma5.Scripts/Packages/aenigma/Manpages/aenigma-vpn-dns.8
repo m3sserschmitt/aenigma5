@@ -1,0 +1,154 @@
+.TH AENIGMA-VPN-DNS 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-vpn-dns \- configure DNS resolution and push directives for a VPN server instance
+.SH SYNOPSIS
+.B aenigma-vpn-dns
+.B \-d
+.I DOMAIN
+.B \-i
+.I DNS_IP
+.B \-f
+.I INTERFACE
+.RB [ \-c
+.IR CNAME ]
+.br
+.B aenigma-vpn-dns
+.B \-h
+.SH DESCRIPTION
+.B aenigma-vpn-dns
+installs and configures
+.BR dnsmasq (8)
+to serve DNS over a VPN tunnel interface for a server instance previously
+provisioned by
+.BR aenigma-vpn-server (8),
+and adds the corresponding
+.B dhcp-option
+push directives to that instance's OpenVPN server configuration so
+connecting clients receive the pushed DNS server and search domain.
+.PP
+A per-instance
+.BR dnsmasq (8)
+configuration is written to
+.IB /etc/dnsmasq.d/ DOMAIN .conf ,
+bound to the given
+.I INTERFACE
+and backed by a per-instance hosts file. That hosts file is not populated
+by this script; individual client hostname entries are added to it by
+.BR aenigma-vpn-server-host (8).
+If
+.B \-c
+.I CNAME
+is given, this script additionally adds a
+.B cname
+directive making
+.I DOMAIN
+resolve as an alias for
+.IR CNAME .
+.PP
+.B aenigma-vpn-dns
+must be run as root, since it installs packages, writes into
+.I /etc/dnsmasq.d
+and the target instance's OpenVPN configuration, and restarts the
+.B dnsmasq
+and
+.B openvpn@
+services.
+.SH OPTIONS
+.TP
+.BI \-d " DOMAIN"
+Name of the VPN server instance to configure DNS for (as passed to
+.BR aenigma-vpn-server (8)
+via its
+.B \-d
+option). Required.
+.TP
+.BI \-i " DNS_IP"
+Address to push to clients as their DNS server, typically the VPN
+server's own tunnel address, e.g.
+.IR 10.8.0.1 .
+Required.
+.TP
+.BI \-f " INTERFACE"
+Network interface
+.BR dnsmasq (8)
+should bind to and serve DNS on, e.g.
+.IR tun0 .
+Required.
+.TP
+.BI \-c " CNAME"
+Optional. If given, makes
+.I DOMAIN
+resolve as a
+.BR dnsmasq (8)
+.B cname
+alias for this target, instead of relying on a direct hosts-file entry.
+.TP
+.B \-h
+Display usage information and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; DNS was configured and the
+.B dnsmasq
+and
+.B openvpn@
+services were restarted.
+.TP
+.B 1
+Invoked without root privileges, called with insufficient or invalid
+arguments, or the target VPN server instance has not been provisioned
+(its configuration file was not found).
+.SH FILES
+.TP
+.IB /etc/openvpn/ DOMAIN .conf
+Target server instance's OpenVPN configuration. Must already exist,
+created by
+.BR aenigma-vpn-server (8).
+.B dhcp-option DOMAIN
+and
+.B dhcp-option DNS
+push directives are added or refreshed here.
+.TP
+.IB /etc/dnsmasq.d/ DOMAIN .conf
+Generated
+.BR dnsmasq (8)
+configuration for this instance, fully rewritten on every run.
+.TP
+.IB /etc/openvpn/ DOMAIN /dnsmasq-hosts
+Per-instance hosts file referenced via
+.B addn-hosts
+in the generated
+.BR dnsmasq (8)
+configuration. Created empty if missing; populated separately by
+.BR aenigma-vpn-server-host (8).
+.SH NOTES
+.IP \(bu 2
+Both the
+.B dhcp-option DOMAIN
+and
+.B dhcp-option DNS
+push directives in the target server configuration are unconditionally
+removed and re-added on every run, rather than added only if not already
+present. This means re-running
+.B aenigma-vpn-dns
+with a different
+.I DNS_IP
+always reflects the new value, and a directive that was manually commented
+out between runs is restored to active rather than silently left disabled.
+.IP \(bu 2
+The generated
+.BR dnsmasq (8)
+configuration file is fully rewritten on each run, so changing
+.I INTERFACE
+or adding/removing
+.B \-c
+.I CNAME
+between runs takes effect cleanly without leftover directives from a
+previous run.
+.SH SEE ALSO
+.BR aenigma-vpn-server (8),
+.BR aenigma-vpn-server-host (8),
+.BR dnsmasq (8),
+.BR openvpn (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

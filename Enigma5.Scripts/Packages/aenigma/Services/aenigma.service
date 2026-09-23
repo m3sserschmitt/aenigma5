@@ -1,0 +1,22 @@
+[Unit]
+Description=Aenigma - Federated messaging system
+After=network.target
+
+[Service]
+UMask=0077
+Environment=DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+WorkingDirectory=/usr/lib/aenigma
+ExecStart=/usr/bin/aenigma-launcher
+Restart=always
+RestartSec=10
+User=aenigma
+Group=aenigma
+KeyringMode=private
+NoNewPrivileges=yes
+LimitCORE=0
+ProtectProc=invisible
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

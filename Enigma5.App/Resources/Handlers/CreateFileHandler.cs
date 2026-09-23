@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,24 +20,28 @@
 
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class CreateFileHandler(EnigmaDbContext context, IConfiguration configuration)
-    : IRequestHandler<CreateFileCommand, CommandResult<Models.SharedDataDto>>
+public class CreateFileHandler(
+    IConfiguration configuration,
+    IDbWriter dbWriter
+) : IRequestHandler<CreateFileCommand, CommandResult<SharedDataDto>>
 {
-    private readonly EnigmaDbContext _context = context;
-
     private readonly IConfiguration _configuration = configuration;
 
-    public async Task<CommandResult<Models.SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
+    private readonly IDbWriter _dbWriter = dbWriter;
+
+    public async Task<CommandResult<SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
     {
         var webContentDirectory = _configuration.GetWebContentDirectory();
         if (webContentDirectory == null || request.File == null || request.File.Length == 0)
         {
-            return CommandResult.CreateResultFailure<Models.SharedDataDto>();
+            return CommandResult.CreateResultFailure<SharedDataDto>();
         }
 
         if (!string.IsNullOrEmpty(webContentDirectory) && !Directory.Exists(webContentDirectory))
@@ -50,19 +54,22 @@ public class CreateFileHandler(EnigmaDbContext context, IConfiguration configura
             MaxAccessCount = request.MaxAccessCount
         };
 
-        _context.Files.Add(record);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        string fullPath = Path.Combine(webContentDirectory, record.Tag);
-        using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
-        await request.File.CopyToAsync(stream, cancellationToken);
-
-        var hostname = _configuration.GetHostname();
-        return CommandResult.CreateResultSuccess(new Models.SharedDataDto
+        if (await _dbWriter.CreateFileAsync(record, cancellationToken) > 0)
         {
-            Tag = record.Tag,
-            ResourceUrl = hostname is not null ? $"{hostname}/{Common.Constants.FileEndpoint}?Tag={record.Tag}" : null,
-            ValidUntil = DateTimeOffset.Now + _configuration.GetFilesRetentionPeriod(),
-        });
+            string fullPath = Path.Combine(webContentDirectory, record.Tag);
+            using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+            await request.File.CopyToAsync(stream, cancellationToken);
+
+            return CommandResult.CreateResultSuccess(new SharedDataDto
+            {
+                Tag = record.Tag,
+                ResourceUrl = _configuration.GetFileUrl(record.Tag),
+                ValidUntil = _configuration.GetFileValidityDate(),
+            });
+        }
+        else
+        {
+            return CommandResult.CreateResultFailure<SharedDataDto>();
+        }
     }
 }

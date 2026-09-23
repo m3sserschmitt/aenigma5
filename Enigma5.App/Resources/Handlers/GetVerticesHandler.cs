@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -18,15 +18,16 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetVerticesHandler(Data.NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<VertexDto>>>
+public class GetVerticesHandler(NetworkGraph graph) : IRequestHandler<GetVerticesQuery, CommandResult<List<VertexDto>>>
 {
-    private readonly Data.NetworkGraph _graph = graph;
+    private readonly NetworkGraph _graph = graph;
 
     public async Task<CommandResult<List<VertexDto>>> Handle(GetVerticesQuery request, CancellationToken cancellationToken)
     => CommandResult.CreateResultSuccess((await _graph.GetVerticesAsync()).Select(item => new VertexDto

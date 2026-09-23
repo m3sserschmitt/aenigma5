@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -47,14 +47,16 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
         {
             object? successResult = null;
             var errors = new HashSet<ErrorDto>();
-            foreach (var item in request.Payloads!)
+            var payloads = request.Payloads ?? [];
+            foreach (var item in payloads)
             {
                 if (await _parser.ParseAsync(item!))
                 {
                     _ = new OnionParsingHubAdapter(invocationContext.Hub)
                     {
                         Content = _parser.Content,
-                        Next = _parser.NextAddress
+                        Next = _parser.NextAddress,
+                        Uuid = payloads.Count == 1 ? request.Uuid : null
                     };
                     dynamic? nextResult = await next(invocationContext);
                     var nextErrors = nextResult?.Errors as HashSet<ErrorDto>;
@@ -63,11 +65,11 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
                         errors.AddErrors(nextErrors);
                     }
                     successResult ??= (nextResult?.Success ?? false) ? nextResult : null;
-                    _logger.LogDebug($"Onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}} successfully parsed.", invocationContext.Context.ConnectionId);
+                    _logger.LogDebug($"Onion from connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} successfully parsed.", invocationContext.Context.ConnectionId);
                 }
                 else
                 {
-                    _logger.LogDebug($"Could not parse onion from connectionId {{{nameof(invocationContext.Context.ConnectionId)}}}", invocationContext.Context.ConnectionId);
+                    _logger.LogDebug($"Could not parse onion from connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}", invocationContext.Context.ConnectionId);
                     errors.AddError(InvocationErrors.ONION_PARSING_FAILED);
                 }
             }
@@ -75,10 +77,10 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
             {
                 errors.AddError(InvocationErrors.INTERNAL_ERROR);
             }
-            return errors.Count > 0 ? new EmptyErrorResultDto(errors) : successResult;
+            return errors.Count > 0 ? new ErrorResultDto(errors) : successResult;
         }
 
-        _logger.LogDebug($"Invalid input data for {{{nameof(invocationContext.HubMethodName)}}} method: {{@{nameof(invocationContext.HubMethodArguments)}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
-        return EmptyErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+        _logger.LogDebug($"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} method {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
+        return ErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
     }
 }

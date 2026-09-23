@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -52,9 +52,7 @@ public class AzurePassphraseReader(
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Critical error encountered while trying to read passphrase from vault.");
-            throw;
+            return null;
         }
     }
-
-    public char[]? ProvidePassphrase() => ProvidePassphraseAsync().GetAwaiter().GetResult();
 }

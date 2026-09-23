@@ -1,0 +1,127 @@
+.TH AENIGMA-VPN-SERVER-HOST 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-vpn-server-host \- assign a static VPN IP and hostname to a client
+.SH SYNOPSIS
+.B aenigma-vpn-server-host
+.B \-c
+.I CLIENT_NAME
+.B \-d
+.I DOMAIN
+.B \-i
+.I IP
+.B \-n
+.I NETMASK
+.br
+.B aenigma-vpn-server-host
+.B \-h
+.SH DESCRIPTION
+.B aenigma-vpn-server-host
+assigns a fixed VPN address to an existing client of a VPN server instance
+previously provisioned by
+.BR aenigma-vpn-server (8),
+by writing an
+.B ifconfig-push
+directive to that client's client-config-dir (ccd) file. If the server
+instance has a
+.B dnsmasq
+hosts file configured, it also registers (or refreshes) a DNS hostname of
+the form
+.IB CLIENT_NAME . DOMAIN
+pointing at that address, and restarts
+.BR dnsmasq (8)
+so the change takes effect.
+.PP
+This script is intended to run on the
+.B VPN server
+machine. It does not issue or modify any certificates; it only affects
+IP assignment and, optionally, DNS resolution for an already-configured
+client.
+.PP
+.B aenigma-vpn-server-host
+must be run as root, since it writes into
+.I /etc/openvpn
+and restarts the
+.B dnsmasq
+service.
+.SH OPTIONS
+.TP
+.BI \-c " CLIENT_NAME"
+Name of the client to assign a static address to, e.g.
+.IR john .
+Used as the ccd filename and as the left-hand label of the generated
+hostname. Required.
+.TP
+.BI \-d " DOMAIN"
+Name of the VPN server instance the client belongs to (as passed to
+.BR aenigma-vpn-server (8)
+via its
+.B \-d
+option). Required.
+.TP
+.BI \-i " IP"
+Static VPN address to assign to the client, e.g.
+.IR 10.8.0.10 .
+Required.
+.TP
+.BI \-n " NETMASK"
+Netmask of the VPN's virtual subnet, e.g.
+.IR 255.255.255.0 .
+Must match the netmask the server instance was provisioned with. Required.
+.TP
+.B \-h
+Display usage information and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; the client's static address was assigned (and its DNS hostname
+registered or refreshed, if applicable).
+.TP
+.B 1
+Invoked without root privileges, called with insufficient or invalid
+arguments, or the target server instance's client-config-dir does not
+exist.
+.SH FILES
+.TP
+.IB /etc/openvpn/ccd/ DOMAIN
+Client-config-dir for the target server instance. Must already exist;
+created by
+.BR aenigma-vpn-server (8).
+.TP
+.IB /etc/openvpn/ccd/ DOMAIN / CLIENT_NAME
+Per-client ccd file. Created if it does not exist. Any existing
+.B ifconfig-push
+line in this file is replaced with the newly specified address; other
+directives already present in the file, if any, are left untouched.
+.TP
+.IB /etc/openvpn/ DOMAIN /dnsmasq-hosts
+Optional dnsmasq hosts file for the target server instance. If present,
+an entry mapping
+.IB CLIENT_NAME . DOMAIN
+to
+.I IP
+is added or refreshed here. If absent, DNS hostname registration is
+skipped with a notice, and no error is raised.
+.SH NOTES
+.IP \(bu 2
+Re-running
+.B aenigma-vpn-server-host
+for a
+.I CLIENT_NAME
+that already has a static address assigned updates it in place: both the
+ccd file's
+.B ifconfig-push
+line and, if applicable, the dnsmasq hosts entry are replaced with the
+newly specified
+.IR IP ,
+rather than accumulating stale or duplicate entries.
+.IP \(bu 2
+This script does not check whether the given
+.I IP
+is already assigned to a different client. Assigning the same address to
+two clients is not detected or prevented.
+.SH SEE ALSO
+.BR aenigma-vpn-server (8),
+.BR openvpn (8),
+.BR dnsmasq (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

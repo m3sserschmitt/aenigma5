@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -Eeuo pipefail
+ 
+OPENVPN_DIRECTORY="/etc/openvpn"
+
+show_help() {
+    echo "Usage: $0 -d DOMAIN -i DNS_IP -f INTERFACE [-c CNAME]"
+    echo ""
+    echo "Options:"
+    echo "  -d DOMAIN       The domain name of the server (e.g., example.com)"
+    echo "  -i DNS_IP       VPN server IP to be pushed as DNS (e.g., 10.8.0.1)"
+    echo "  -f INTERFACE    Network interface to bind (e.g. tun0)"
+    echo "  [-c CNAME]      (Optional) Make DOMAIN act like a CNAME for this value"
+    echo ""
+    echo "Example:"
+    echo "  sudo $0 -d vpn.example.com -i 10.8.0.1 -f tun0 -c vpn-endpoint.example.com"
+    exit 1
+}
+
+[[ $EUID -ne 0 ]] && { echo "ERROR: Run as root: sudo bash $0"; exit 1; }
+
+if [ "$#" -lt 6 ]; then
+    show_help
+fi
+
+while getopts "d:i:f:c:h" opt; do
+    case $opt in
+        d) DOMAIN=$OPTARG ;;
+        i) DNS_IP=$OPTARG ;;
+        f) INTERFACE=$OPTARG ;;
+        c) CNAME=$OPTARG ;;
+        h) show_help ;;
+        *) show_help ;;
+    esac
+done
+
+if [[ ! -v DOMAIN || ! -v DNS_IP || ! -v INTERFACE ]]; then
+    echo "Error: DOMAIN, DNS_IP and INTERFACE are required."
+    show_help
+fi
+
+SERVER_DIRECTORY="$OPENVPN_DIRECTORY/$DOMAIN"
+DNSMASQ_HOSTS="$SERVER_DIRECTORY/dnsmasq-hosts"
+SERVER_CONF="$OPENVPN_DIRECTORY/$DOMAIN.conf"
+
+[[ ! -f "$SERVER_CONF" ]] && { echo "ERROR: $SERVER_CONF not found. Setup the VPN server for '$DOMAIN' first."; exit 1; }
+ 
+apt-get update -qq
+apt-get install -y dnsmasq
+# Create empty hosts file if it does not exist. Populated by
+# aenigma-vpn-server-host with per-client hostname entries.
+touch "$DNSMASQ_HOSTS"
+
+# Build dnsmasq config
+DNSMASQ_CONF="/etc/dnsmasq.d/$DOMAIN.conf"
+cat > "$DNSMASQ_CONF" << CONF
+interface=$INTERFACE
+bind-interfaces
+addn-hosts=$DNSMASQ_HOSTS
+CONF
+
+# If CNAME provided, add cname directive
+if [[ -v CNAME ]]; then
+    echo "cname=$DOMAIN,$CNAME" >> "$DNSMASQ_CONF"
+fi
+
+# Add push directives to server config. Existing lines are always
+# removed and re-added rather than skipped-if-present, so re-running
+# with a changed DNS_IP (or a manually commented-out directive) does not
+# leave a stale or disabled value behind.
+sed -i '/push "dhcp-option DOMAIN /d' "$SERVER_CONF"
+echo "push \"dhcp-option DOMAIN $DOMAIN\"" >> "$SERVER_CONF"
+
+sed -i '/push "dhcp-option DNS /d' "$SERVER_CONF"
+echo "push \"dhcp-option DNS $DNS_IP\"" >> "$SERVER_CONF"
+
+systemctl enable dnsmasq
+systemctl restart dnsmasq
+systemctl restart "openvpn@${DOMAIN}"
+
+echo ""
+echo "DNS setup complete."
+echo "  dnsmasq config: $DNSMASQ_CONF"
+echo "  Hosts file:     $DNSMASQ_HOSTS"
+echo "  Pushed DNS:     $DNS_IP"
+echo "  Interface:      $INTERFACE"
+[[ -v CNAME ]] && echo "  CNAME:          $DOMAIN -> $CNAME"

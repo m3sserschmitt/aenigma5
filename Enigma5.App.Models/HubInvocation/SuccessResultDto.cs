@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,11 +20,4 @@
 
 namespace Enigma5.App.Models.HubInvocation;
 
-public class SuccessResultDto<T> : InvocationResultDto<T>
-{
-    public SuccessResultDto(T? data) : base(data) { }
-
-    public SuccessResultDto() { }
-
-    public override bool Success => true;
-}
+public class SuccessResultDto<T>(T? data) : InvocationResultDto<T>(data, [], true) { }

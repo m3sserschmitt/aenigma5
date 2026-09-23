@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -29,6 +29,8 @@ using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Handlers;
 using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Models.Contracts.Hubs;
+using Enigma5.App.Extensions;
+using Enigma5.App.Common;
 
 namespace Enigma5.App.Hubs;
 
@@ -36,14 +38,12 @@ public partial class RoutingHub(
     ISessionManager sessionManager,
     ICertificateManager certificateManager,
     IMediator commandRouter,
-    IConfiguration configuration,
     ILogger<RoutingHub> logger) :
     Hub,
     IEnigmaHub,
     IOnionParsingHub,
     IOnionRoutingHub,
-    IIdentityHub,
-    IAuthorizedServiceHub
+    IIdentityHub
 {
     private readonly ISessionManager _sessionManager = sessionManager;
 
@@ -53,32 +53,34 @@ public partial class RoutingHub(
 
     private readonly ILogger<RoutingHub> _logger = logger;
 
-    private readonly IConfiguration _configuration = configuration;
-
     public string? DestinationConnectionId { get; set; }
 
     public string? Next { get; set; }
 
     public byte[]? Content { get; set; }
 
+    public string? Uuid { get; set; }
+
     public string? ClientAddress { get; set; }
 
-    public Task<InvocationResultDto<string>> GenerateToken()
+    [BlacklistAuthorization]
+    public async Task<InvocationResultDto<string>> GenerateToken()
     {
-        var nonce = _sessionManager.AddPending(Context.ConnectionId);
+        var nonce = await _sessionManager.AddPendingAsync(Context.ConnectionId);
 
         if (nonce is null)
         {
             _logger.LogError(
-                $"Null nonce generated while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+                $"Null nonce generated while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
                 nameof(GenerateToken),
                 Context.ConnectionId
                 );
         }
 
-        return nonce is not null ? OkAsync(nonce) : ErrorAsync<string>(InvocationErrors.NONCE_GENERATION_ERROR);
+        return nonce is not null ? Ok(nonce) : Error<string>(InvocationErrors.NONCE_GENERATION_ERROR);
     }
 
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<VertexDto>> GetLocalVertex()
     {
         var localAddress = await _certificateManager.GetAddressAsync();
@@ -94,51 +96,57 @@ public partial class RoutingHub(
         return Ok(result.Value!);
     }
 
+    [Obsolete("Use PullPaged instead; Still here for compatibility with previous versions and will be removed in the future;")]
     [Authenticated]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull()
     {
         if (ClientAddress is null)
         {
-            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
             nameof(Pull),
             Context.ConnectionId);
             return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
-        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(ClientAddress));
-
-        if (result.IsSuccessNotNullResultValue())
-        {
-            await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress));
-            return Ok(result.Value!);
-        }
-
-        _logger.LogError($"Could not retrieve pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
-        nameof(Pull),
-        Context.ConnectionId,
-        result);
-        return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
+        return Ok(await GetPendingMessagesAsync(ClientAddress, null, 1024));
     }
 
     [Authenticated]
+    [BlacklistAuthorization]
+    public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull2(PullRequestDto request)
+    {
+        if (ClientAddress is null)
+        {
+            _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
+            nameof(Pull),
+            Context.ConnectionId);
+            return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
+        }
+
+        return Ok(await GetPendingMessagesAsync(ClientAddress, request.InfId, Constants.MessagesPageSize));
+    }
+
+    [Authenticated]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> Cleanup()
     {
         if (ClientAddress is null)
         {
-            _logger.LogError($"ClientAddress null while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
+            _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
             nameof(Cleanup),
             Context.ConnectionId);
             return Error<bool>(InvocationErrors.INTERNAL_ERROR);
         }
 
-        var result = await _commandRouter.Send(new RemoveMessagesCommand(ClientAddress));
+        var result = await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress, null));
 
         if (result.IsSuccessNotNullResultValue())
         {
             return Ok(true);
         }
 
-        _logger.LogError($"Could cleanup pending messages while invoking {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}; Command result: {{result}}.",
+        _logger.LogError($"Could cleanup pending messages while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}; Command result: {{@{Constants.Serilog.CommandResultKey}}}.",
         nameof(Pull),
         Context.ConnectionId,
         result);
@@ -146,22 +154,24 @@ public partial class RoutingHub(
     }
 
     [ValidateModel]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request)
     {
         var authenticated = await Authenticate(request.PublicKey!, request.Signature!);
 
         if (!authenticated)
         {
-            _logger.LogDebug($"Could not authenticate connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
+            _logger.LogDebug($"Could not authenticate connectionId {{{Constants.Serilog.ConnectionIdKey}}}.", Context.ConnectionId);
             return Error<bool>(InvocationErrors.INVALID_NONCE_SIGNATURE);
         }
 
-        _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} authenticated.", Context.ConnectionId);
+        _logger.LogDebug($"ConnectionId {{{Constants.Serilog.ConnectionIdKey}}} authenticated.", Context.ConnectionId);
         return Ok(true);
     }
 
     [Authenticated]
     [ValidateModel]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> Broadcast(VertexBroadcastRequestDto broadcastAdjacencyList)
     {
         var result = await _commandRouter.Send(new HandleBroadcastCommand(broadcastAdjacencyList));
@@ -178,18 +188,20 @@ public partial class RoutingHub(
 
     [ValidateModel]
     [Authenticated]
-    [AuthorizedServiceOnly]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> TriggerBroadcast(TriggerBroadcastRequestDto request)
     {
-        var localVertex = await AddNewAdjacencies(request.NewAddresses ?? []);
+        var vertexBroadcastRequest = await AddNewAdjacencies(request.NewAddresses ?? []);
 
-        if (localVertex is null)
+        if (vertexBroadcastRequest is null)
         {
-            _logger.LogWarning($"{nameof(TriggerBroadcast)} resulted in no changes to be broadcasted.");
+            _logger.LogError($"Invocation of {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}} returned null vertex broadcast.",
+            nameof(TriggerBroadcast),
+            Context.ConnectionId);
             return Error(true, InvocationErrors.BROADCAST_TRIGGERING_WARNING);
         }
 
-        return await SendBroadcast(localVertex!)
+        return await SendBroadcast(vertexBroadcastRequest!)
             ? Ok(true)
             : Error<bool>(InvocationErrors.BROADCAST_TRIGGERING_FAILED);
     }
@@ -198,63 +210,40 @@ public partial class RoutingHub(
     [OnionParsing]
     [OnionRouting]
     [Authenticated]
+    [BlacklistAuthorization]
     public async Task<InvocationResultDto<bool>> RouteMessage(RoutingRequestDto request)
     {
-        bool success = false;
-        var vertex = await _commandRouter.Send(new GetVertexQuery(Next!));
-        var notLeaf = vertex.IsSuccessNotNullResultValue() && vertex.Value!.PublicKey is not null;
-        if (notLeaf && DestinationConnectionId != null && Content != null)
-        {
-            success = await RouteMessage(DestinationConnectionId, Content, null);
-            if (!success)
-            {
-                success = (await CreatePendingMessage()).IsSuccessNotNullResultValue();
-            }
-        }
-        else if (Content is not null)
+        if (Content is not null)
         {
             var result = await CreatePendingMessage();
-            success = result.IsSuccessNotNullResultValue();
-            if (DestinationConnectionId != null)
+            if (DestinationConnectionId != null && result.IsSuccessNotNullResultValue())
             {
-                success |= await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
+                await RouteMessage(DestinationConnectionId, Content, result?.Value?.Uuid);
             }
+            var success = (Uuid == null && result?.Value?.Uuid != null) || (Uuid != null && Uuid == result?.Value?.Uuid);
+            return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
         }
-        return success ? Ok(true) : Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
+        return Error<bool>(InvocationErrors.ONION_ROUTING_FAILED);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _logger.LogDebug($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected.", Context.ConnectionId);
-        if (!_sessionManager.Remove(Context.ConnectionId, out string? removedAddress))
+        _logger.LogDebug($"ConnectionId {{{Constants.Serilog.ConnectionIdKey}}} disconnected.", Context.ConnectionId);
+        var removedAddress = await _sessionManager.RemoveAsync(Context.ConnectionId);
+        if (removedAddress == null)
         {
-            _logger.LogWarning($"ConnectionId {{{nameof(Context.ConnectionId)}}} disconnected, but the connection could not be found into Session Manager", Context.ConnectionId);
+            _logger.LogError($"ConnectionId {{{Constants.Serilog.ConnectionIdKey}}} disconnected, but the connection could not be found into Session Manager.", Context.ConnectionId);
             return;
         }
 
-        var broadcast = await RemoveAdjacencies([removedAddress!]);
-
-        if (broadcast != null)
-        {
-            await SendBroadcast(broadcast);
-        }
+        await RemoveAdjacencies([removedAddress!]);
 
         await base.OnDisconnectedAsync(exception);
     }
 
     public override async Task OnConnectedAsync()
     {
-        var impersonateServiceHeader = Context.GetHttpContext()?.Request.Headers[Common.Constants.XImpersonateServiceHeader];
-        if (!impersonateServiceHeader.HasValue)
-        {
-            return;
-        }
-        var impersonateServiceHeaderString = impersonateServiceHeader.ToString();
-        if (string.IsNullOrWhiteSpace(impersonateServiceHeaderString))
-        {
-            return;
-        }
-        Context.Items[Common.Constants.XImpersonateServiceHeader] = impersonateServiceHeaderString;
+        Context.MapConnectionDetails();
         await base.OnConnectedAsync();
     }
 }

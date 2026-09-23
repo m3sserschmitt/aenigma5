@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -48,6 +48,18 @@ public class OnionParsingHubAdapter(Hub hub) : IOnionParsingHub
             if (onionParserHub != null)
             {
                 onionParserHub.Content = value;
+            }
+        }
+    }
+
+    public string? Uuid
+    {
+        get => onionParserHub?.Uuid;
+        set
+        {
+            if (onionParserHub != null)
+            {
+                onionParserHub.Uuid = value;
             }
         }
     }

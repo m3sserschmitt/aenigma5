@@ -1,6 +1,6 @@
 ﻿/*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -20,9 +20,6 @@
 
 using Enigma5.App.Common.Enums;
 using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Http;
-using System.Net;
-using Microsoft.Extensions.Logging;
 
 namespace Enigma5.App.Common.Extensions;
 
@@ -34,53 +31,56 @@ public static class ConfigurationExtensions
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
-    public static string? GetLocalListenAddress(this IConfiguration configuration)
+    public static string? GetHttpEndpoint(this IConfiguration configuration)
     => configuration.GetStringValue("Kestrel:EndPoints:Http:Url")?.Trim('/', ' ');
 
-    public static string? GetAuthorizedLocalListenAddress(this IConfiguration configuration)
-    => configuration.GetStringValue("Kestrel:EndPoints:HttpAuthorized:Url")?.Trim('/', ' ');
-
-    public static bool IsAuthorizedHttpInvocation(this IConfiguration configuration, HttpContext httpContext, ILogger? logger = null)
-    {
-        var authorizedLocalAddress = configuration.GetAuthorizedLocalListenAddress();
-        if (string.IsNullOrWhiteSpace(authorizedLocalAddress))
-        {
-            logger?.LogError($"Authorized local address not found into config.");
-            return false;
-        }
-
-        if (!Uri.TryCreate(authorizedLocalAddress, UriKind.Absolute, out var uri))
-        {
-            logger?.LogError($"Authorized local address could not be parsed.");
-            return false;
-        }
-
-        if (!IPAddress.TryParse(uri.Host, out var authorizedIp))
-        {
-            logger?.LogError($"Could not parse authorized IP.");
-            return false;
-        }
-
-        var connectionLocalPort = httpContext.Connection.LocalPort;
-
-        if (authorizedIp.Equals(IPAddress.Any))
-        {
-            return uri.Port == connectionLocalPort;
-        }
-
-        var connectionLocalIp = httpContext.Connection.LocalIpAddress;
-
-        if (connectionLocalIp == null)
-        {
-            logger?.LogError($"Local authorized IP resolved to null.");
-            return false;
-        }
-
-        return connectionLocalIp.Normalize().Equals(authorizedIp.Normalize()) && uri.Port == connectionLocalPort;
-    }
+    public static string? GetControlHttpEndpoint(this IConfiguration configuration)
+    => configuration.GetStringValue("Kestrel:EndPoints:HttpControl:Url")?.Trim('/', ' ');
 
     public static string? GetHostname(this IConfiguration configuration)
     => configuration.GetStringValue("Hostname")?.Trim('/', ' ');
+
+    public static string? GetDatabaseConnectionString(this IConfiguration configuration)
+    => configuration.GetConnectionString("DbConnectionString");
+
+    public static string? GetPublicEndpoint(this IConfiguration configuration)
+    {
+        var service = configuration.GetHostname();
+        if(string.IsNullOrWhiteSpace(service))
+        {
+            service = configuration.GetOnionService();
+        }
+        return string.IsNullOrWhiteSpace(service) ? null : service;
+    }
+
+    public static string? GetSharedDataUrl(this IConfiguration configuration, string tag)
+    {
+        
+        var service = configuration.GetPublicEndpoint();
+        if(string.IsNullOrWhiteSpace(service))
+        {
+            return null;
+        }
+
+        return $"{service}/{Constants.ShareEndpoint}?Tag={tag}";
+    }
+
+    public static DateTimeOffset? GetSharedDataValidityDate(this IConfiguration configuration)
+    => DateTimeOffset.UtcNow + configuration.GetSharedDataRetentionPeriod();
+
+    public static string? GetFileUrl(this IConfiguration configuration, string tag)
+    {
+        var service = configuration.GetPublicEndpoint();
+        if(string.IsNullOrWhiteSpace(service))
+        {
+            return null;
+        }
+
+        return $"{service}/{Constants.FileEndpoint}?Tag={tag}";
+    }
+
+    public static DateTimeOffset? GetFileValidityDate(this IConfiguration configuration)
+    => DateTimeOffset.UtcNow + configuration.GetFilesRetentionPeriod();
 
     public static string? GetPrivateKeyPath(this IConfiguration configuration)
     => configuration.GetStringValue("PrivateKeyPath");
@@ -91,26 +91,20 @@ public static class ConfigurationExtensions
     public static string? GetWebContentDirectory(this IConfiguration configuration)
     => configuration.GetStringValue("WebContentDirectory");
 
-    public static TimeSpan GetMessageRetentionPeriod(this IConfiguration condiguration)
-    => condiguration.GetTimeSpan("MessageRetentionPeriod", new(0));
+    public static TimeSpan GetMessageRetentionPeriod(this IConfiguration configuration)
+    => configuration.GetTimeSpan("MessageRetentionPeriod", new(0));
 
-    public static TimeSpan GetSentMessageRetentionPeriod(this IConfiguration condiguration)
-    => condiguration.GetTimeSpan("SentMessageRetentionPeriod", new(0));
+    public static TimeSpan GetSentMessageRetentionPeriod(this IConfiguration configuration)
+    => configuration.GetTimeSpan("SentMessageRetentionPeriod", new(0));
 
-    public static TimeSpan GetSharedDataRetentionPeriod(this IConfiguration condiguration)
-    => condiguration.GetTimeSpan("SharedDataRetentionPeriod", new(0));
+    public static TimeSpan GetSharedDataRetentionPeriod(this IConfiguration configuration)
+    => configuration.GetTimeSpan("SharedDataRetentionPeriod", new(0));
 
     public static TimeSpan GetFilesRetentionPeriod(this IConfiguration configuration)
     => configuration.GetTimeSpan("FilesRetentionPeriod", new(0));
 
     public static string? GetPassphraseKeyPath(this IConfiguration configuration)
     => configuration.GetStringValue("PassphrasePath");
-
-    public static bool GetRetryConnection(this IConfiguration configuration)
-    => configuration.GetValue("Network:RetryConnections", false);
-
-    public static int GetConnectionRetriesCount(this IConfiguration configuration)
-    => configuration.GetValue("Network:ConnectionRetriesCount", 0);
 
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
     => configuration.GetValue("Network:DelayBetweenConnectionRetries", 0);
@@ -138,7 +132,7 @@ public static class ConfigurationExtensions
     }
 
     public static TimeSpan GetVertexLifetime(this IConfiguration configuration)
-    => configuration.GetTimeSpan("VertexLifetime", Constants.LeafsLifetimeDefault);
+    => configuration.GetTimeSpan("VertexLifetime", Constants.DefaultVertexLifetime);
 
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetStringValue("AzureVaultUrl");
@@ -149,9 +143,21 @@ public static class ConfigurationExtensions
     public static PassphraseSource GetPassphraseSource(this IConfiguration configuration)
     => configuration.GetEnum("PassphraseSource", PassphraseSource.Dashboard);
 
+    public static DbProvider GetDbProvider(this IConfiguration configuration)
+    => configuration.GetEnum("DbProvider", DbProvider.Sqlite);
+
     public static string? GetOnionService(this IConfiguration configuration)
     => configuration.GetStringValue("OnionService");
 
     public static string? GetSocks5Proxy(this IConfiguration configuration)
     => configuration.GetStringValue("Socks5Proxy");
+
+    public static long GetSharedFileMaxSize(this IConfiguration configuration)
+    => configuration.GetValue("SharedFileMaxSize", Constants.DefaultSharedFileMaxSize);
+
+    public static long GetSharedDataMaxSize(this IConfiguration configuration)
+    => configuration.GetValue("SharedDataMaxSize", Constants.DefaultSharedDataMaxSize);
+
+    public static PassphrasePersistence GetPassphrasePersistence(this IConfiguration configuration)
+    => configuration.GetValue("PassphrasePersistence", PassphrasePersistence.Persistent);
 }

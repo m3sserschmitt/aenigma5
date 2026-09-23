@@ -1,0 +1,4 @@
+# libSystem.IO.Compression.Native.so is a prebuilt .NET runtime native
+# component. Rebuilding it against system zlib is impractical for this
+# package;
+aenigma: embedded-library *zlib*

@@ -1,0 +1,98 @@
+.TH AENIGMA-STANDARD-SETUP 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-standard-setup \- one-time initialization of the standard aenigma onion services
+.SH SYNOPSIS
+.B aenigma-standard-setup
+.SH DESCRIPTION
+.B aenigma-standard-setup
+performs one-time initialization of the onion services used by a standard
+aenigma deployment: a public-facing onion service for the main
+.I aenigma
+backend, and a stealth-authenticated onion service for the
+.I aenigma-dashboard
+backend. Each is provisioned by invoking
+.BR aenigma-tor (8)
+with fixed, opinionated defaults for local address, onion port, and
+(for the dashboard) client authorization.
+.PP
+This script assumes the underlying packages and their base configuration
+have already been installed and completed independently; it does not
+install or configure Tor, DNS, VPN, or any other subsystem itself beyond
+invoking
+.BR aenigma-tor (8)
+for these two specific services. It is intentionally narrow in scope, not
+a full-system provisioning entry point, though it may grow to cover
+additional one-time initialization steps in the future.
+.PP
+.B aenigma-standard-setup
+must be run as root, since
+.BR aenigma-tor (8)
+itself requires root.
+.SH OPTIONS
+This script takes no options or arguments.
+.TP
+.B \-h
+Not applicable; the script has no option parsing and no help output of
+its own.
+.SH EXIT STATUS
+.TP
+.B 0
+Success, or nothing needed to be done because both services were already
+fully provisioned.
+.TP
+.B 1
+Not invoked as root, or one of the underlying
+.BR aenigma-tor (8)
+invocations failed.
+.SH FILES
+.TP
+.IB /var/lib/tor/aenigma/hostname
+Presence of this file is treated as confirmation that the main
+.I aenigma
+onion service has already been fully provisioned; if missing,
+.BR aenigma-tor (8)
+is invoked for it again.
+.TP
+.IB /var/lib/tor/aenigma-dashboard/hostname
+Same check, for the
+.I aenigma-dashboard
+onion service.
+.SH NOTES
+.IP \(bu 2
+Each service is gated on the existence of its published
+.I hostname
+file, not merely its service directory. This is deliberate:
+.BR aenigma-tor (8)
+creates and takes ownership of a service's directory early in its own
+run, before Tor has been restarted and the address has actually been
+generated, so a directory left behind by a previously failed or
+interrupted run would otherwise be mistaken for a completed one and
+never retried on a subsequent run of this script.
+.IP \(bu 2
+The dashboard service is provisioned with client authorization for a
+user named
+.IR aenigma-dashboard ,
+via
+.BR aenigma-tor (8) 's
+.B \-u
+option. Per
+.BR aenigma-tor-auth (8) ,
+if this script is re-run after the dashboard's
+.I hostname
+file already exists, the dashboard branch is skipped entirely and the
+existing client authorization key is left untouched.
+.IP \(bu 2
+Only the main
+.I aenigma
+service's onion address is written into the aenigma configuration
+(via
+.BR aenigma-tor (8) 's
+.B \-c 1 );
+the dashboard's address is not, consistent with it being reached only by
+authorized clients rather than referenced by the application itself.
+.SH SEE ALSO
+.BR aenigma-tor (8),
+.BR aenigma-tor-auth (8),
+.BR aenigma-config (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

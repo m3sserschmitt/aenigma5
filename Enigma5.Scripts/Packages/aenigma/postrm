@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+
+SERVICE_NAME="aenigma"
+APP_USER="aenigma"
+APP_INSTALL_DIR="/usr/lib/$SERVICE_NAME"
+APP_SETTINGS_DIR="/etc/$SERVICE_NAME"
+VAR_LIB="/var/lib/$SERVICE_NAME"
+LOGS_DIR="/var/log/$SERVICE_NAME"
+UPLOADS_DIR="/srv/$SERVICE_NAME"
+
+ACTION="${1:-}"
+
+log() {
+  printf '%s\n' "$*"
+}
+
+safe_rm_dir() {
+  DIR="$1"
+
+  [ -n "$DIR" ] || return 0
+  [ -d "$DIR" ] || return 0
+
+  # refuse symlinks
+  if [ -L "$DIR" ]; then
+    log "Refusing to remove symlink: $DIR"
+    return 1
+  fi
+
+  # refuse dangerous paths
+  case "$DIR" in
+    /|/usr|/usr/local|/etc|/var|/bin|/sbin|/lib|/lib64)
+      log "Refusing to remove protected path: $DIR"
+      return 1
+      ;;
+  esac
+
+  log "Removing directory: $DIR"
+  rm -rf --one-file-system "$DIR"
+}
+
+remove_user() {
+  if id "$APP_USER" >/dev/null 2>&1; then
+    log "Removing user $APP_USER"
+    deluser --remove-home "$APP_USER" || true
+  fi
+}
+
+case "$ACTION" in
+  remove)
+    safe_rm_dir "$APP_INSTALL_DIR"
+    ;;
+
+  purge)
+    safe_rm_dir "$APP_INSTALL_DIR"
+    safe_rm_dir "$APP_SETTINGS_DIR"
+    safe_rm_dir "$VAR_LIB"
+    safe_rm_dir "$LOGS_DIR"
+    safe_rm_dir "$UPLOADS_DIR"
+    remove_user
+    ;;
+
+  upgrade|abort-upgrade|failed-upgrade)
+    log "Upgrade path detected: no cleanup required"
+    ;;
+
+  disappear)
+    log "Package disappeared (replaced): no cleanup required"
+    ;;
+
+  *)
+    log "postrm called with unknown action: $ACTION"
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

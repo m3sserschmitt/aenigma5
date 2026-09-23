@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -23,7 +23,9 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Commands;
 
-public class MarkMessagesAsDeliveredCommand(string destination): IRequest<CommandResult<int>>
+public class MarkMessagesAsDeliveredCommand(string? destination, long? supId): IRequest<CommandResult<int>>
 {
-    public string Destination { get; private set; } = destination;
+    public string? Destination { get; private set; } = destination;
+
+    public long? SupId { get; private set; } = supId;
 }

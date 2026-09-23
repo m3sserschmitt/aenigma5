@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -21,30 +21,32 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
+using Enigma5.App.Resources.Contracts;
+using LinqKit;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class MarkMessagesAsDeliveredHandler(EnigmaDbContext dbContext) : IRequestHandler<MarkMessagesAsDeliveredCommand, CommandResult<int>>
+public class MarkMessagesAsDeliveredHandler(
+    IDbWriter dbWriter
+) : IRequestHandler<MarkMessagesAsDeliveredCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _dbContext = dbContext;
+    private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(MarkMessagesAsDeliveredCommand request, CancellationToken cancellationToken)
     {
-        if(!request.Destination.IsValidAddress())
+        if (!request.Destination.IsValidAddress())
         {
             return CommandResult.CreateResultFailure<int>();
         }
 
-        var messages = _dbContext.Messages.Where(item => item.Destination == request.Destination && !item.Sent);
-        foreach (var message in messages)
-        {
-            message.Sent = true;
-            message.DateSent = DateTimeOffset.Now;
-            message.SentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        }
-        _dbContext.Messages.UpdateRange(messages);
+        var predicate = PredicateBuilder.New<PendingMessage>(item => item.Destination == request.Destination && !item.Sent);
 
-        return CommandResult.CreateResultSuccess(await _dbContext.SaveChangesAsync(cancellationToken));
+        if (request.SupId != null)
+        {
+            predicate = predicate.And(item => item.Id <= request.SupId);
+        }
+
+        return CommandResult.CreateResultSuccess(await _dbWriter.MarkMessagesAsDeliveredAsync(predicate, cancellationToken));
     }
 }

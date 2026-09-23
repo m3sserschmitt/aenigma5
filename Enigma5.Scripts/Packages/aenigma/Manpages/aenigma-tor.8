@@ -1,0 +1,165 @@
+.TH AENIGMA-TOR 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-tor \- configure and publish a Tor onion (hidden) service for an aenigma-managed backend
+.SH SYNOPSIS
+.B aenigma-tor
+.B \-l
+.I LOCAL_ADDRESS
+.B \-o
+.I ONION_PORT
+.B \-s
+.I SERVICE_NAME
+.RB [ \-u
+.IR AUTHORIZED_USER ]
+.RB [ \-c
+.IR CONFIG_ADDRESS ]
+.br
+.B aenigma-tor
+.B \-h
+.SH DESCRIPTION
+.B aenigma-tor
+installs and enables the Tor daemon if necessary, provisions a
+.B HiddenServiceDir
+for the named service, appends the corresponding
+.B HiddenServiceDir
+/
+.B HiddenServicePort
+block to
+.IR /etc/tor/torrc " (unless the service is already configured there),"
+restarts Tor, waits for the onion address to be generated, optionally
+configures client authorization for it, and prints the resulting address.
+.PP
+The script is intended as a basic, one-port-per-service starting point for
+publishing a single local endpoint as a Tor onion service. It is not a
+general-purpose torrc manager: if a service directory named by
+.I SERVICE_NAME
+already has a matching
+.B HiddenServiceDir
+line in
+.IR /etc/tor/torrc ,
+that block is left untouched on subsequent runs. To change a service's
+port or target address, edit
+.I /etc/tor/torrc
+manually (or remove the relevant block) before re-running.
+.PP
+.B aenigma-tor
+must be run as root, since it installs packages, edits
+.IR /etc/tor/torrc ,
+manages the
+.B tor
+systemd service, and changes ownership of files under
+.IR /var/lib/tor .
+.SH OPTIONS
+.TP
+.BI \-l " LOCAL_ADDRESS"
+The local address and port where the backend service is already listening,
+e.g.
+.IR 127.0.0.1:8080 .
+This becomes the target of the
+.B HiddenServicePort
+line. Required.
+.TP
+.BI \-o " ONION_PORT"
+The virtual port on which the onion service should accept connections from
+Tor clients, e.g.
+.IR 80 .
+Required.
+.TP
+.BI \-s " SERVICE_NAME"
+Name used to identify the onion service. This determines the service
+directory,
+.IR /var/lib/tor/ SERVICE_NAME,
+which stores the service's private key and generated
+.I hostname
+(the \fB.onion\fR address). Required.
+.TP
+.BI \-u " AUTHORIZED_USER"
+Optional. If given, grants the named user client authorization for this
+service by invoking
+.BR aenigma-tor-auth (8)
+with
+.BI \-s " SERVICE_NAME"
+.BI \-u " AUTHORIZED_USER"
+after the onion address has been generated (see
+.SM NOTES ).
+.TP
+.BI \-c " CONFIG_ADDRESS"
+Optional. If set to
+.IR 1 ,
+the resulting onion address is written into the aenigma configuration via
+.BR aenigma-config (8)
+under the
+.I OnionService
+key, as
+.IR http://<address>.onion .
+If set to
+.I 0
+or omitted, the aenigma configuration is left unchanged.
+.TP
+.B \-h
+Display usage information and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; the onion service address was generated and printed.
+.TP
+.B 1
+Invoked without root privileges, called with insufficient or invalid
+arguments, or the onion service address failed to appear within the
+generation timeout.
+.SH FILES
+.TP
+.I /etc/tor/torrc
+Tor's main configuration file. A
+.B HiddenServiceDir
+/
+.B HiddenServicePort
+block is appended here for each new service.
+.TP
+.IB /var/lib/tor/ SERVICE_NAME
+Per-service directory created and owned by the
+.I debian-tor
+user, mode 0700. Contains the service's private key and, once Tor has
+published the descriptor, the
+.I hostname
+file holding the
+.B .onion
+address.
+.SH NOTES
+.IP \(bu 2
+The script performs a literal, whole-line match against
+.I /etc/tor/torrc
+to decide whether a service is already configured; it does not attempt to
+merge, update, or deduplicate ports for an existing
+.BR HiddenServiceDir .
+.IP \(bu 2
+Directory ownership and permissions under
+.IB /var/lib/tor/ SERVICE_NAME
+are (re)applied on every run, even if the directory already existed, so
+that permission drift does not silently break Tor.
+.IP \(bu 2
+After configuration, the script waits up to 120 seconds for Tor to publish
+the service and write the
+.I hostname
+file. On slow hosts or first-time descriptor publication this may take
+close to the full timeout.
+.IP \(bu 2
+When
+.B \-u
+is given, client authorization is configured only after the
+.I hostname
+file is confirmed to exist, since
+.BR aenigma-tor-auth (8)
+embeds the onion address in the private key file it generates. This
+ordering matters specifically for a service's first-ever run with
+.BR \-u :
+the address does not exist before Tor has been restarted and finished
+publishing the descriptor.
+.SH SEE ALSO
+.BR tor (1),
+.BR torrc (5),
+.BR systemctl (1),
+.BR aenigma-tor-auth (8),
+.BR aenigma-config (8)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.rujas@aenigma.ro>

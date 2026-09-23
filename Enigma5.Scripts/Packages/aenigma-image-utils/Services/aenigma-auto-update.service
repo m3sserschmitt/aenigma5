@@ -1,0 +1,8 @@
+[Unit]
+Description=Update the Aenigma package to the latest available version
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/aenigma-update

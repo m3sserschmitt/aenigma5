@@ -1,0 +1,136 @@
+.TH AENIGMA-STATUS 8 "2026-08-12" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.SH NAME
+aenigma-status \- display the running status of the Aenigma service
+and its configured onion services
+.SH SYNOPSIS
+.B aenigma-status
+.SH DESCRIPTION
+.B aenigma-status
+prints a human-readable, color-coded summary of the local Aenigma
+installation: whether the
+.B aenigma
+and
+.B tor
+systemd services are running, and, for every Tor hidden service
+configured under
+.IR /var/lib/tor ,
+its name, published
+.I .onion
+address, and configured port(s). It takes no options or arguments.
+.PP
+The script performs the following actions:
+.IP \(bu 2
+Reports the active/inactive state of the
+.B aenigma
+and
+.B tor
+systemd units via
+.BR "systemctl is-active" .
+.IP \(bu 2
+Iterates every subdirectory of
+.IR /var/lib/tor .
+Any subdirectory without a
+.I hostname
+file is treated as a hidden service that Tor has not yet started or
+finished configuring, and is silently skipped.
+.IP \(bu 2
+For each remaining hidden service, reads its published address from
+.IR /var/lib/tor/ SERVICE / hostname
+and looks up the matching
+.B HiddenServicePort
+entry or entries for that service by parsing
+.I /etc/tor/torrc
+directly.
+.IP \(bu 2
+Prints a block per service showing its name, address, and port(s),
+or a note that no onion services are configured yet if none were
+found.
+.IP \(bu 2
+Prints a closing hint pointing to
+.BR aenigma-tor-get-auth (8)
+for retrieving client authorization keys, where configured.
+.PP
+Output uses ANSI color escape sequences and is intended for
+interactive terminal use.
+.PP
+.B aenigma-status
+must be run as root, since
+.I /var/lib/tor
+and its
+.I hostname
+files are only readable by the
+.B debian-tor
+user and root.
+.SH OPTIONS
+.B aenigma-status
+takes no command-line options.
+.SH EXIT STATUS
+.TP
+.B 0
+Status information was gathered and printed. This is returned even
+if the
+.B aenigma
+or
+.B tor
+services are stopped, or no onion services are configured; those
+are reported conditions, not script failures.
+.TP
+.B 1
+The script was not run as root.
+.SH FILES
+.TP
+.I /var/lib/tor
+Scanned for hidden service subdirectories.
+.TP
+.I /var/lib/tor/ SERVICE /hostname
+Read to obtain each onion service's published address.
+.TP
+.I /etc/tor/torrc
+Parsed to determine the configured port(s) for each onion service.
+Read-only; never modified by this script.
+.SH EXAMPLES
+Display current Aenigma and Tor status:
+.PP
+.RS
+.EX
+sudo aenigma-status
+.EE
+.RE
+.SH NOTES
+The
+.I torrc
+parser implemented in this script
+.RB ( get_ports_for_service )
+is a plain-text, line-by-line scan that assumes each
+.B HiddenServiceDir
+block is contiguous and terminated by either the next
+.B HiddenServiceDir
+line or end of file. It does not use Tor's own configuration parser,
+so any
+.I torrc
+file with unusual formatting, comments interleaved inside a block,
+or a
+.B HiddenServiceDir
+value that differs only by trailing whitespace or path
+normalisation from the directory name under
+.I /var/lib/tor
+may be reported with the wrong port, or as
+.IR "unknown port" .
+.PP
+A hidden service directory without a
+.I hostname
+file is silently omitted from the output entirely, with no
+indication to the operator that a configured-but-not-yet-started
+service exists. An operator troubleshooting a service that never
+came up may see no mention of it at all in
+.BR aenigma-status 's
+output.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR tor (8),
+.BR aenigma-start (8),
+.BR aenigma-tor (8),
+.BR aenigma-tor-get-auth (8),
+.BR torrc (5)
+.SH AUTHOR
+Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>

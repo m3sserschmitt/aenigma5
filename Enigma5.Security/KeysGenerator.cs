@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -19,6 +19,7 @@
 */
 
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Enigma5.Security;
 
@@ -30,17 +31,27 @@ public static class KeysGenerator
 
     private const string GenerateKeyArguments = "genrsa -aes256 -out {0} -passout stdin {1}";
 
+    private const string GenerateUnprotectedKeyArguments = "genrsa -out {0} {1}";
+
     private const string ExportPublicKeyCommand = GenerateKeyCommand;
 
     private const string ExportPublicKeyArguments = "rsa -in {0} -outform PEM -pubout -out {1} -passin stdin";
 
-    public static Task<bool> Generate(string privatePemPath, char[] passphrase, int keySize = KeySizeBits)
-    => LaunchProcess(GenerateKeyCommand, string.Format(GenerateKeyArguments, privatePemPath, keySize), passphrase);
+    private const string ExportPublicKeyUnprotectedArguments = "rsa -in {0} -outform PEM -pubout -out {1}";
 
-    public static Task<bool> ExportPublicKey(string privatePemPath, string publicPemPath, char[] passphrase)
-    => LaunchProcess(ExportPublicKeyCommand, string.Format(ExportPublicKeyArguments, privatePemPath, publicPemPath), passphrase);
+    private static string GetGenerateKeyArguments(char[] passphrase)
+    => passphrase.Length == 0 ? GenerateUnprotectedKeyArguments : GenerateKeyArguments;
 
-    private static async Task<bool> LaunchProcess(string command, string arguments, char[] passphrase)
+    private static string GetExportPublicKeyArguments(char[] passphrase)
+    => passphrase.Length == 0 ? ExportPublicKeyUnprotectedArguments : ExportPublicKeyArguments;
+
+    public static Task<bool> Generate(string privatePemPath, char[] passphrase, int keySize = KeySizeBits, ILogger? logger = null)
+    => LaunchKeyProcess(GenerateKeyCommand, string.Format(GetGenerateKeyArguments(passphrase), privatePemPath, keySize), passphrase, logger);
+
+    public static Task<bool> ExportPublicKey(string privatePemPath, string publicPemPath, char[] passphrase, ILogger? logger = null)
+    => LaunchKeyProcess(ExportPublicKeyCommand, string.Format(GetExportPublicKeyArguments(passphrase), privatePemPath, publicPemPath), passphrase, logger);
+
+    private static async Task<bool> LaunchKeyProcess(string command, string arguments, char[] passphrase, ILogger? logger = null)
     {
         try
         {
@@ -65,8 +76,9 @@ public static class KeysGenerator
             await process.WaitForExitAsync();
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger?.LogError(ex, "Error encountered while running key generator process.");
             return false;
         }
     }

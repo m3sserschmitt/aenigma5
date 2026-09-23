@@ -1,6 +1,6 @@
 /*
-    Aenigma - Federal messaging system
-    Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 
@@ -25,8 +25,6 @@ namespace Enigma5.Security;
 public class CommandLinePassphraseReader : IPassphraseProvider
 {
     private static readonly int PASSPHRASE_MAX_LENGTH = 128;
-
-    public char[]? ProvidePassphrase() => ReadPassphrase();
 
     private static char[]? ReadPassphrase()
     {
