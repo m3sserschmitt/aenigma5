@@ -41,6 +41,7 @@ using System.Text.Json.Serialization;
 using Enigma5.App.Middlewares;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Models;
+using Microsoft.Extensions.Primitives;
 
 namespace Enigma5.App;
 
@@ -201,6 +202,11 @@ public class StartupConfiguration(IConfiguration configuration)
             }
         });
         serviceProvider.UseAsHangfireActivator();
+        var logger = serviceProvider.GetRequiredService<ILogger<StartupConfiguration>>();
+        configuration.WarnAboutInvalidSettings(logger);
+        // Configuration files are loaded again when they change; their new values are checked as well.
+        ChangeToken.OnChange(configuration.GetReloadToken, () => configuration.WarnAboutInvalidSettings(logger));
+
         serviceProvider.MigrateDatabase();
         serviceProvider.SetupMasterPassphrase();
 

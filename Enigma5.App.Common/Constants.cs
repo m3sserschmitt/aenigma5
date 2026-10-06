@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using Enigma5.App.Common.Enums;
+
 namespace Enigma5.App.Common;
 
 public static class Constants
@@ -41,6 +43,26 @@ public static class Constants
 
     // Milliseconds.
     public const int DefaultDelayBetweenConnectionRetries = 3000;
+
+    // Defaults of the settings, used when a setting is missing or its value cannot be read.
+    // They are the same as the values in Enigma5.App/appsettings.json.
+    public const DbProvider DefaultDbProvider = DbProvider.Sqlite;
+
+    public const string DefaultDbConnectionString = "data source=aenigmaDb.sqlite";
+
+    public const KeySource DefaultKeySource = KeySource.File;
+
+    public const PassphraseSource DefaultPassphraseSource = PassphraseSource.Dashboard;
+
+    public const PassphrasePersistence DefaultPassphrasePersistence = PassphrasePersistence.Persistent;
+
+    public const string DefaultPrivateKeyPath = "private-key.pem";
+
+    public const string DefaultPublicKeyPath = "public-key.pem";
+
+    public const string DefaultWebContentDirectory = "./";
+
+    public const string DefaultSocks5Proxy = "socks5://127.0.0.1:9050";
 
     public static readonly TimeSpan SignalRHandshakeTimeout = TimeSpan.FromSeconds(15);
 

@@ -103,6 +103,14 @@ public static class ConfigurationExtensions
         ) ?? false);
     }
 
+    public static void WarnAboutInvalidSettings(this IConfiguration configuration, ILogger logger)
+    {
+        foreach (var setting in configuration.GetInvalidSettings())
+        {
+            logger.LogWarning("The setting {Setting} has the value {Value}, which cannot be read. The default {Default} is used instead.", setting.Key, setting.Value, setting.DefaultValue);
+        }
+    }
+
     public static List<HttpBlacklistDto> GetHttpBlacklists(this IConfiguration configuration)
     => configuration.GetSection("HttpBlacklists").Get<List<HttpBlacklistDto>>() ?? [];
 
