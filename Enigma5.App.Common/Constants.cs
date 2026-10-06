@@ -28,6 +28,17 @@ public static class Constants
 
     public static readonly TimeSpan DefaultVertexLifetime = TimeSpan.FromMinutes(30);
 
+    public static readonly TimeSpan DefaultMessageRetentionPeriod = TimeSpan.FromDays(14);
+
+    public static readonly TimeSpan DefaultSentMessageRetentionPeriod = TimeSpan.Zero;
+
+    public static readonly TimeSpan DefaultSharedDataRetentionPeriod = TimeSpan.FromDays(14);
+
+    public static readonly TimeSpan DefaultFilesRetentionPeriod = TimeSpan.FromDays(3);
+
+    // Milliseconds.
+    public const int DefaultDelayBetweenConnectionRetries = 3000;
+
     public static readonly TimeSpan SignalRHandshakeTimeout = TimeSpan.FromSeconds(15);
 
     public static readonly TimeSpan SignalRClientTimeoutInterval = TimeSpan.FromSeconds(90);
