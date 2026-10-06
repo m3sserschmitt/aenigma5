@@ -159,9 +159,31 @@ public sealed class SealProvider :
 
     public static int SearchMasterPassphrase() => Native.SearchMasterPassphrase();
 
-    public static int CreateMasterPassphrase(byte[] passphrase) => Native.CreateMasterPassphrase(passphrase);
+    public static int CreateMasterPassphrase(byte[] passphrase)
+    => WithTerminatedCopy(passphrase, Native.CreateMasterPassphrase);
 
-    public static int CreatePersistentMasterPassphrase(byte[] passphrase) => Native.CreatePersistentMasterPassphrase(passphrase);
+    public static int CreatePersistentMasterPassphrase(byte[] passphrase)
+    => WithTerminatedCopy(passphrase, Native.CreatePersistentMasterPassphrase);
+
+    // libaenigma reads the passphrase as a zero-terminated string of at most KernelKeyMaxSize bytes.
+    private static int WithTerminatedCopy(byte[] passphrase, Func<byte[], int> create)
+    {
+        if (passphrase.Length == 0 || passphrase.Length > Constants.KernelKeyMaxSize || Array.IndexOf(passphrase, (byte)0) >= 0)
+        {
+            return -1;
+        }
+
+        var terminated = new byte[passphrase.Length + 1];
+        try
+        {
+            passphrase.CopyTo(terminated, 0);
+            return create(terminated);
+        }
+        finally
+        {
+            Array.Clear(terminated);
+        }
+    }
 
     public static bool RemoveMasterPassphrase() => Native.RemoveMasterPassphrase();
 

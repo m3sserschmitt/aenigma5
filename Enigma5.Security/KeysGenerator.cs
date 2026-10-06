@@ -62,18 +62,28 @@ public static class KeysGenerator
                     FileName = command,
                     Arguments = arguments,
                     RedirectStandardInput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 }
             };
             if (!process.Start())
             {
+                logger?.LogError("Could not start {Command}.", command);
                 return false;
             }
+            var errorOutput = process.StandardError.ReadToEndAsync();
             await process.StandardInput.WriteAsync(passphrase);
             await process.StandardInput.FlushAsync();
             process.StandardInput.Close();
             await process.WaitForExitAsync();
+            if (process.ExitCode != 0)
+            {
+                // The arguments hold only file paths; the passphrase is passed on standard input.
+                logger?.LogError("{Command} {Arguments} failed with exit code {ExitCode}: {Error}",
+                    command, arguments, process.ExitCode, (await errorOutput).Trim());
+                return false;
+            }
             return true;
         }
         catch (Exception ex)

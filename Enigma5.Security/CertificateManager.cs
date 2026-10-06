@@ -87,13 +87,20 @@ public sealed class CertificateManager(
         PassphrasePersistence.Ephemeral => SealProvider.SearchMasterPassphrase(),
         _ => 0
     };
-    
+
+    private int CreateMasterPassphrase(byte[] passphrase) => _configuration.GetPassphrasePersistence() switch
+    {
+        PassphrasePersistence.Persistent => SealProvider.CreatePersistentMasterPassphrase(passphrase),
+        PassphrasePersistence.Ephemeral => SealProvider.CreateMasterPassphrase(passphrase),
+        _ => -1
+    };
+
     public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
     => _simpleSingleThreadRunner.RunAsync(() =>
     {
         SearchMasterPassphrase();
         SealProvider.RemoveMasterPassphrase();
-        return SealProvider.CreatePersistentMasterPassphrase(passphrase) > 0;
+        return CreateMasterPassphrase(passphrase) > 0;
     }, _logger);
 
     public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(() =>
@@ -160,15 +167,15 @@ public sealed class CertificateManager(
         var privateKeyFileInfo = new FileInfo(privateKeyPath);
         if (!privateKeyFileInfo.Exists || privateKeyFileInfo.Length == 0)
         {
-            return await KeysGenerator.Generate(privateKeyPath, passphrase) &&
-            await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+            return await KeysGenerator.Generate(privateKeyPath, passphrase, logger: _logger) &&
+            await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase, _logger);
         }
         else
         {
             var publicKeyFileInfo = new FileInfo(publicKeyPath);
             if (!publicKeyFileInfo.Exists || publicKeyFileInfo.Length == 0)
             {
-                return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+                return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase, _logger);
             }
         }
         return true;
