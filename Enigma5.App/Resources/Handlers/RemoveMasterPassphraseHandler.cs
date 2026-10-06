@@ -19,6 +19,7 @@
 */
 
 using Enigma5.App.Data;
+using Enigma5.App.NetworkBridge;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.UI;
 using Enigma5.Security.Contracts;
@@ -26,7 +27,7 @@ using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class RemoveMasterPassphraseHandler(ICertificateManager certificateManager, NetworkGraph networkGraph, DashboardUIState dashboardUIState)
+public class RemoveMasterPassphraseHandler(ICertificateManager certificateManager, NetworkGraph networkGraph, DashboardUIState dashboardUIState, Bridge bridge)
 : IRequestHandler<RemoveMasterPassphraseCommand, CommandResult<bool>>
 {
     private readonly ICertificateManager _certificateManager = certificateManager;
@@ -35,11 +36,15 @@ public class RemoveMasterPassphraseHandler(ICertificateManager certificateManage
 
     private readonly NetworkGraph _networkGraph = networkGraph;
 
+    private readonly Bridge _bridge = bridge;
+
     public async Task<CommandResult<bool>> Handle(RemoveMasterPassphraseCommand request, CancellationToken cancellationToken)
     {
         await _certificateManager.RemoveMasterPassphraseAsync();
         await _networkGraph.GenerateLocalVertexAsync();
         await _dashboardUIState.SetPrivateKeyUnlockedAsync(!string.IsNullOrWhiteSpace((await _networkGraph.GetLocalVertexAsync())?.SignedData));
+        // A run of the bridge on a locked node closes the connections to the peers, so they stop listing this node.
+        await _bridge.StartAsync(cancellationToken);
         return CommandResult.CreateResultSuccess(!_dashboardUIState.PrivateKeyUnlocked);
     }
 }

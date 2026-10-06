@@ -126,6 +126,20 @@ public sealed class CertificateManager(
         return SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty);
     }, _logger);
 
+    // True if the private key can be used right now. It signs one byte, so the answer is never out of date.
+    public async Task<bool> CanSignAsync()
+    {
+        try
+        {
+            using var signer = await CreateSignerAsync();
+            return signer?.Sign([0]) is not null;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> SetupAsync(char[] passphrase)
     {
         try

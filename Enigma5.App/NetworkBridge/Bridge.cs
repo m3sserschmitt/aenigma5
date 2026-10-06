@@ -20,6 +20,9 @@
 
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
+using Enigma5.App.Data;
+using Enigma5.App.UI;
+using Enigma5.Security.Contracts;
 
 namespace Enigma5.App.NetworkBridge;
 
@@ -27,6 +30,9 @@ public class Bridge(
     IConfiguration configuration,
     HubConnectionsProxy hubConnectionsProxy,
     SimpleSingleThreadRunner singleThreadRunner,
+    ICertificateManager certificateManager,
+    NetworkGraph networkGraph,
+    DashboardUIState dashboardUIState,
     ILogger<Bridge> logger) : IDisposable
 {
     private bool _disposed;
@@ -39,6 +45,12 @@ public class Bridge(
 
     private readonly SimpleSingleThreadRunner _singleThreadRunner = singleThreadRunner;
 
+    private readonly ICertificateManager _certificateManager = certificateManager;
+
+    private readonly NetworkGraph _networkGraph = networkGraph;
+
+    private readonly DashboardUIState _dashboardUIState = dashboardUIState;
+
     ~Bridge()
     {
         Dispose(false);
@@ -47,6 +59,12 @@ public class Bridge(
     public async Task<bool> StartAsync(CancellationToken cancellationToken = default) => await _singleThreadRunner.RunAsync(async () =>
     {
         _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}}...", nameof(StartAsync));
+        if (!await IsKeyAvailableAsync())
+        {
+            // Without the key no vector can sign in. Creating one would only fail and be retried without end.
+            await _connections.StopAsync(cancellationToken);
+            return false;
+        }
         var result = await _connections.LoadConnectionsAsync(cancellationToken);
         RegisterEvents();
         result &= await _connections.StartAsync(cancellationToken);
@@ -56,6 +74,20 @@ public class Bridge(
         result &= await _connections.CleanupAsync(cancellationToken);
         return result;
     }, _logger);
+
+    // Asks the key itself, by signing. If the answer differs from what the node shows (for example
+    // because the key file was locked or unlocked from outside), the local vertex and the dashboard follow.
+    private async Task<bool> IsKeyAvailableAsync()
+    {
+        var available = await _certificateManager.CanSignAsync();
+        if (available != _dashboardUIState.PrivateKeyUnlocked)
+        {
+            _logger.LogWarning("The private key is {State}. The local vertex is generated again.", available ? "available again" : "no longer available; connections to peers are stopped");
+            await _networkGraph.GenerateLocalVertexAsync();
+            await _dashboardUIState.SetPrivateKeyUnlockedAsync(available);
+        }
+        return available;
+    }
 
     private void RegisterEvents()
     {
