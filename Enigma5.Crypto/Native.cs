@@ -20,7 +20,6 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
 using Enigma5.App.Common.Utils;
 
 namespace Enigma5.Crypto;
@@ -108,7 +107,4 @@ internal static partial class Native
 
     [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial IntPtr UnsealOnion(IntPtr ctx, [In] byte[] onion, out int outLen);
-
-    [LibraryImport(App.Common.Constants.Libaenigma, StringMarshallingCustomType = typeof(Utf8StringMarshaller))]
-    internal static partial IntPtr SealOnion([In] byte[] plaintext, uint plaintextLen, [In] string[] keys, [In] string[] addresses, uint count, out int outLen);
 }

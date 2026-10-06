@@ -24,34 +24,6 @@ namespace Enigma5.Crypto;
 
 public static class KeyUtil
 {
-    public static bool FreeKeyNativeBuffer(IntPtr nativeBuffer, int bytesCount)
-    {
-        try
-        {
-            Marshal.Copy(new byte[bytesCount], 0, nativeBuffer, bytesCount);
-            Marshal.FreeHGlobal(nativeBuffer);
-            return true;
-        }
-        catch(Exception)
-        {
-            return false;
-        }
-    }
-
-    public static bool FreeKeyNativeBuffer(IntPtr nativeBuffer, byte[] keyMaterial)
-    {
-        try
-        {
-            FreeKeyNativeBuffer(nativeBuffer, keyMaterial.Length);
-            Array.Clear(keyMaterial);
-            return true;
-        }
-        catch(Exception)
-        {
-            return false;
-        }
-    }
-
     public static byte[]? CopyKeyFromNativeBuffer(nint source, int bytesCount)
     {
         try

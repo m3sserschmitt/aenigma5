@@ -130,29 +130,6 @@ public sealed class SealProvider :
 
     public static int GetPKeySize(string publicKey) => publicKey.IsValidPublicKey() ? Native.GetPKeySize(publicKey) : -1;
 
-    public static string? SealOnion(
-        byte[] plaintext,
-        List<string> keys,
-        List<string> addresses)
-    {
-        if (keys.Count != addresses.Count || keys.Any(item => !item.IsValidPublicKey()) || addresses.Any(item => !item.IsValidAddress()) || plaintext.Length == 0)
-        {
-            return null;
-        }
-
-        var data = Native.SealOnion(plaintext, (uint)plaintext.Length, [.. keys], [.. addresses], (uint)keys.Count, out var outLen);
-
-        if (data == IntPtr.Zero || outLen < 0)
-        {
-            return null;
-        }
-
-        var managedBuffer = KeyUtil.CopyKeyFromNativeBuffer(data, outLen);
-        KeyUtil.FreeKeyNativeBuffer(data, outLen);
-
-        return managedBuffer is not null ? Convert.ToBase64String(managedBuffer) : null;
-    }
-
     public static bool SetMasterPassphraseName(string name) => Native.SetMasterPassphraseName(name);
 
     public static int SearchPersistentMasterPassphrase() => Native.SearchPersistentMasterPassphrase();
