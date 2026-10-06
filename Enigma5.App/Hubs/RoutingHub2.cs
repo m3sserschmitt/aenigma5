@@ -139,7 +139,57 @@ public partial class RoutingHub
         {
             return [];
         }
-        return result.Value ?? [];
+        var messages = result.Value ?? [];
+        RecordPulledMessages(messages);
+        return messages;
+    }
+
+    // Highest message id returned by Pull or Pull2 on this connection; Cleanup never confirms beyond it.
+    private long? LastPulledMessageId
+    => Context.Items.TryGetValue(Common.Constants.HubConnectionLastPulledMessageIdKey, out var value) ? value as long? : null;
+
+    private void RecordPulledMessages(List<PendingMessageDto> messages)
+    {
+        if (messages.Count == 0)
+        {
+            return;
+        }
+
+        var highestId = messages.Max(message => message.Id);
+        if (LastPulledMessageId is not long lastPulled || highestId > lastPulled)
+        {
+            Context.Items[Common.Constants.HubConnectionLastPulledMessageIdKey] = highestId;
+        }
+    }
+
+    private async Task<InvocationResultDto<bool>> ConfirmDeliveryAsync(string methodName, long? requestedSupId)
+    {
+        if (ClientAddress is null)
+        {
+            _logger.LogError($"ClientAddress null while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
+            methodName,
+            Context.ConnectionId);
+            return Error<bool>(InvocationErrors.INTERNAL_ERROR);
+        }
+
+        // Only messages this connection has actually received can be confirmed.
+        if (LastPulledMessageId is not long lastPulled)
+        {
+            return Ok(true);
+        }
+        var supId = requestedSupId is long requested ? Math.Min(requested, lastPulled) : lastPulled;
+
+        var result = await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress, supId));
+        if (result.IsSuccessNotNullResultValue())
+        {
+            return Ok(true);
+        }
+
+        _logger.LogError($"Could not clean up pending messages while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; Command result: {{@{Common.Constants.Serilog.CommandResultKey}}}.",
+        methodName,
+        Context.ConnectionId,
+        result);
+        return Error<bool>(InvocationErrors.INTERNAL_ERROR);
     }
 
     private async Task<bool> SendBroadcast(VertexBroadcastRequestDto adjacencyLists)

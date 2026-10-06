@@ -52,11 +52,17 @@ public static class Constants
 
     public const int MessagesPageSize = 20;
 
+    // Maximum number of messages returned by the deprecated hub method Pull.
+    public const int LegacyPullMaxMessages = 128;
+
     public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
 
     public const string HubConnectionLocalIpKey = "HubConnectionLocalIp";
 
     public const string HubConnectionLocalPortKey = "HubConnectionLocalPort";
+
+    // Highest pending message id returned by Pull or Pull2 on a connection; limits what Cleanup confirms.
+    public const string HubConnectionLastPulledMessageIdKey = "HubConnectionLastPulledMessageId";
 
     public const string OnionRoutingEndpoint = "OnionRouting";
 

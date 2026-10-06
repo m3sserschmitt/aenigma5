@@ -109,17 +109,18 @@ public partial class RoutingHub(
             return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
-        return Ok(await GetPendingMessagesAsync(ClientAddress, null, 1024));
+        return Ok(await GetPendingMessagesAsync(ClientAddress, null, Constants.LegacyPullMaxMessages));
     }
 
     [Authenticated]
+    [ValidateModel]
     [BlacklistAuthorization]
     public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull2(PullRequestDto request)
     {
         if (ClientAddress is null)
         {
             _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
-            nameof(Pull),
+            nameof(Pull2),
             Context.ConnectionId);
             return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
@@ -129,29 +130,8 @@ public partial class RoutingHub(
 
     [Authenticated]
     [BlacklistAuthorization]
-    public async Task<InvocationResultDto<bool>> Cleanup()
-    {
-        if (ClientAddress is null)
-        {
-            _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
-            nameof(Cleanup),
-            Context.ConnectionId);
-            return Error<bool>(InvocationErrors.INTERNAL_ERROR);
-        }
-
-        var result = await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress, null));
-
-        if (result.IsSuccessNotNullResultValue())
-        {
-            return Ok(true);
-        }
-
-        _logger.LogError($"Could cleanup pending messages while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}; Command result: {{@{Constants.Serilog.CommandResultKey}}}.",
-        nameof(Pull),
-        Context.ConnectionId,
-        result);
-        return Error<bool>(InvocationErrors.INTERNAL_ERROR);
-    }
+    public Task<InvocationResultDto<bool>> Cleanup()
+    => ConfirmDeliveryAsync(nameof(Cleanup), null);
 
     [ValidateModel]
     [BlacklistAuthorization]
@@ -230,13 +210,15 @@ public partial class RoutingHub(
     {
         _logger.LogDebug($"ConnectionId {{{Constants.Serilog.ConnectionIdKey}}} disconnected.", Context.ConnectionId);
         var removedAddress = await _sessionManager.RemoveAsync(Context.ConnectionId);
-        if (removedAddress == null)
+        if (removedAddress is null)
         {
-            _logger.LogError($"ConnectionId {{{Constants.Serilog.ConnectionIdKey}}} disconnected, but the connection could not be found into Session Manager.", Context.ConnectionId);
-            return;
+            // Expected for connections that never signed in, or whose session was taken over by a newer sign-in.
+            _logger.LogDebug($"ConnectionId {{{Constants.Serilog.ConnectionIdKey}}} disconnected without an active session.", Context.ConnectionId);
         }
-
-        await RemoveAdjacencies([removedAddress!]);
+        else
+        {
+            await RemoveAdjacencies([removedAddress]);
+        }
 
         await base.OnDisconnectedAsync(exception);
     }
