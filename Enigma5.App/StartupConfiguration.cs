@@ -212,7 +212,6 @@ public class StartupConfiguration(IConfiguration configuration)
                 endpoints.MapOpenApi();
             }
         });
-        serviceProvider.UseAsHangfireActivator();
         var logger = serviceProvider.GetRequiredService<ILogger<StartupConfiguration>>();
         configuration.WarnAboutInvalidSettings(logger);
         // Configuration files are loaded again when they change; their new values are checked as well.

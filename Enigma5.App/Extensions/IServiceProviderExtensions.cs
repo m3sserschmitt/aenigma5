@@ -19,9 +19,7 @@
 */
 
 using Enigma5.App.Data;
-using Enigma5.App.Hangfire;
 using Enigma5.App.Resources.Commands;
-using Hangfire;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,9 +27,6 @@ namespace Enigma5.App.Extensions;
 
 public static class IServiceProviderExtensions
 {
-    public static IGlobalConfiguration<HangfireActivator> UseAsHangfireActivator(this IServiceProvider serviceProvider)
-        => GlobalConfiguration.Configuration.UseActivator(new HangfireActivator(serviceProvider));
-
     public static IServiceProvider MigrateDatabase(this IServiceProvider serviceProvider)
     {
         try

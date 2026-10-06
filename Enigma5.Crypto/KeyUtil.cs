@@ -38,23 +38,4 @@ public static class KeyUtil
             return null;
         }
     }
-
-    private static readonly byte[] nullByte = [ 0 ];
-
-    public static nint CopyKeyToNativeBuffer(byte[] source)
-    {
-        try
-        {
-            var nativeBuffer = Marshal.AllocHGlobal(source.Length + 1);
-            
-            Marshal.Copy(source, 0, nativeBuffer, source.Length);
-            Marshal.Copy(nullByte, 0, nativeBuffer + source.Length, nullByte.Length);
-            
-            return nativeBuffer;
-        }
-        catch
-        {
-            return IntPtr.Zero;
-        }
-    }
 }
