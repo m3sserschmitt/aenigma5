@@ -57,6 +57,8 @@ public class App
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseKestrel();
+                // Makes the Blazor script of the dashboard available when the project runs unpublished outside Development.
+                webBuilder.UseStaticWebAssets();
                 webBuilder.UseStartup<StartupConfiguration>();
             });
 }
