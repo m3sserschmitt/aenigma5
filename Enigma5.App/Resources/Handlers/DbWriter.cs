@@ -32,7 +32,7 @@ public abstract class DbWriter : IDbWriter
 
     public abstract Task<int> RunRemoveFileAsync(FileRecord fileRecord);
 
-    public abstract Task<int> RunCreatePendingMessageAsync(PendingMessage pendingMessage);
+    public abstract Task<PendingMessage?> RunCreatePendingMessageAsync(PendingMessage pendingMessage, bool skipIfUuidExists);
 
     public abstract Task<int> RunRemoveMessagesAsync(Expression<Func<PendingMessage, bool>> predicate);
 
@@ -44,9 +44,9 @@ public abstract class DbWriter : IDbWriter
 
     public abstract Task<int> RunCreateSharedDataAsync(SharedData sharedData);
 
-    public abstract Task<int> RunIncrementFileAccessCountAsync(FileRecord fileRecord);
+    public abstract Task<FileRecord?> RunIncrementFileAccessCountAsync(string tag);
 
-    public abstract Task<int> RunIncrementSharedDataAccessCountAsync(SharedData sharedData);
+    public abstract Task<SharedData?> RunIncrementSharedDataAccessCountAsync(string tag);
 
     public async Task<int> CreatePeerAsync(Peer peer, CancellationToken cancellationToken)
     {
@@ -84,22 +84,22 @@ public abstract class DbWriter : IDbWriter
         return await RunCreateSharedDataAsync(sharedData);
     }
 
-    public async Task<int> CreatePendingMessageAsync(PendingMessage pendingMessage, CancellationToken cancellationToken = default)
+    public async Task<PendingMessage?> CreatePendingMessageAsync(PendingMessage pendingMessage, bool skipIfUuidExists, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return await RunCreatePendingMessageAsync(pendingMessage);
+        return await RunCreatePendingMessageAsync(pendingMessage, skipIfUuidExists);
     }
 
-    public async Task<int> IncrementFileAccessCountAsync(FileRecord fileRecord, CancellationToken cancellationToken = default)
+    public async Task<FileRecord?> IncrementFileAccessCountAsync(string tag, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return await RunIncrementFileAccessCountAsync(fileRecord);
+        return await RunIncrementFileAccessCountAsync(tag);
     }
 
-    public async Task<int> IncrementSharedDataAccessCountAsync(SharedData sharedData, CancellationToken cancellationToken = default)
+    public async Task<SharedData?> IncrementSharedDataAccessCountAsync(string tag, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return await RunIncrementSharedDataAccessCountAsync(sharedData);
+        return await RunIncrementSharedDataAccessCountAsync(tag);
     }
 
     public async Task<int> MarkMessagesAsDeliveredAsync(Expression<Func<PendingMessage, bool>> predicate, CancellationToken cancellationToken = default)

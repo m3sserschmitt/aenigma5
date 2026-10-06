@@ -55,13 +55,22 @@ public class SingleThreadDbWriter(
         return dbContext.SaveChanges();
     }, _logger);
 
-    public override async Task<int> RunCreatePendingMessageAsync(PendingMessage pendingMessage)
+    public override async Task<PendingMessage?> RunCreatePendingMessageAsync(PendingMessage pendingMessage, bool skipIfUuidExists)
     => await _simpleSingleThreadRunner.RunAsync(() =>
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<EnigmaDbContext>();
+        // The check and the insert run in the same work item, so two calls cannot both pass the check.
+        if (skipIfUuidExists)
+        {
+            var existingMessage = dbContext.Messages.AsNoTracking().FirstOrDefault(item => item.Uuid == pendingMessage.Uuid);
+            if (existingMessage is not null)
+            {
+                return existingMessage;
+            }
+        }
         dbContext.Messages.Add(pendingMessage);
-        return dbContext.SaveChanges();
+        return dbContext.SaveChanges() > 0 ? pendingMessage : null;
     }, _logger);
 
     public override async Task<int> RunRemoveMessagesAsync(Expression<Func<PendingMessage, bool>> predicate)
@@ -98,40 +107,42 @@ public class SingleThreadDbWriter(
         return dbContext.SaveChanges();
     }, _logger);
 
-    public override async Task<int> RunIncrementFileAccessCountAsync(FileRecord fileRecord)
+    public override async Task<FileRecord?> RunIncrementFileAccessCountAsync(string tag)
     => await _simpleSingleThreadRunner.RunAsync(() =>
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<EnigmaDbContext>();
+        // The record is read in the same work item that changes it, so no increment is lost.
+        var fileRecord = dbContext.Files.FirstOrDefault(item => item.Tag == tag);
+        if (fileRecord is null)
+        {
+            return null;
+        }
         fileRecord.AccessCount += 1;
         if (fileRecord.AccessCount >= fileRecord.MaxAccessCount)
         {
             dbContext.Files.Remove(fileRecord);
         }
-        else
-        {
-            dbContext.Files.Update(fileRecord);
-        }
-
-        return dbContext.SaveChanges();
+        return dbContext.SaveChanges() > 0 ? fileRecord : null;
     }, _logger);
 
-    public override async Task<int> RunIncrementSharedDataAccessCountAsync(SharedData sharedData)
+    public override async Task<SharedData?> RunIncrementSharedDataAccessCountAsync(string tag)
     => await _simpleSingleThreadRunner.RunAsync(() =>
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<EnigmaDbContext>();
+        // The record is read in the same work item that changes it, so no increment is lost.
+        var sharedData = dbContext.SharedData.FirstOrDefault(item => item.Tag == tag);
+        if (sharedData is null)
+        {
+            return null;
+        }
         sharedData.AccessCount += 1;
         if (sharedData.AccessCount >= sharedData.MaxAccessCount)
         {
             dbContext.SharedData.Remove(sharedData);
         }
-        else
-        {
-            dbContext.SharedData.Update(sharedData);
-        }
-
-        return dbContext.SaveChanges();
+        return dbContext.SaveChanges() > 0 ? sharedData : null;
     }, _logger);
 
     public override async Task<int> RunMarkMessagesAsDeliveredAsync(Expression<Func<PendingMessage, bool>> predicate)

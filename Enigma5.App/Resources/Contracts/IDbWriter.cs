@@ -33,9 +33,13 @@ public interface IDbWriter
 
     Task<int> RemoveFileAsync(FileRecord fileRecord, CancellationToken cancellationToken = default);
 
-    Task<int> IncrementFileAccessCountAsync(FileRecord fileRecord, CancellationToken cancellationToken = default);
+    // Adds one to the access count, or removes the record when the maximum is reached.
+    // Returns the record with its new count, or null if the tag is not known.
+    Task<FileRecord?> IncrementFileAccessCountAsync(string tag, CancellationToken cancellationToken = default);
 
-    Task<int> CreatePendingMessageAsync(PendingMessage pendingMessage, CancellationToken cancellationToken = default);
+    // Returns the stored message: the given one if it was added, or, when skipIfUuidExists is set,
+    // the message already stored with the same uuid. Returns null if nothing was stored.
+    Task<PendingMessage?> CreatePendingMessageAsync(PendingMessage pendingMessage, bool skipIfUuidExists, CancellationToken cancellationToken = default);
 
     Task<int> RemoveMessagesAsync(Expression<Func<PendingMessage, bool>> predicate, CancellationToken cancellationToken = default);
 
@@ -45,5 +49,6 @@ public interface IDbWriter
 
     Task<int> RemoveSharedDataAsync(Expression<Func<SharedData, bool>> predicate, CancellationToken cancellationToken = default);
 
-    Task<int> IncrementSharedDataAccessCountAsync(SharedData sharedData, CancellationToken cancellationToken = default);
+    // Same contract as IncrementFileAccessCountAsync.
+    Task<SharedData?> IncrementSharedDataAccessCountAsync(string tag, CancellationToken cancellationToken = default);
 }

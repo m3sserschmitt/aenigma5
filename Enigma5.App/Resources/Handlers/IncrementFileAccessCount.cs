@@ -23,19 +23,15 @@ using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Contracts;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class IncrementFileAccessCountHandler(
-    EnigmaDbContext context,
     IConfiguration configuration,
     IDbWriter dbWriter
 ) : IRequestHandler<IncrementFileAccessCountCommand, CommandResult<int>>
 {
     private readonly IConfiguration _configuration = configuration;
-
-    private readonly EnigmaDbContext _context = context;
 
     private readonly IDbWriter _dbWriter = dbWriter;
 
@@ -53,17 +49,13 @@ public class IncrementFileAccessCountHandler(
 
     public async Task<CommandResult<int>> Handle(IncrementFileAccessCountCommand request, CancellationToken cancellationToken)
     {
-        var fileRecord = await _context.Files.FirstOrDefaultAsync(
-            item => item.Tag == request.Tag,
-            cancellationToken: cancellationToken);
-
-        if (fileRecord is not null)
+        var fileRecord = await _dbWriter.IncrementFileAccessCountAsync(request.Tag, cancellationToken);
+        if (fileRecord is null)
         {
-            var result = await _dbWriter.IncrementFileAccessCountAsync(fileRecord, cancellationToken);
-            RemoveFile(fileRecord);
-            return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
+            return CommandResult.CreateResultFailure<int>();
         }
 
-        return CommandResult.CreateResultFailure<int>();
+        RemoveFile(fileRecord);
+        return CommandResult.CreateResultSuccess(1);
     }
 }

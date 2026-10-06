@@ -18,35 +18,21 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Contracts;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class IncrementSharedDataAccessCountHandler(
-    EnigmaDbContext context,
     IDbWriter dbWriter
 ) : IRequestHandler<IncrementSharedDataAccessCountCommand, CommandResult<int>>
 {
-    private readonly EnigmaDbContext _context = context;
-
     private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<int>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
-        var sharedData = await _context.SharedData.FirstOrDefaultAsync(
-            item => item.Tag == request.Tag,
-            cancellationToken: cancellationToken);
-
-        if (sharedData is not null)
-        {
-            var result = await _dbWriter.IncrementSharedDataAccessCountAsync(sharedData, cancellationToken);
-            return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
-        }
-
-        return CommandResult.CreateResultFailure<int>();
+        var sharedData = await _dbWriter.IncrementSharedDataAccessCountAsync(request.Tag, cancellationToken);
+        return sharedData is not null ? CommandResult.CreateResultSuccess(1) : CommandResult.CreateResultFailure<int>();
     }
 }
