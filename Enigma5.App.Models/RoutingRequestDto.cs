@@ -52,6 +52,19 @@ public class RoutingRequestDto(List<string?>? payloads = null, string? uuid = nu
         {
             errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));
         }
+
+        // The uuid tracks one message, so it is only allowed with a single payload.
+        if(Uuid is not null)
+        {
+            if(Payloads?.Count > 1)
+            {
+                errors.AddError(ValidationErrorsDto.UUID_NOT_ALLOWED_FOR_MULTIPLE_PAYLOADS, nameof(Uuid));
+            }
+            else if(!Uuid.IsValidGuid())
+            {
+                errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Uuid));
+            }
+        }
         return errors;
     }
 }

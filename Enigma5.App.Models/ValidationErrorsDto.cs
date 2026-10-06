@@ -30,6 +30,8 @@ public static class ValidationErrorsDto
 
     public const string INVALID_SIGNATURE = "The signature could not be verified.";
 
+    public const string UUID_NOT_ALLOWED_FOR_MULTIPLE_PAYLOADS = "A uuid can only be provided with a single payload.";
+
     public const string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
 
     public const string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";
