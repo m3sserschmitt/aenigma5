@@ -133,6 +133,8 @@ public static class Constants
 
     public const string DashboardPageEndpoint = "Dashboard";
 
+    public const string JobsDashboardEndpoint = "/Jobs";
+
     public const string MessagesCleanupRecurringJob = "messages-cleanup";
 
     public const string SharedDataCleanupRecurringJob = "shared-data-cleanup";

@@ -114,6 +114,17 @@ public class StartupConfiguration(IConfiguration configuration)
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
 
+            if (env.IsDevelopment())
+            {
+                // Hangfire's own page, for development only. It only tells local requests apart,
+                // so it is also blacklisted on the public endpoint.
+                endpoints.MapHangfireDashboard(Constants.JobsDashboardEndpoint, new DashboardOptions
+                {
+                    DashboardTitle = "Aenigma jobs",
+                    IsReadOnlyFunc = _ => true
+                });
+            }
+
             endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint, options =>
             {
                 options.AllowStatefulReconnects = true;
