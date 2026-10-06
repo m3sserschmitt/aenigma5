@@ -181,7 +181,7 @@ public static class Constants
 
         public const string CommandKey = "Command";
 
-        public const string CommandResultKey = "CommendResult";
+        public const string CommandResultKey = "CommandResult";
 
         public const string AddressKey = "Address";
     }
