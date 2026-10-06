@@ -29,12 +29,34 @@ namespace Enigma5.App.Resources.Handlers;
 
 public class CreateFileHandler(
     IConfiguration configuration,
-    IDbWriter dbWriter
+    IDbWriter dbWriter,
+    ILogger<CreateFileHandler> logger
 ) : IRequestHandler<CreateFileCommand, CommandResult<SharedDataDto>>
 {
     private readonly IConfiguration _configuration = configuration;
 
     private readonly IDbWriter _dbWriter = dbWriter;
+
+    private readonly ILogger _logger = logger;
+
+    // Best effort: whatever cannot be removed here is removed by the cleanup job when the record expires.
+    private async Task RemoveAsync(FileRecord record, string fullPath)
+    {
+        try
+        {
+            if (File.Exists(fullPath))
+            {
+                File.Delete(fullPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not delete a partly stored file.");
+            return;
+        }
+
+        await _dbWriter.RemoveFileAsync(record, CancellationToken.None);
+    }
 
     public async Task<CommandResult<SharedDataDto>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
     {
@@ -62,8 +84,17 @@ public class CreateFileHandler(
 
         if (await _dbWriter.CreateFileAsync(record, cancellationToken) > 0)
         {
-            using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
-            await request.File.CopyToAsync(stream, cancellationToken);
+            try
+            {
+                using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+                await request.File.CopyToAsync(stream, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not store an uploaded file; its record is removed again.");
+                await RemoveAsync(record, fullPath);
+                return CommandResult.CreateResultFailure<SharedDataDto>();
+            }
 
             return CommandResult.CreateResultSuccess(new SharedDataDto
             {

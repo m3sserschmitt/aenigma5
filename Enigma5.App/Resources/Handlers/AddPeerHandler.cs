@@ -23,6 +23,7 @@ using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Contracts;
+using Enigma5.App.Resources.Queries;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
@@ -40,6 +41,12 @@ public class AddPeerHandler(
     {
         if (request.Address.IsValidAddress() && Uri.TryCreate(request.Host, UriKind.Absolute, out var parsedUri))
         {
+            var peers = await _mediator.Send(new GetPeersQuery(), cancellationToken);
+            if (!peers.IsSuccessNotNullResultValue() || peers.Value!.Any(item => item.Address == request.Address))
+            {
+                return CommandResult.CreateResultFailure<PeerDto>();
+            }
+
             var peer = new Peer
             {
                 Host = parsedUri.ToString(),
