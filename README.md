@@ -69,7 +69,8 @@ cd ./Enigma5.Scripts
 
 Depending on your environment, you might want to change the default configuration
 values within `./Enigma5.App/appsettings.json`. Let's walk through the file and
-explain all sections.
+explain all sections. A setting that is missing takes the default given below; a value that
+cannot be read is replaced by that default, and the log shows a warning naming the setting.
 
 ```json
 "ConnectionStrings": {
@@ -129,6 +130,13 @@ configure granular access to the [API](./API.md).
             "GET",
             "POST"
           ]
+        },
+        {
+          "Path": "/Jobs",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
         }
       ]
     }
@@ -138,9 +146,11 @@ configure granular access to the [API](./API.md).
 As the name suggests, this section can be used to effectively block access to a specific
 API path on a given endpoint. In this default configuration `GET /Dashboard` http
 requests, and the `/_blazor` connection the dashboard page uses, will be blocked on
-`http://127.0.0.1:8080`. Similarly we can define other rules and control who can access
-what. The `Endpoint` must be written with an IP address (not a host name such as
-`localhost`), otherwise the rule never applies.
+`http://127.0.0.1:8080`. The `/Jobs` rule blocks the background jobs page, which exists only
+when the app runs in the `Development` environment (`run-dev.sh`), where it can be opened at
+[http://localhost:8081/Jobs](http://localhost:8081/Jobs). Similarly we can define other rules
+and control who can access what. The `Endpoint` must be written with an IP address (not a host name such as
+`localhost`), otherwise the rule never applies and a warning is logged at startup.
 
 ---
 
@@ -342,6 +352,17 @@ the network we should erase its info from the local ledger after a certain perio
 of inactivity. When running an isolated instance, this property is of no use. Default
 is 30 minutes. Keep it well above 10 minutes: neighbors refresh their information only
 about every 10 minutes.
+
+---
+
+```json
+"UnlistedVertexGracePeriod": "00:06:00"
+```
+
+How long a node is kept in the local graph when no other node lists it as a neighbor,
+for example because it has left the network. A short grace period is needed because
+information about distant nodes arrives piece by piece. It should be shorter than
+`VertexLifetime` and longer than about a minute. Default is 6 minutes.
 
 ---
 

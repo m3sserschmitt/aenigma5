@@ -166,7 +166,7 @@ Requires sign-in.
 
 To page through all pending messages, start with `infId` set to `null`, then pass the `id` of the
 last message received until an empty page is returned. Pulling does not mark messages as
-delivered; call [`Cleanup`](#cleanup) after pulling for that.
+delivered; call [`Cleanup2`](#cleanup2) with the `id` of the last message received for that.
 
 **Request Payload** — [`PullRequestDto`](#pullrequestdto)
 
@@ -181,7 +181,9 @@ delivered; call [`Cleanup`](#cleanup) after pulling for that.
 
 ---
 
-### `Cleanup`
+### `Cleanup` — Deprecated
+
+> Use `Cleanup2` instead. Will be removed in a future version.
 
 Marks the signed-in identity's pending messages as delivered, up to the highest message `id`
 that `Pull` or `Pull2` has returned **on the same connection**. Messages that were not returned on
@@ -195,6 +197,29 @@ been pulled on this connection, nothing is marked. Requires sign-in.
 | Outcome | Description |
 |---|---|
 | Success | Returns `true` |
+| Failure | `Internal error` |
+| Failure | `Authentication required` |
+
+---
+
+### `Cleanup2`
+
+Marks the signed-in identity's pending messages with an `id` up to and including `supId` as
+delivered. Pass the `id` of the last message received from `Pull2`. Requires sign-in.
+
+`supId` is capped at the highest message `id` that `Pull` or `Pull2` has returned on the same
+connection, so messages the connection has not received are never marked, even if a larger
+`supId` is sent. If nothing has been pulled on this connection, nothing is marked.
+
+**Request Payload** — [`CleanupRequestDto`](#cleanuprequestdto)
+
+**Responses**
+
+| Outcome | Description |
+|---|---|
+| Success | Returns `true` |
+| Failure | `One or more required properties not provided.` (missing `supId`) |
+| Failure | `One or more properties have invalid values.` (negative `supId`) |
 | Failure | `Internal error` |
 | Failure | `Authentication required` |
 
@@ -217,15 +242,25 @@ Forwards one or more encrypted message payloads toward their destination. Requir
 | Failure | `One or more required properties not provided.` |
 | Failure | `Too many payloads for one request.` |
 | Failure | `One or more payloads exceed the maximum onion size.` |
-| Failure | `One or more properties not in correct format.` |
+| Failure | `One or more properties not in correct format.` (includes a `uuid` that is not a GUID) |
+| Failure | `A uuid can only be provided with a single payload.` |
+| Failure | `Relays must route one message per request, with its uuid.` |
 | Failure | `Authentication required` |
 
-**Note:** a single request can batch up to 20 payloads; each is decrypted one layer and
-routed independently — one failing doesn't stop the rest. A recipient who's currently
-connected receives the message immediately in addition to it being saved; otherwise it's
-saved only, for later retrieval via `Pull2`.
+**Notes:**
+- A single request can batch up to 20 payloads; each is decrypted one layer and routed
+  independently — one failing doesn't stop the rest. A recipient who's currently connected
+  receives the message immediately in addition to it being saved; otherwise it's saved only, for
+  later retrieval via `Pull2`.
+- `uuid` tracks one message and lets nodes recognize a message they have already received. It may
+  only be sent with exactly one payload and must be a GUID. With several payloads, `uuid` must be
+  omitted; the node then assigns a new `uuid` to each message.
+- Batches are for clients. A caller whose address is a graph neighbor of the node (another relay)
+  must send exactly one payload per request, together with its `uuid`.
 
 ---
+
+### Network Graph
 
 ### `Broadcast`
 
@@ -286,7 +321,7 @@ message content after this node removed its onion layer, base64-encoded. `uuid` 
 message's tracking reference.
 
 **Note:** the message is also stored and remains available through [`Pull2`](#pull2) until the
-recipient confirms it with [`Cleanup`](#cleanup). Use `uuid` to detect duplicates.
+recipient confirms it with [`Cleanup2`](#cleanup2). Use `uuid` to detect duplicates.
 
 ### `Broadcast` (server → client)
 
@@ -307,6 +342,14 @@ changes.
 |---|---|---|
 | `publicKey` | string | Caller's public key, in PEM format |
 | `signature` | string | Base64 encoding of the decoded challenge bytes from `GenerateToken`, followed by their RSA SHA-256 signature made with the caller's private key |
+
+---
+
+### `CleanupRequestDto`
+
+| Property | Type | Description |
+|---|---|---|
+| `supId` | integer | `id` of the last message received; messages with an `id` up to and including it are marked as delivered. Required; must not be negative |
 
 ---
 
@@ -340,7 +383,7 @@ changes.
 | Property | Type | Description |
 |---|---|---|
 | `payloads` | string[] | One or more base64-encoded, onion-encrypted message layers (max 20, each at most 16,384 characters) |
-| `uuid` | string or `null` | Caller-supplied tracking reference; only honored when `payloads` contains exactly one item |
+| `uuid` | string or `null` | Tracking reference of the message, in GUID format. Allowed only when `payloads` contains exactly one item; required for callers that are graph neighbors of the node |
 
 ---
 

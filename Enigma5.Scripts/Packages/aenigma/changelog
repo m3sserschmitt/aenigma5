@@ -1,3 +1,32 @@
+aenigma (5.1.0) unstable; urgency=medium
+
+  [ Romulus Ruja ]
+  * New hub method Cleanup2 confirms pending messages up to a given id;
+    Pull and Cleanup are deprecated in favor of Pull2 and Cleanup2. The
+    bridge uses Cleanup2 and falls back to Cleanup for 5.0.x peers.
+  * RouteMessage: a uuid must be a GUID and is allowed only with a single
+    payload; it is stored in lowercase form. Relays must route one message
+    per request, with its uuid.
+  * PUT /IncrementSharedDataAccessCount and PUT /IncrementFileAccessCount
+    answer 404 when no record has the given tag.
+  * A new job removes expired and unlisted vertices from the graph every
+    five minutes. New setting UnlistedVertexGracePeriod (default 00:06:00).
+  * Every setting has a default; a value that cannot be read is replaced
+    by its default and reported with a warning, at startup and when the
+    configuration is reloaded.
+  * A blacklist whose endpoint can never match is reported with a warning
+    at startup.
+  * The default log level of the package is Warning.
+  * Log properties renamed: CommendResult to CommandResult, and
+    ConnectionIdKey to ConnectionId.
+  * The dashboard state is kept by a single thread; a slow dashboard
+    session no longer delays the others.
+  * The background jobs page is available at /Jobs in the Development
+    environment only.
+  * Removed code that was never called and unused package references.
+
+ -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 06 Oct 2026 17:15:00 +0300
+
 aenigma (5.0.1) unstable; urgency=high
 
   [ Romulus Ruja ]
