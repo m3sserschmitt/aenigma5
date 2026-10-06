@@ -28,12 +28,15 @@ public interface IEnigmaHub
 
     Task<InvocationResultDto<VertexDto>> GetLocalVertex();
 
-    [Obsolete("Use PullPaged instead; Still here for compatibility with previous versions and will be removed in the future;")]
+    [Obsolete("Use Pull2 instead; Still here for compatibility with previous versions and will be removed in the future;")]
     Task<InvocationResultDto<List<PendingMessageDto>>> Pull();
 
     Task<InvocationResultDto<List<PendingMessageDto>>> Pull2(PullRequestDto request);
 
+    [Obsolete("Use Cleanup2 instead; Still here for compatibility with previous versions and will be removed in the future;")]
     Task<InvocationResultDto<bool>> Cleanup();
+
+    Task<InvocationResultDto<bool>> Cleanup2(CleanupRequestDto request);
 
     Task<InvocationResultDto<bool>> Authenticate(AuthenticationRequestDto request);
 
