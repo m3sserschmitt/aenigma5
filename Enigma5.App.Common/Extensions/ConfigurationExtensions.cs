@@ -148,6 +148,9 @@ public static class ConfigurationExtensions
     public static TimeSpan GetVertexLifetime(this IConfiguration configuration)
     => configuration.GetTimeSpan("VertexLifetime", Constants.DefaultVertexLifetime);
 
+    public static TimeSpan GetUnlistedVertexGracePeriod(this IConfiguration configuration)
+    => configuration.GetTimeSpan("UnlistedVertexGracePeriod", Constants.DefaultUnlistedVertexGracePeriod);
+
     public static string? GetAzureVaultUrl(this IConfiguration configuration)
     => configuration.GetStringValue("AzureVaultUrl");
 

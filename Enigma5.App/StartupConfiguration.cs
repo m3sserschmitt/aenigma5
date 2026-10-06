@@ -230,5 +230,11 @@ public class StartupConfiguration(IConfiguration configuration)
             ),
             Constants.FilesCleanupJobInterval
         );
+
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            Constants.GraphCleanupRecurringJob,
+            bridge => bridge.Send(new CleanupGraphCommand()),
+            Constants.GraphCleanupJobInterval
+        );
     }
 }

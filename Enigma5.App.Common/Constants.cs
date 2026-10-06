@@ -28,6 +28,9 @@ public static class Constants
 
     public static readonly TimeSpan DefaultVertexLifetime = TimeSpan.FromMinutes(30);
 
+    // How long a vertex that no other vertex lists is kept before a cleanup may remove it.
+    public static readonly TimeSpan DefaultUnlistedVertexGracePeriod = TimeSpan.FromMinutes(6);
+
     public static readonly TimeSpan DefaultMessageRetentionPeriod = TimeSpan.FromDays(14);
 
     public static readonly TimeSpan DefaultSentMessageRetentionPeriod = TimeSpan.Zero;
@@ -114,6 +117,8 @@ public static class Constants
 
     public const string FilesCleanupRecurringJob = "files-cleanup";
 
+    public const string GraphCleanupRecurringJob = "graph-cleanup";
+
     public const string InvokeNetworkBridgeRecurringJob = "invoke-network-bridge";
 
     public const string MessagesCleanupJobInterval = "*/5 * * * *";
@@ -121,6 +126,8 @@ public static class Constants
     public const string SharedDataCleanupJobInterval = "*/5 * * * *";
 
     public const string FilesCleanupJobInterval = "*/5 * * * *";
+
+    public const string GraphCleanupJobInterval = "*/5 * * * *";
 
     public const string InvokeNetworkBridgeJobInterval = "*/5 * * * *";
 

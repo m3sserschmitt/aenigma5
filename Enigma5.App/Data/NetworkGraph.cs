@@ -176,6 +176,17 @@ public class NetworkGraph : IDisposable
         return updatedVertices;
     }, _logger);
 
+    // Run by a background job, so that old vertices are removed even when nothing else changes the graph.
+    public Task<int> CleanupAsync() => _singleThreadRunner.RunAsync(async () =>
+    {
+        var removed = CleanupGraph();
+        if (removed > 0)
+        {
+            await NotifyPeersChangedAsync();
+        }
+        return removed;
+    }, _logger);
+
     public Task<bool> GenerateLocalVertexAsync()
     => _singleThreadRunner.RunAsync(async () =>
         {
@@ -255,14 +266,18 @@ public class NetworkGraph : IDisposable
         return union;
     }
 
-    private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan vertexLifetime)
-    => !IsLocalVertex(vertex) && (vertex.LastUpdateExceeded(vertexLifetime) || !neighborhoodsUnion.TryGetValue(vertex, out var _));
+    // A vertex that no vertex lists is removed only after a grace period, because the vertex that
+    // lists it may still be on its way.
+    private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan vertexLifetime, TimeSpan unlistedGracePeriod)
+    => !IsLocalVertex(vertex) && (vertex.LastUpdateExceeded(vertexLifetime)
+        || (!neighborhoodsUnion.TryGetValue(vertex, out var _) && vertex.LastUpdateExceeded(unlistedGracePeriod)));
 
-    private void CleanupGraph()
+    private int CleanupGraph()
     {
         var vertexLifetime = _configuration.GetVertexLifetime();
+        var unlistedGracePeriod = _configuration.GetUnlistedVertexGracePeriod();
         var neighborhoodsUnion = GetNeighborhoodsUnion();
-        _vertices.RemoveWhere(item => IsRemovalCandidate(item, neighborhoodsUnion, vertexLifetime));
+        return _vertices.RemoveWhere(item => IsRemovalCandidate(item, neighborhoodsUnion, vertexLifetime, unlistedGracePeriod));
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)
