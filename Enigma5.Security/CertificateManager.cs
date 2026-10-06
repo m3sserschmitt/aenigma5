@@ -102,12 +102,15 @@ public sealed class CertificateManager(
         return SealProvider.RemoveMasterPassphrase();
     }, _logger);
 
-    public Task<IEnvelopeUnsealer> CreateUnsealerAsync()
-    => _simpleSingleThreadRunner.RunAsync(() =>
+    public async Task<IEnvelopeUnsealer> CreateUnsealerAsync()
     {
-        SearchMasterPassphrase();
-        return SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty);
-    }, _logger);
+        var publicKey = await GetPublicKeyAsync() ?? string.Empty;
+        return await _simpleSingleThreadRunner.RunAsync(() =>
+        {
+            SearchMasterPassphrase();
+            return SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty, publicKey);
+        }, _logger);
+    }
 
     public Task<IEnvelopeSigner> CreateSignerAsync()
     => _simpleSingleThreadRunner.RunAsync(() =>

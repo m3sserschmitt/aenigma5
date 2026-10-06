@@ -22,6 +22,11 @@ namespace Enigma5.Crypto;
 
 public static class Constants
 {
+    // Size in bytes of the big-endian length prefix at the start of every onion layer.
+    // Must match ONION_LENGTH_BYTES in Libaenigma7/include/cryptography/Constants.hh;
+    // libaenigma does not export it, unlike the other sizes below.
+    public const int OnionLengthBytes = 2;
+
     public static readonly int AddressSize;
 
     public static readonly int KernelKeyMaxSize;
