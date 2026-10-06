@@ -33,6 +33,7 @@ public class IncrementSharedDataAccessCountHandler(
     public async Task<CommandResult<int>> Handle(IncrementSharedDataAccessCountCommand request, CancellationToken cancellationToken)
     {
         var sharedData = await _dbWriter.IncrementSharedDataAccessCountAsync(request.Tag, cancellationToken);
-        return sharedData is not null ? CommandResult.CreateResultSuccess(1) : CommandResult.CreateResultFailure<int>();
+        // The value is the number of records changed; 0 means that no record has this tag.
+        return CommandResult.CreateResultSuccess(sharedData is not null ? 1 : 0);
     }
 }

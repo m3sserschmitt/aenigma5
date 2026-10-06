@@ -146,6 +146,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount)
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithDescription("Increment shared data current access count. When current access count equals maximum access count the object is scheduled for removal.");
 
@@ -190,6 +191,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount)
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithDescription("Increment file current access count. When current access count equals maximum access count the object is scheduled for removal.");
 
