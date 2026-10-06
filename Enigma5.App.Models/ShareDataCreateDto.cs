@@ -24,6 +24,7 @@ using System.Text.Json.Serialization;
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models.Contracts;
 using Enigma5.App.Models.Extensions;
+using Enigma5.Crypto;
 
 namespace Enigma5.App.Models;
 
@@ -63,6 +64,10 @@ public class SharedDataCreateDto([Required]string? publicKey = null, string? sig
         {
             errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SignedData));
         }
+        else if(PublicKey.IsValidPublicKey() && !IsSignatureValid())
+        {
+            errors.AddError(ValidationErrorsDto.INVALID_SIGNATURE, nameof(SignedData));
+        }
 
         if(AccessCount <= 0)
         {
@@ -70,5 +75,11 @@ public class SharedDataCreateDto([Required]string? publicKey = null, string? sig
         }
 
         return errors;
+    }
+
+    private bool IsSignatureValid()
+    {
+        using var verifier = SealProvider.Factory.CreateVerifier(PublicKey!);
+        return verifier.Verify(Convert.FromBase64String(SignedData!));
     }
 }

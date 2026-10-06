@@ -91,12 +91,13 @@ public static class Api
         [FromQuery] string? address,
         [FromServices] IMediator commandRouter)
     {
-        if (address is null)
+        var normalizedAddress = address.NormalizeAddress();
+        if (normalizedAddress is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new GetVertexQuery(address));
+        var result = await commandRouter.Send(new GetVertexQuery(normalizedAddress));
         return result.CreateGetResponse();
     }
 
@@ -128,7 +129,7 @@ public static class Api
         [FromForm] int? maxAccessCount,
         [FromServices] IMediator commandRouter)
     {
-        if (file == null || file.Length == 0 || maxAccessCount == null)
+        if (file == null || file.Length == 0 || maxAccessCount == null || maxAccessCount <= 0)
         {
             return Results.BadRequest();
         }
