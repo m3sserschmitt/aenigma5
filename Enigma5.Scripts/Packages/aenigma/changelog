@@ -1,3 +1,34 @@
+aenigma (5.0.1) unstable; urgency=high
+
+  [ Romulus Ruja ]
+  * Security: file tags are mapped to paths safely; GET /File could read
+    files outside the upload directory.
+  * Security: sign-in challenges come from a secure random source and can
+    be used once.
+  * Security: input lengths are checked before every call into libaenigma.
+  * Security: the key passphrase is no longer written to the log.
+  * Security: an Ephemeral passphrase is no longer kept in the persistent
+    keyring; passphrases are handed to libaenigma zero-terminated.
+  * Security: only nodes with a live session can become graph neighbors.
+  * Security: /_blazor is blocked on the public endpoint by default;
+    Newtonsoft.Json pinned to 13.0.3.
+  * Cleanup confirms only messages the connection has pulled; Pull returns
+    at most 128 messages. Fixes loss of pending messages.
+  * Hub messages up to 331776 bytes are accepted, so batches of onions are
+    no longer rejected; one onion may have at most 16384 characters.
+  * Access counts and the duplicate uuid check are correct under
+    concurrent requests.
+  * Invalid or unknown input is answered with 400 or 404 instead of 500.
+  * Missing retention settings default to the shipped values instead of 0.
+  * The bridge signs in again after a peer restart, and stays quiet while
+    the node's key is locked.
+  * The dashboard works when started with run-prod.sh.
+  * A failed file upload removes its record; a peer address can be stored
+    only once.
+  * aenigma-update is included in the package.
+
+ -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 06 Oct 2026 15:54:04 +0300
+
 aenigma (5.0.0) unstable; urgency=medium
 
   [ Romulus Ruja ]

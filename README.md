@@ -122,6 +122,13 @@ configure granular access to the [API](./API.md).
           "Methods": [
             "GET"
           ]
+        },
+        {
+          "Path": "/_blazor",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
         }
       ]
     }
@@ -130,8 +137,10 @@ configure granular access to the [API](./API.md).
 
 As the name suggests, this section can be used to effectively block access to a specific
 API path on a given endpoint. In this default configuration `GET /Dashboard` http
-requests will be blocked on `http://127.0.0.1:8080`. Similarly we can define other rules
-and control who can access what.
+requests, and the `/_blazor` connection the dashboard page uses, will be blocked on
+`http://127.0.0.1:8080`. Similarly we can define other rules and control who can access
+what. The `Endpoint` must be written with an IP address (not a host name such as
+`localhost`), otherwise the rule never applies.
 
 ---
 
@@ -331,7 +340,8 @@ every other node in the network. Every node in the network should also share the
 information with their neighbors. When a specific node stops sending information into
 the network we should erase its info from the local ledger after a certain period
 of inactivity. When running an isolated instance, this property is of no use. Default
-is 30 minutes.
+is 30 minutes. Keep it well above 10 minutes: neighbors refresh their information only
+about every 10 minutes.
 
 ---
 
@@ -380,6 +390,22 @@ Seq, Elasticsearch, or Datadog.
 ---
 
 **Important Note**: The Azure setup was tested only for Azure Virtual Machines with Managed Identities.
+
+### Peers
+
+A node is connected to other nodes by adding them as peers on the dashboard
+([http://localhost:8081/dashboard](http://localhost:8081/dashboard)), once the private key is
+unlocked. A peer has a host (the base URL of its public endpoint, for example its onion service
+URL) and an address; ask the operator of the other node for both. Only one of the two nodes needs
+to add the other.
+
+A stored peer cannot be edited. If a peer's address or host changes, **remove the old entry
+first, then add the new one**. Two entries for the same host must not exist at the same time: only
+one of them is used, and it may be the wrong one.
+
+If a peer stays `Disconnected`, check that the key is unlocked, that the host is reachable
+(through Tor for `.onion` hosts, see `Socks5Proxy`), and that the address is still the peer's
+current one. Press `Retry` to connect again at once.
 
 ### License
 
