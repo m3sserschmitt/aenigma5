@@ -55,6 +55,13 @@ public static class Constants
     // Maximum number of messages returned by the deprecated hub method Pull.
     public const int LegacyPullMaxMessages = 128;
 
+    // Maximum length of one base64 onion accepted by RouteMessage. Sized for 6 relay nodes plus the
+    // recipient's layer (4096-bit keys) around a signed 256-character client message (~12 900 chars).
+    public const int MaxOnionSize = 16 * 1024;
+
+    // Largest incoming hub message: a full batch of maximum-size onions plus room for JSON framing.
+    public const long SignalRMaximumReceiveMessageSize = MessagesPageSize * MaxOnionSize + 4 * 1024;
+
     public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
 
     public const string HubConnectionLocalIpKey = "HubConnectionLocalIp";

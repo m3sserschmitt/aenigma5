@@ -44,6 +44,10 @@ public class RoutingRequestDto(List<string?>? payloads = null, string? uuid = nu
         {
             errors.AddError(ValidationErrorsDto.TOO_MANY_PAYLOADS, nameof(Payloads));
         }
+        else if(Payloads?.Any(item => item?.Length > Constants.MaxOnionSize) ?? false)
+        {
+            errors.AddError(ValidationErrorsDto.PAYLOAD_TOO_LARGE, nameof(Payloads));
+        }
         else if(!(Payloads?.All(item => item.IsValidBase64()) ?? true))
         {
             errors.AddError(ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(Payloads));

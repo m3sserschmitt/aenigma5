@@ -57,6 +57,7 @@ public class StartupConfiguration(IConfiguration configuration)
             options.ClientTimeoutInterval = Constants.SignalRClientTimeoutInterval;
             options.HandshakeTimeout = Constants.SignalRHandshakeTimeout;
             options.StatefulReconnectBufferSize = Constants.SignalRStatefulReconnectBufferSize;
+            options.MaximumReceiveMessageSize = Constants.SignalRMaximumReceiveMessageSize;
         })
         .AddHubOptions<RoutingHub>(options =>
         {
