@@ -209,6 +209,7 @@ public class StartupConfiguration(IConfiguration configuration)
 
         serviceProvider.MigrateDatabase();
         serviceProvider.SetupMasterPassphrase();
+        configuration.WarnAboutBlacklistsThatNeverMatch(logger);
 
         StartJobs(configuration);
     }
