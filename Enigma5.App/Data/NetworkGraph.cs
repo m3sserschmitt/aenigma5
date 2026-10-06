@@ -137,7 +137,8 @@ public class NetworkGraph : IDisposable
         }, _logger
     );
 
-    public Task<List<Vertex>> UpdateAsync(Vertex vertex) => _singleThreadRunner.RunAsync(async () =>
+    // mayAddNeighbor: the vertex's owner has an active session on this node.
+    public Task<List<Vertex>> UpdateAsync(Vertex vertex, bool mayAddNeighbor) => _singleThreadRunner.RunAsync(async () =>
     {
         if (!_networkGraphValidationPolicy.Validate(vertex))
         {
@@ -152,7 +153,7 @@ public class NetworkGraph : IDisposable
 
         vertex = vertex.CopyBySerialization();
 
-        if (await UpdateLocalNeighborhoodAsync(vertex))
+        if (await UpdateLocalNeighborhoodAsync(vertex, mayAddNeighbor))
         {
             updatedVertices.Add(_localVertex.CopyBySerialization());
         }
@@ -206,27 +207,31 @@ public class NetworkGraph : IDisposable
     private bool IsLocalVertex(Vertex vertex)
     => vertex.Neighborhood.Address == _localVertex.Neighborhood.Address;
 
-    private async Task<bool> UpdateLocalNeighborhoodAsync(Vertex source)
+    private async Task<bool> UpdateLocalNeighborhoodAsync(Vertex source, bool mayAddNeighbor)
     {
         var result = LocalAdjacencyChanged(source);
-
-        Vertex? newLocalVertex = null;
-
-        if (result < 0)
-        {
-            newLocalVertex = await Vertex.Factory.Prototype.AddNeighborAsync(_localVertex, source, _certificateManager);
-        }
-        else if (result > 0)
-        {
-            newLocalVertex = await Vertex.Factory.Prototype.RemoveNeighborAsync(_localVertex, source, _certificateManager);
-        }
-
         if (result == 0)
         {
             return false;
         }
 
-        ReplaceLocalVertex(newLocalVertex!);
+        // Adding requires an active session with the source; removing does not.
+        if (result < 0 && !mayAddNeighbor)
+        {
+            return false;
+        }
+
+        var newLocalVertex = result < 0
+            ? await Vertex.Factory.Prototype.AddNeighborAsync(_localVertex, source, _certificateManager)
+            : await Vertex.Factory.Prototype.RemoveNeighborAsync(_localVertex, source, _certificateManager);
+
+        // Signing fails while the key is locked; keep the current local vertex in that case.
+        if (newLocalVertex is null)
+        {
+            return false;
+        }
+
+        ReplaceLocalVertex(newLocalVertex);
 
         return true;
     }

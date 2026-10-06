@@ -21,16 +21,19 @@
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
 using Enigma5.App.Data.Extensions;
+using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using MediatR;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class BroadcastHandler(NetworkGraph networkGraph)
+public class BroadcastHandler(NetworkGraph networkGraph, ISessionManager sessionManager)
 : IRequestHandler<HandleBroadcastCommand, CommandResult<List<VertexBroadcastRequestDto>>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
+
+    private readonly ISessionManager _sessionManager = sessionManager;
 
     public async Task<CommandResult<List<VertexBroadcastRequestDto>>> Handle(HandleBroadcastCommand request, CancellationToken cancellationToken = default)
     {
@@ -40,7 +43,13 @@ public class BroadcastHandler(NetworkGraph networkGraph)
         }
 
         var vertex = request.BroadcastAdjacencyList.ToVertex();
-        var vertices = await _networkGraph.UpdateAsync(vertex);
+
+        // Only a node that is connected to this node right now may become its neighbor.
+        var ownerAddress = vertex.Neighborhood.Address;
+        var ownerConnected = !string.IsNullOrWhiteSpace(ownerAddress)
+            && await _sessionManager.TryGetConnectionIdAsync(ownerAddress) is not null;
+
+        var vertices = await _networkGraph.UpdateAsync(vertex, ownerConnected);
         return CommandResult.CreateResultSuccess(vertices.Select(item => item.ToVertexBroadcast()).ToList());
     }
 }
