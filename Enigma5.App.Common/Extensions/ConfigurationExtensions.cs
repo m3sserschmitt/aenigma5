@@ -91,6 +91,20 @@ public static class ConfigurationExtensions
     public static string? GetWebContentDirectory(this IConfiguration configuration)
     => configuration.GetStringValue("WebContentDirectory");
 
+    public static string? GetWebContentFilePath(this IConfiguration configuration, string? tag)
+    {
+        var webContentDirectory = configuration.GetWebContentDirectory();
+        var normalizedTag = tag.NormalizeTag();
+        if (string.IsNullOrWhiteSpace(webContentDirectory) || normalizedTag is null)
+        {
+            return null;
+        }
+
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(webContentDirectory)) + Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(Path.Combine(root, normalizedTag));
+        return fullPath.StartsWith(root, StringComparison.Ordinal) ? fullPath : null;
+    }
+
     public static TimeSpan GetMessageRetentionPeriod(this IConfiguration configuration)
     => configuration.GetTimeSpan("MessageRetentionPeriod", new(0));
 

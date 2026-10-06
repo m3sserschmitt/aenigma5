@@ -54,9 +54,14 @@ public class CreateFileHandler(
             MaxAccessCount = request.MaxAccessCount
         };
 
+        var fullPath = _configuration.GetWebContentFilePath(record.Tag);
+        if (fullPath is null)
+        {
+            return CommandResult.CreateResultFailure<SharedDataDto>();
+        }
+
         if (await _dbWriter.CreateFileAsync(record, cancellationToken) > 0)
         {
-            string fullPath = Path.Combine(webContentDirectory, record.Tag);
             using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
             await request.File.CopyToAsync(stream, cancellationToken);
 

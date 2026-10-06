@@ -39,18 +39,14 @@ public class IncrementFileAccessCountHandler(
 
     private readonly IDbWriter _dbWriter = dbWriter;
 
-    private void RemoveFile(FileRecord fileRecord, IncrementFileAccessCountCommand request)
+    private void RemoveFile(FileRecord fileRecord)
     {
-        var webContentDirectory = _configuration.GetWebContentDirectory();
         if (fileRecord.AccessCount >= fileRecord.MaxAccessCount)
         {
-            if (!string.IsNullOrWhiteSpace(webContentDirectory))
+            var fullPath = _configuration.GetWebContentFilePath(fileRecord.Tag);
+            if (fullPath is not null && File.Exists(fullPath))
             {
-                var fullPath = Path.Combine(webContentDirectory, request.Tag);
-                if (File.Exists(fullPath))
-                {
-                    File.Delete(fullPath);
-                }
+                File.Delete(fullPath);
             }
         }
     }
@@ -64,7 +60,7 @@ public class IncrementFileAccessCountHandler(
         if (fileRecord is not null)
         {
             var result = await _dbWriter.IncrementFileAccessCountAsync(fileRecord, cancellationToken);
-            RemoveFile(fileRecord, request);
+            RemoveFile(fileRecord);
             return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
         }
 

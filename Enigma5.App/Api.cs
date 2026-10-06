@@ -20,6 +20,7 @@
 
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
@@ -58,12 +59,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
+        var sharedData = await commandRouter.Send(new GetSharedDataQuery(normalizedTag));
         return sharedData.IsSuccessNotNullResultValue() ? sharedData.CreateGetResponse() : Results.NotFound();
     }
 
@@ -73,12 +75,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(tag));
+        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(normalizedTag));
         return result.CreatePutResponse();
     }
 
@@ -140,12 +143,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new GetFileQuery(tag));
+        var result = await commandRouter.Send(new GetFileQuery(normalizedTag));
 
         if (!result.IsSuccessNotNullResultValue() || result.Value?.File is null)
         {
@@ -164,12 +168,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new IncrementFileAccessCountCommand(tag));
+        var result = await commandRouter.Send(new IncrementFileAccessCountCommand(normalizedTag));
         return result.CreatePutResponse();
     }
 }

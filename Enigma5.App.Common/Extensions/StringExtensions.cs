@@ -76,6 +76,24 @@ public static partial class StringExtensions
     public static bool IsValidAddress(this string? address)
     => !string.IsNullOrWhiteSpace(address) && AddressRegex().IsMatch(address);
 
+    // Trimmed, lowercase address, or null if the value is not a valid address.
+    public static string? NormalizeAddress(this string? address)
+    {
+        var normalized = address?.Trim().ToLowerInvariant();
+        return normalized.IsValidAddress() ? normalized : null;
+    }
+
+    public static bool IsValidGuid(this string? value)
+    => Guid.TryParse(value, out _);
+
+    // Canonical lowercase form (the one Guid.ToString() produces), or null if the value is not a GUID.
+    public static string? NormalizeGuid(this string? value)
+    => Guid.TryParse(value, out var guid) ? guid.ToString() : null;
+
+    // Tags of shared data and files are GUIDs.
+    public static string? NormalizeTag(this string? tag)
+    => tag.NormalizeGuid();
+
         private static bool IsValidKey(this string? key, Func<Regex> regex)
     => key.GetKeyBase64Content(regex).IsValidBase64();
 
