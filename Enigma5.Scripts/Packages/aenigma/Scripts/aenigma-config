@@ -56,10 +56,10 @@ if [[ ! -v PROPERTY || ! -v NEW_VALUE ]]; then
     exit 1
 fi
 
-# Check file exists
+# The file holds only the settings that differ from the defaults; create it if it is missing
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: file '$CONFIG_FILE' not found"
-    exit 1
+    mkdir -p "$CONFIGS_DIR"
+    echo '{}' > "$CONFIG_FILE"
 fi
 
 TYPE="string"

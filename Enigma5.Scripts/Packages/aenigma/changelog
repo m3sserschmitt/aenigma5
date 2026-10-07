@@ -17,6 +17,11 @@ aenigma (5.1.0) unstable; urgency=medium
   * A blacklist whose endpoint can never match is reported with a warning
     at startup.
   * The default log level of the package is Warning.
+  * /etc/aenigma/appsettings.json is no longer a conffile. It holds only
+    the settings that differ from the defaults in /usr/lib/aenigma, so an
+    upgrade no longer stops at a configuration prompt and new defaults
+    always apply. An existing file is reduced to its changed settings;
+    the full file is kept as appsettings.json.dpkg-bak.
   * Log properties renamed: CommendResult to CommandResult, and
     ConnectionIdKey to ConnectionId.
   * The dashboard state is kept by a single thread; a slow dashboard

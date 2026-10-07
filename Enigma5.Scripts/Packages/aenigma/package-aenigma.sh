@@ -29,6 +29,7 @@ COPYRIGHT_FILE="$SCRIPT_DIR/copyright"
 LINTIAN_OVERRIDES_FILE="$SCRIPT_DIR/$SERVICE_NAME.lintian-overrides"
 MANPAGES_FILE="$SCRIPT_DIR/$SERVICE_NAME.manpages"
 POSTINST_SCRIPT="$SCRIPT_DIR/postinst"
+PREINST_SCRIPT="$SCRIPT_DIR/preinst"
 POSTRM_SCRIPT="$SCRIPT_DIR/postrm"
 PROJECT_FILE="$SCRIPT_DIR/../../../$EXECUTABLE_NAME/$EXECUTABLE_NAME.csproj"
 SERVICE_FILES="$SCRIPT_DIR/Services/*.service"
@@ -88,7 +89,6 @@ mkdir -pv $PKG_DIR/debian
 mkdir -pv $PKG_DIR/usr/lib/$SERVICE_NAME
 mkdir -pv $PKG_DIR/usr/lib/systemd/system
 mkdir -pv $PKG_DIR/usr/bin
-mkdir -pv $PKG_DIR/etc/$SERVICE_NAME
 mkdir -pv $PKG_DIR/man
 
 # Step 3: Publish the .NET app
@@ -96,6 +96,7 @@ dotnet publish $PROJECT_FILE -c Release -r linux-$ARCH --self-contained true -o 
 
 # Step 4: Copy application files to /usr/lib/APP_NAME
 cp -v $POSTINST_SCRIPT $PKG_DIR/debian/postinst
+cp -v $PREINST_SCRIPT $PKG_DIR/debian/preinst
 cp -v $POSTRM_SCRIPT $PKG_DIR/debian/postrm
 cp -v $LINTIAN_OVERRIDES_FILE $PKG_DIR/debian
 cp -v $CHANGELOG_FILE $PKG_DIR/debian/changelog
@@ -104,7 +105,6 @@ cp -v $MANPAGES_FILE $PKG_DIR/debian
 cp -v $APP_SETTINGS_DIR/* $PKG_DIR/usr/lib/$SERVICE_NAME
 cp -v $SERVICE_FILES $PKG_DIR/usr/lib/systemd/system
 cp -v $SCRIPT_FILES $PKG_DIR/usr/bin
-cp -v $CONFIG_FILE $PKG_DIR/etc/$SERVICE_NAME
 cp -v $MANPAGE_FILES $PKG_DIR/man
 
 # Step 5: Create control file
@@ -168,11 +168,17 @@ usr/bin/aenigma-vpn-server-client
 usr/bin/aenigma-vpn-server-host
 usr/lib/systemd/system/aenigma.service
 usr/lib/$SERVICE_NAME/*
-etc/$SERVICE_NAME
+EOF
+
+# Versions before 5.1.0 shipped /etc/aenigma/appsettings.json as a conffile. It is now created by postinst.
+echo "Creating debian/$SERVICE_NAME.maintscript file"
+cat <<EOF > $PKG_DIR/debian/$SERVICE_NAME.maintscript
+rm_conffile /etc/$SERVICE_NAME/appsettings.json 5.1.0~ $SERVICE_NAME
 EOF
 
 chmod 755 $PKG_DIR/debian/rules \
  $PKG_DIR/debian/postinst \
+ $PKG_DIR/debian/preinst \
  $PKG_DIR/debian/postrm \
  $PKG_DIR/usr/bin/*
 

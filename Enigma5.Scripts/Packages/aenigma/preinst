@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Aenigma - Federated messaging system
+# Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+# This file is part of Aenigma project.
+
+# Aenigma is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Aenigma is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+
+SERVICE_NAME="aenigma"
+DEFAULTS_FILE="/usr/lib/$SERVICE_NAME/appsettings.json"
+CONFIG_DIR="/etc/$SERVICE_NAME"
+OLD_DEFAULTS_FILE="$CONFIG_DIR/appsettings.json.old-defaults"
+
+case "$1" in
+  install|upgrade)
+    # Versions before 5.1.0 kept a full copy of the defaults in /etc/aenigma/appsettings.json.
+    # The defaults of the installed version are saved here, before they are replaced;
+    # postinst compares them with the operator's file to find the operator's own settings.
+    if [ -n "${2:-}" ] && dpkg --compare-versions "$2" lt "5.1.0" \
+       && [ -f "$DEFAULTS_FILE" ] && [ -d "$CONFIG_DIR" ]; then
+      cp -f "$DEFAULTS_FILE" "$OLD_DEFAULTS_FILE"
+    fi
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

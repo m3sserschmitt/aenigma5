@@ -28,6 +28,20 @@ UPLOADS_DIR="$SRV_DIR/uploads"
 LIB_DIR="/var/lib/$SERVICE_NAME"
 DATABASE_DIR="$LIB_DIR/db"
 PRIVATE_KEY_FILE="$LIB_DIR/private-key.pem"
+CONFIG_DIR="/etc/$SERVICE_NAME"
+CONFIG_FILE="$CONFIG_DIR/appsettings.json"
+CONFIG_BACKUP_FILE="$CONFIG_FILE.dpkg-backup"
+OLD_DEFAULTS_FILE="$CONFIG_FILE.old-defaults"
+
+# Keeps only what differs from the defaults. Lists are compared as a whole.
+TRIM_FILTER='
+def strip($d):
+  if type == "object" and ($d | type) == "object"
+  then to_entries
+     | map(. as $e | select((($d | has($e.key)) | not) or $e.value != $d[$e.key]) | .value |= strip($d[$e.key]))
+     | from_entries
+  else . end;
+$operator[0] | strip($default[0])'
 
 case "$1" in
   configure)
@@ -62,6 +76,28 @@ case "$1" in
 
     chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
     chmod -v 600 "$PRIVATE_KEY_FILE"
+
+    # /etc/aenigma/appsettings.json holds only the operator's settings.
+    # The defaults are in /usr/lib/aenigma/appsettings.json and are replaced on every upgrade.
+    mkdir -pv "$CONFIG_DIR"
+    if [ ! -f "$CONFIG_FILE" ]; then
+      if [ -f "$CONFIG_BACKUP_FILE" ]; then
+        # Upgrade from a version before 5.1.0, where the operator changed the full copy.
+        if [ -f "$OLD_DEFAULTS_FILE" ] && jq -n --slurpfile operator "$CONFIG_BACKUP_FILE" \
+             --slurpfile default "$OLD_DEFAULTS_FILE" "$TRIM_FILTER" > "$CONFIG_FILE.tmp" 2>/dev/null; then
+          mv -f "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+          echo "Kept your settings in $CONFIG_FILE; the previous file is saved as $CONFIG_FILE.dpkg-bak"
+        else
+          rm -f "$CONFIG_FILE.tmp"
+          cp -f "$CONFIG_BACKUP_FILE" "$CONFIG_FILE"
+          echo "WARNING: could not separate your settings from the old defaults; $CONFIG_FILE was kept unchanged"
+        fi
+      else
+        echo '{}' > "$CONFIG_FILE"
+      fi
+      chmod -v 644 "$CONFIG_FILE"
+    fi
+    rm -f "$OLD_DEFAULTS_FILE"
     ;;
   abort-upgrade|abort-remove|abort-deconfigure)
     ;;
