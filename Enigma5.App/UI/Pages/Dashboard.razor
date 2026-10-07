@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
+@using Enigma5.App.Common.Extensions
 @using Enigma5.App.Models
 @using Enigma5.App.Resources.Commands
 @using Enigma5.App.Resources.Handlers
@@ -44,9 +45,11 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         <PeersInput Items="Peers" OnAddItem="SubmitNewPeer" OnRemoveItem="RemovePeer" OnRetry="ReloadPeerConnections" />
     </div>
 </div>
+<ToastHost @ref="Toasts" />
 
 @code {
     private bool _disposed;
+    private ToastHost Toasts = default!;
     private IEnumerable<PeerDto> Peers = [];
     private IReadOnlyCollection<PeerDto> InboundPeers = new HashSet<PeerDto>();
     private IReadOnlyCollection<PeerDto> OutboundPeers = new HashSet<PeerDto>();
@@ -86,31 +89,66 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         return InvokeAsync(StateHasChanged);
     }
 
-    private Task SubmitNewPeer(PeerDto peer)
+    // Returns true when the peer was added. The checks are the ones AddPeerHandler makes, done here to name the reason.
+    private async Task<bool> SubmitNewPeer(PeerDto peer)
     {
         if (string.IsNullOrWhiteSpace(peer.Host) || string.IsNullOrWhiteSpace(peer.Address))
         {
-            return Task.CompletedTask;
+            Toasts.Show("Enter the host and the address of the peer.", error: true);
+            return false;
         }
-        return Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
+        if (!Uri.TryCreate(peer.Host, UriKind.Absolute, out _))
+        {
+            Toasts.Show("The host must be a full address, for example http://example.onion.", error: true);
+            return false;
+        }
+        if (!peer.Address.IsValidAddress())
+        {
+            Toasts.Show("The peer address is not valid.", error: true);
+            return false;
+        }
+
+        var result = await Mediator.Send(new AddPeerCommand(peer.Host, peer.Address));
+        if (!result.IsSuccessNotNullResultValue())
+        {
+            Toasts.Show("The peer could not be added. Check that its address is not already in the list.", error: true);
+            return false;
+        }
+        Toasts.Show("Peer added.");
+        return true;
     }
 
-    private Task RemovePeer(PeerDto peer)
+    private async Task RemovePeer(PeerDto peer)
     {
         if (peer.Id == null)
         {
-            return Task.CompletedTask;
+            return;
         }
-        return Mediator.Send(new RemovePeerCommand(peer.Id.Value));
+        var result = await Mediator.Send(new RemovePeerCommand(peer.Id.Value));
+        if (!result.IsSuccessResult())
+        {
+            Toasts.Show("The peer could not be removed.", error: true);
+        }
     }
 
     private async Task UnlockPrivateKey(char[] passphrase)
     {
-        await Mediator.Send(new SetMasterPassphraseCommand(passphrase));
+        var result = await Mediator.Send(new SetMasterPassphraseCommand(passphrase));
         Array.Clear(passphrase);
+        if (result.Value != true)
+        {
+            Toasts.Show("The key could not be unlocked. Check the passphrase.", error: true);
+        }
     }
 
-    private Task LockPrivateKey() => Mediator.Send(new RemoveMasterPassphraseCommand());
+    private async Task LockPrivateKey()
+    {
+        var result = await Mediator.Send(new RemoveMasterPassphraseCommand());
+        if (result.Value != true)
+        {
+            Toasts.Show("The key could not be locked.", error: true);
+        }
+    }
 
     private Task ReloadPeerConnections() => Mediator.Send(new InvokeNetworkBridgeCommand());
 

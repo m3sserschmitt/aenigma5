@@ -62,7 +62,8 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 @code {
     private bool _disposed;
     [Parameter] public IEnumerable<PeerDto> Items { get; set; } = [];
-    [Parameter] public EventCallback<PeerDto> OnAddItem { get; set; } = default;
+    // Returns true when the peer was added; the inputs are cleared only then.
+    [Parameter] public Func<PeerDto, Task<bool>>? OnAddItem { get; set; }
     [Parameter] public EventCallback<PeerDto> OnRemoveItem { get; set; } = default;
     [Parameter] public EventCallback OnRetry { get; set; } = default;
 
@@ -84,19 +85,17 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
         StateHasChanged();
     });
 
-    private Task AddItem()
+    private async Task AddItem()
     {
-        if (string.IsNullOrEmpty(Host) || string.IsNullOrWhiteSpace(Address))
-        {
-            return Task.CompletedTask;
-        }
         var newPeer = new PeerDto
         {
-            Host = Host,
-            Address = Address
+            Host = Host.Trim(),
+            Address = Address.Trim()
         };
-        ResetInput();
-        return OnAddItem.InvokeAsync(newPeer);
+        if (OnAddItem is not null && await OnAddItem(newPeer))
+        {
+            ResetInput();
+        }
     }
 
     private void ResetInput()
