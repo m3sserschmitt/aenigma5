@@ -156,6 +156,8 @@ public class NetworkGraph : IDisposable
         if (await UpdateLocalNeighborhoodAsync(vertex, mayAddNeighbor))
         {
             updatedVertices.Add(_localVertex.CopyBySerialization());
+            // The dashboard depends on the local neighbor list, also when the received vertex itself is not new.
+            await NotifyPeersChangedAsync();
         }
 
         if (!_vertices.TryGetValue(vertex, out var previous)) // vertex not existent;
