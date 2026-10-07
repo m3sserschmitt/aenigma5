@@ -194,9 +194,11 @@ public class NetworkGraph : IDisposable
             if (v is null)
             {
                 ReplaceLocalVertex(Vertex.Factory.Create(await _certificateManager.GetAddressAsync()));
+                await NotifyPeersChangedAsync();
                 return false;
             }
             ReplaceLocalVertex(v);
+            await NotifyPeersChangedAsync();
             return true;
         }, _logger);
 
@@ -207,7 +209,10 @@ public class NetworkGraph : IDisposable
         {
             return;
         }
-        await _dashboardUIState.SetInboundPeersAsync([.. _vertices.Where(v => v.Neighborhood.Neighbors.Contains(address)).Select(v => new PeerDto {
+        // A peer counts as connected only when both sides agree: its vertex lists this node and the local
+        // vertex lists it. The local list follows the live sessions, so it is right as soon as a connection closes.
+        var localNeighbors = _localVertex.Neighborhood.Neighbors;
+        await _dashboardUIState.SetInboundPeersAsync([.. _vertices.Where(v => v.Neighborhood.Address is string peer && v.Neighborhood.Neighbors.Contains(address) && localNeighbors.Contains(peer)).Select(v => new PeerDto {
             Host = v.Neighborhood.Hostname,
             Address = v.Neighborhood.Address,
             Connected = true
