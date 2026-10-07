@@ -20,14 +20,19 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
 
 <div class="list-group-item list-group-item-action rounded shadow-sm">
     <div class="row">
-        <div class="col col-5">
-            <p class="m-0">@Model.Host</p>
+        <div class="col col-4">
+            <p class="m-0 text-break">@Model.Host</p>
+            @if (Model.Id is null)
+            {
+                @* Not in this node's peer list: the other node connected to this one. *@
+                <p class="text-muted small m-0">incoming</p>
+            }
         </div>
         <div class="col col-5">
-            <p class="m-0">@Model.Address</p>
+            <p class="m-0 text-break">@Model.Address</p>
         </div>
-        <div class="col col-1">
-            <p class="@(Model.Connected ? "text-success" : "text-danger") small m-0">
+        <div class="col col-2">
+            <p class="@(Model.Connected ? "text-success" : "text-danger") small text-nowrap m-0">
                 @(Model.Connected ? "Connected" : "Disconnected")
             </p>
         </div>

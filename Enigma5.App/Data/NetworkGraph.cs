@@ -213,7 +213,7 @@ public class NetworkGraph : IDisposable
         // vertex lists it. The local list follows the live sessions, so it is right as soon as a connection closes.
         var localNeighbors = _localVertex.Neighborhood.Neighbors;
         await _dashboardUIState.SetInboundPeersAsync([.. _vertices.Where(v => v.Neighborhood.Address is string peer && v.Neighborhood.Neighbors.Contains(address) && localNeighbors.Contains(peer)).Select(v => new PeerDto {
-            Host = v.Neighborhood.Hostname,
+            Host = v.Neighborhood.Hostname ?? v.Neighborhood.OnionService,
             Address = v.Neighborhood.Address,
             Connected = true
             })
