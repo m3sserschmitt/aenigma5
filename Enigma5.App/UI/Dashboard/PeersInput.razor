@@ -80,6 +80,8 @@ along with Aenigma.  If not, see <https://www.gnu.org/licenses/>. *@
     private Task PrivateKeyUnlockedChanged(bool unlocked) => InvokeAsync(() =>
     {
         PrivateKeyUnlocked = unlocked;
+        // The notification can arrive after the click that caused it was rendered.
+        StateHasChanged();
     });
 
     private Task AddItem()
