@@ -17,6 +17,27 @@ LimitCORE=0
 ProtectProc=invisible
 CapabilityBoundingSet=
 AmbientCapabilities=
+ProtectSystem=strict
+ReadWritePaths=/var/lib/aenigma /var/log/aenigma /srv/aenigma
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RemoveIPC=yes
+SystemCallArchitectures=native
+# The .NET runtime needs the calls in @resources, and its just-in-time compiler rules out MemoryDenyWriteExecute.
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
 
 [Install]
 WantedBy=multi-user.target

@@ -25,6 +25,10 @@ aenigma (5.1.0) unstable; urgency=medium
   * /var/log/aenigma has mode 750. New installations create the service
     user without a home directory, and a purge no longer tries to remove
     one.
+  * The service is confined by systemd: the file system is read-only for
+    it except /var/lib/aenigma, /var/log/aenigma and /srv/aenigma, and it
+    has a private /tmp, no access to /home and a restricted set of system
+    calls.
   * Log properties renamed: CommendResult to CommandResult, and
     ConnectionIdKey to ConnectionId.
   * The dashboard state is kept by a single thread; a slow dashboard
