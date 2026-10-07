@@ -47,12 +47,12 @@ case "$1" in
   configure)
     if ! id "$SERVICE_USER" >/dev/null 2>&1; then
       echo "Creating user '$SERVICE_USER' for the service..."
-      useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+      useradd --system --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
     fi
 
     mkdir -pv "$LOG_DIR"
     chown -v "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
-    chmod -v 755 "$LOG_DIR"
+    chmod -v 750 "$LOG_DIR"
 
     mkdir -pv "$LIB_DIR"
     chown -v "$SERVICE_USER":"$SERVICE_USER" "$LIB_DIR"

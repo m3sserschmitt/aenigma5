@@ -22,6 +22,9 @@ aenigma (5.1.0) unstable; urgency=medium
     upgrade no longer stops at a configuration prompt and new defaults
     always apply. An existing file is reduced to its changed settings;
     the full file is kept as appsettings.json.dpkg-bak.
+  * /var/log/aenigma has mode 750. New installations create the service
+    user without a home directory, and a purge no longer tries to remove
+    one.
   * Log properties renamed: CommendResult to CommandResult, and
     ConnectionIdKey to ConnectionId.
   * The dashboard state is kept by a single thread; a slow dashboard
