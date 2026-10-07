@@ -140,12 +140,13 @@ public class ConnectionVector : IDisposable
                 {
                     return;
                 }
-                var handler = new HttpClientHandler
+                // A new handler for every start: SignalR disposes the handler when a connection fails or stops,
+                // and a disposed handler would make every later start of this vector fail.
+                options.HttpMessageHandlerFactory = _ => new HttpClientHandler
                 {
                     Proxy = new WebProxy(socks5ProxyAddress),
                     UseProxy = true
                 };
-                options.HttpMessageHandlerFactory = _ => handler;
                 options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
             }
         });
