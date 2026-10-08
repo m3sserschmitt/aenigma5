@@ -33,8 +33,9 @@ public class GetSharedDataHandler(EnigmaDbContext context) : IRequestHandler<Get
     public async Task<CommandResult<SharedDataDto>> Handle(GetSharedDataQuery request, CancellationToken cancellationToken)
     {
         var sharedData = await _context.SharedData.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken: cancellationToken);
+        // Not found is a successful lookup without a value; HTTP callers turn it into 404.
         return sharedData is null
-        ? CommandResult.CreateResultFailure<SharedDataDto>()
+        ? CommandResult.CreateResultSuccess<SharedDataDto>(null)
         : CommandResult.CreateResultSuccess(new SharedDataDto
         {
             Tag = sharedData.Tag,

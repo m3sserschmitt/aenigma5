@@ -41,13 +41,10 @@ public class RemovePeerHandler(
     {
         var peer = await _dbContext.Peers.FindAsync([request.Id], cancellationToken: cancellationToken);
 
-        if (peer == null)
-        {
-            return CommandResult.CreateResultFailure<int>();
-        }
-
-        var result = await _dbWriter.RemovePeerAsync(peer, cancellationToken);
+        // The value is the number of records removed; 0 means that no peer has this id.
+        var result = peer is null ? 0 : await _dbWriter.RemovePeerAsync(peer, cancellationToken);
+        // Also when nothing was removed: the run of the bridge brings the dashboard's list of peers up to date.
         await _mediator.Send(new InvokeNetworkBridgeCommand(), cancellationToken);
-        return result > 0 ? CommandResult.CreateResultSuccess(result) : CommandResult.CreateResultFailure<int>();
+        return CommandResult.CreateResultSuccess(result);
     }
 }

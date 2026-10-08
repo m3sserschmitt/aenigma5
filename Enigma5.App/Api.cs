@@ -66,7 +66,7 @@ public static class Api
         }
 
         var sharedData = await commandRouter.Send(new GetSharedDataQuery(normalizedTag));
-        return sharedData.IsSuccessNotNullResultValue() ? sharedData.CreateGetResponse() : Results.NotFound();
+        return sharedData.CreateGetResponse();
     }
 
     public static async Task<IResult> IncrementSharedDataAccessCount(
@@ -152,7 +152,12 @@ public static class Api
 
         var result = await commandRouter.Send(new GetFileQuery(normalizedTag));
 
-        if (!result.IsSuccessNotNullResultValue() || result.Value?.File is null)
+        if (!result.IsSuccessResult())
+        {
+            return Results.Problem(statusCode: 500);
+        }
+
+        if (result.Value?.File is null)
         {
             return Results.NotFound();
         }
