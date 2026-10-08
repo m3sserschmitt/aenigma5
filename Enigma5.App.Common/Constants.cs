@@ -95,6 +95,14 @@ public static class Constants
     // recipient's layer (4096-bit keys) around a signed 256-character client message (~12 900 chars).
     public const int MaxOnionSize = 16 * 1024;
 
+    // RSA key sizes, in bits, that are accepted for a public key received from a caller.
+    public const int MinPublicKeySize = 2048;
+
+    public const int MaxPublicKeySize = 8192;
+
+    // Longest text of a public key in PEM form, in characters; a key of the largest size needs about 1500.
+    public const int MaxPublicKeyLength = 4096;
+
     // Largest incoming hub message: a full batch of maximum-size onions plus room for JSON framing.
     public const long SignalRMaximumReceiveMessageSize = MessagesPageSize * MaxOnionSize + 4 * 1024;
 

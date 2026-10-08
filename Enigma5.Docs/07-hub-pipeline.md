@@ -103,14 +103,14 @@ only if three conditions hold:
 
 1. the hub method has the marker attribute `TMarker`;
 2. the hub implements the interface `THub`;
-3. the arguments of the call pass the filter's own check (for example, "exactly one argument, and it
-   can be validated").
+3. the arguments of the call pass the filter's own check.
 
-If any condition is false, the filter is skipped and the call goes on to the next filter. A filter is
-therefore not a hard barrier: a call whose arguments do not fit a filter's check simply passes by
-that filter. The later filters and the hub method must still handle such calls safely. For example,
-a `RouteMessage` call with a `null` argument skips validation and onion parsing; `OnionRoutingFilter`
-then finds no next address and returns an error.
+If any condition is false, the filter is skipped and the call goes on to the next filter.
+`ValidateModelFilter` is stricter: it handles every call of a method marked `[ValidateModel]`, and
+refuses a call whose argument is missing, `null` or not a request object with `Invalid data provided
+for method invocation.`. A method with this marker is therefore never run without a validated
+request. The other filters can still be passed by a call that does not fit their check, so each of
+them and the hub method must handle such calls safely.
 
 ### 7.3.3 What each filter does
 
@@ -166,7 +166,7 @@ list of errors. Table 7.4 lists the rules.
 
 | Request object | Used by | Rules |
 |---|---|---|
-| `AuthenticationRequestDto` | `Authenticate` | `publicKey` is present and is a PEM public key; `signature` is present and is base64. |
+| `AuthenticationRequestDto` | `Authenticate` | `publicKey` is present and is a public key in the one accepted form (Chapter 5); `signature` is present and is base64. |
 | `PullRequestDto` | `Pull2` | `infId` is `null` or not negative. |
 | `CleanupRequestDto` | `Cleanup2` | `supId` is present and not negative. |
 | `RoutingRequestDto` | `RouteMessage` | `payloads` has 1 to 20 items; every item is at most 16 384 characters long and is base64. `uuid`, if given, is a GUID and comes with exactly one payload. |

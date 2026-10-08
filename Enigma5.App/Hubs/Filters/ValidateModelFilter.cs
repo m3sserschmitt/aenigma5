@@ -31,8 +31,9 @@ public class ValidateModelFilter(ILogger<ValidateModelFilter> logger) : BaseFilt
 {
     private readonly ILogger<ValidateModelFilter> _logger = logger;
 
-    protected override bool CheckArguments(HubInvocationContext invocationContext)
-    => invocationContext.HubMethodArguments.Count == 1 && invocationContext.HubMethodArguments[0] is IValidatable;
+    // Every call of a method that asks for validation is handled here. A call whose argument is missing,
+    // null or not of a kind that can be validated is refused, so that it never reaches the hub method.
+    protected override bool CheckArguments(HubInvocationContext invocationContext) => true;
 
     public override async ValueTask<object?> Handle(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {

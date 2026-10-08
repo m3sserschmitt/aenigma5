@@ -29,6 +29,11 @@ aenigma (5.1.0) unstable; urgency=medium
     it except /var/lib/aenigma, /var/log/aenigma and /srv/aenigma, and it
     has a private /tmp, no access to /home and a restricted set of system
     calls.
+  * Security: a public key is accepted only as a single PEM block with
+    the label PUBLIC KEY that holds exactly one RSA key of 2048 to 8192
+    bits; its address and every signature check use that one reading.
+    Addresses must not be followed by a line end. A hub call without a
+    valid request object is refused before it reaches the method.
   * Log properties renamed: CommendResult to CommandResult, and
     ConnectionIdKey to ConnectionId.
   * The dashboard state is kept by a single thread; a slow dashboard

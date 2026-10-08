@@ -130,6 +130,83 @@ public class StringExtensionsTests
         Assert.False(value.IsValidPublicKey());
     }
 
+    // A public key must be readable in one way only: one block, nothing around it, and content that is
+    // exactly one key. Otherwise two readers of the same text could take it for two different keys.
+    private static string Body(string publicKey)
+    => publicKey.Replace("-----BEGIN PUBLIC KEY-----", string.Empty).Replace("-----END PUBLIC KEY-----", string.Empty).Replace("\n", string.Empty).Replace("\r", string.Empty).Trim();
+
+    private static string Pem(byte[] der) => $"-----BEGIN PUBLIC KEY-----\n{Convert.ToBase64String(der)}\n-----END PUBLIC KEY-----";
+
+    // A key of 1024 bits, below the smallest accepted size.
+    private const string SmallPublicKey = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC1j0DaYAg4G7iq8mt26vDwtSOJt0KjfP2VeYnfNnFexYYm0GTWLdkY2abYpjeYBsaeHOxw2E6rG0tyROA0OBywuBREUIDWy0dX/R+1v5MPBNEEH0dG43tDng1YFYXZLysREwTJzZp5HJhKmPxAX6jj47BPPpM7bB6xgIqkRutgzwIDAQAB\n-----END PUBLIC KEY-----";
+
+    public static TheoryData<string> TextsWithMoreThanOneKeyBlock => new()
+    {
+        TestKeys.PublicKey1 + "\n" + TestKeys.PublicKey2,
+        TestKeys.PublicKey1 + TestKeys.PublicKey1,
+        "comment\n" + TestKeys.PublicKey1,
+        TestKeys.PublicKey1 + "\ncomment",
+        TestKeys.PublicKey1.Replace("PUBLIC KEY", "RSA PUBLIC KEY"),
+        TestKeys.PublicKey1.Replace("-----END PUBLIC KEY-----", "-----END RSA PUBLIC KEY-----")
+    };
+
+    [Theory]
+    [MemberData(nameof(TextsWithMoreThanOneKeyBlock))]
+    public void A_public_key_is_one_block_with_the_label_PUBLIC_KEY_and_nothing_else(string text)
+    {
+        Assert.False(text.IsValidPublicKey());
+        Assert.Null(text.NormalizePublicKey());
+        Assert.Null(text.GetPublicKeyBase64());
+    }
+
+    [Fact]
+    public void A_public_key_holds_exactly_one_key_without_anything_after_it()
+    {
+        var der = Convert.FromBase64String(Body(TestKeys.PublicKey1));
+
+        Assert.True(Pem(der).IsValidPublicKey());
+        Assert.False(Pem([.. der, 0]).IsValidPublicKey());
+        Assert.False(Pem([.. der, .. der]).IsValidPublicKey());
+        Assert.False(Pem(der[..^1]).IsValidPublicKey());
+        Assert.False(Pem([1, 2, 3, 4]).IsValidPublicKey());
+    }
+
+    [Fact]
+    public void A_public_key_below_the_smallest_size_or_longer_than_the_longest_text_is_refused()
+    {
+        Assert.False(SmallPublicKey.IsValidPublicKey());
+        Assert.False((TestKeys.PublicKey1 + new string('\n', Constants.MaxPublicKeyLength)).IsValidPublicKey());
+    }
+
+    [Fact]
+    public void Every_accepted_way_of_writing_a_key_gives_the_same_normalized_text_and_content()
+    {
+        var body = Body(TestKeys.PublicKey1);
+        string[] forms =
+        [
+            TestKeys.PublicKey1,
+            TestKeys.PublicKey1.Replace("\r", string.Empty).Replace("\n", "\r\n"),
+            "\n  " + TestKeys.PublicKey1 + "\n\n",
+            $"-----BEGIN PUBLIC KEY-----\n{body}\n-----END PUBLIC KEY-----"
+        ];
+
+        Assert.All(forms, form => Assert.True(form.IsValidPublicKey()));
+        Assert.Single(forms.Select(form => form.NormalizePublicKey()).Distinct());
+        Assert.Equal([body], forms.Select(form => form.GetPublicKeyBase64()).Distinct());
+    }
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData(" ")]
+    public void An_address_or_onion_address_with_anything_after_it_is_refused(string tail)
+    {
+        Assert.True(TestKeys.Address1.IsValidAddress());
+        Assert.False((TestKeys.Address1 + tail).IsValidAddress());
+        Assert.False((tail + TestKeys.Address1).IsValidAddress());
+        Assert.False((new string('a', 56) + ".onion" + tail).IsValidOnionAddress());
+    }
+
     [Fact]
     public void IsValidPublicKey_refuses_a_private_key()
     {

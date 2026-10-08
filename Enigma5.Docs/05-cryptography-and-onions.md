@@ -59,9 +59,17 @@ one kind of operation. `CryptoContext` wraps the pointer to such an object. It i
 `IDisposable` and frees the native object when it is disposed, or at the latest when the garbage
 collector finalizes it.
 
-Before a context is created, the key text is checked with a regular expression for the PEM format
-(`IsValidPublicKey`, `IsValidPrivateKey`). If the check fails, no native call is made and the
-context holds a null pointer. Every operation on such a context returns `null` or `false`.
+Before a context is created, the key text is checked (`IsValidPublicKey`, `IsValidPrivateKey`). If
+the check fails, no native call is made and the context holds a null pointer. Every operation on
+such a context returns `null` or `false`.
+
+A public key from a caller is read in one place and in one way (`StringExtensions.ParsePublicKey`).
+The text must be a single PEM block with the label `PUBLIC KEY` and nothing but white space around
+it, at most 4 096 characters long. Its content must be the DER form of one RSA key
+(SubjectPublicKeyInfo) of 2 048 to 8 192 bits, with nothing after it, written exactly as an encoder
+writes it. The address of the key is computed from this content (Section 5.4.1), and the native
+library receives the content written out again as PEM (`NormalizePublicKey`), never the text the
+caller sent. The address and every check of a signature therefore always refer to the same key.
 
 The result of `Run` and `UnsealOnion` is a buffer that belongs to the context. The wrapper copies it
 into a managed array right away; the buffer is freed together with the context. The node therefore
@@ -102,8 +110,8 @@ der     = base64-decode(text between PEM header and footer)    (SubjectPublicKey
 address = lowercase-hex(SHA-256(der))                             (64 characters)
 ```
 
-The code is in `CertificateHelper.GetHexAddressFromPublicKey`. An address is valid if it matches
-`^[a-f0-9]{64}$`. Inside an onion, the next address is stored as its 32 raw bytes, not as text.
+The code is in `CertificateHelper.GetHexAddressFromPublicKey`. An address is valid if it consists of
+exactly 64 characters `a`-`f` and `0`-`9`, with nothing before or after them. Inside an onion, the next address is stored as its 32 raw bytes, not as text.
 
 ### 5.4.2 Envelopes
 

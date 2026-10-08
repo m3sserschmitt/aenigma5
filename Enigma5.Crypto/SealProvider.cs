@@ -43,9 +43,9 @@ public sealed class SealProvider :
     private SealProvider(CryptoContext ctx, string? publicKey = null)
     {
         _ctx = ctx;
-        var validPublicKey = publicKey.IsValidPublicKey();
-        _envelopeOverhead = validPublicKey ? Native.GetEnvelopeSize(0, publicKey!) : -1;
-        _signatureSize = validPublicKey ? Native.GetSignedDataSize(0, publicKey!) : -1;
+        var normalizedPublicKey = publicKey.NormalizePublicKey();
+        _envelopeOverhead = normalizedPublicKey is not null ? Native.GetEnvelopeSize(0, normalizedPublicKey) : -1;
+        _signatureSize = normalizedPublicKey is not null ? Native.GetSignedDataSize(0, normalizedPublicKey) : -1;
     }
 
     ~SealProvider()
@@ -128,7 +128,7 @@ public sealed class SealProvider :
         }
     }
 
-    public static int GetPKeySize(string publicKey) => publicKey.IsValidPublicKey() ? Native.GetPKeySize(publicKey) : -1;
+    public static int GetPKeySize(string publicKey) => publicKey.NormalizePublicKey() is string normalized ? Native.GetPKeySize(normalized) : -1;
 
     public static bool SetMasterPassphraseName(string name) => Native.SetMasterPassphraseName(name);
 

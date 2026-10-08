@@ -51,13 +51,19 @@ public class ValidateModelFilterTests
     }
 
     [Fact]
-    public async Task A_call_without_its_request_is_not_checked_by_this_filter()
+    public async Task A_call_without_its_request_is_refused()
     {
         await using var node = await TestNode.StartAsync();
-        var call = node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), [null]);
+        var filter = node.Create<ValidateModelFilter>();
 
-        // The filter only acts when the single argument is a request model; the hub method handles the rest.
-        Assert.Equal(FilterCalls.Passed, await FilterCalls.Run(node.Create<ValidateModelFilter>(), call));
+        // A call that the filter cannot validate never reaches the hub method.
+        var withNull = await FilterCalls.Run(filter, node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), [null]));
+        var withoutArgument = await FilterCalls.Run(filter, node.HubCall("connection-2", nameof(RoutingHub.Cleanup2)));
+        var withAnotherKind = await FilterCalls.Run(filter, node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), "text"));
+
+        Assert.Equal(InvocationErrors.INVALID_INVOCATION_DATA, FilterCalls.SingleError(withNull));
+        Assert.Equal(InvocationErrors.INVALID_INVOCATION_DATA, FilterCalls.SingleError(withoutArgument));
+        Assert.Equal(InvocationErrors.INVALID_INVOCATION_DATA, FilterCalls.SingleError(withAnotherKind));
     }
 
     [Fact]

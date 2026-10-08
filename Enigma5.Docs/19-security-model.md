@@ -63,6 +63,7 @@ address is another node or the recipient, except by looking it up in the network
 |---|---|---|
 | Onion encryption: one layer per node, each a hybrid of RSA and AES-256-GCM | A node can remove only its own layer. Content and later stops stay hidden. A changed layer is detected and rejected. | 5 |
 | Addresses as hashes of public keys | An address cannot be claimed without the matching key. | 5 |
+| One strict reading of a public key, used for the address and, written out again, for every signature check | The address of a caller and the key that checks its signature are always the same key. | 5 |
 | Sign-in by signing a random challenge | A caller proves control of an address before it can collect or route messages. | 8 |
 | One-time challenges, created by a secure random source | A recorded sign-in cannot be replayed. | 8 |
 | Messages are returned only to the signed-in address | A caller can collect and confirm only its own messages. | 9 |

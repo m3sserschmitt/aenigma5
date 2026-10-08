@@ -170,6 +170,8 @@ configuration. Table 15.4 lists the most important ones.
 | `LegacyPullMaxMessages` | 128 | Largest number of messages returned by `Pull`. |
 | `MaxOnionSize` | 16,384 | Largest length of one onion, in base64 characters (Chapter 5). |
 | `SignalRMaximum`<br>`ReceiveMessageSize` | 331,776 | Largest hub message, in bytes: 20 onions of the largest size, plus 4 KiB. |
+| `MinPublicKeySize`<br>`MaxPublicKeySize` | 2,048<br>8,192 | Accepted sizes of a caller's RSA key, in bits (Chapter 5). |
+| `MaxPublicKeyLength` | 4,096 | Longest text of a public key, in characters. |
 | `AuthTokenSize` | 64 | Size of the sign-in nonce, in bytes (Chapter 8). |
 | `DefaultVertexBroadcast`<br>`MinimumPeriod` | 6 minutes | Shortest time before an unchanged vertex is accepted again (Chapter 10). |
 | `SignalRKeepAliveInterval`<br>`SignalRClientTimeoutInterval`<br>`SignalRHandshakeTimeout` | 20 s<br>90 s<br>15 s | Timing of hub connections. |

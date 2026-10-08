@@ -148,6 +148,41 @@ public sealed class SessionManagerTests : IDisposable
 
     #region One session for each address
 
+    // The address of a session and the check of the signature must come from the same key. A text that holds
+    // more than one key block could be read as one key for the address and as another for the signature.
+    [Fact]
+    public async Task A_text_with_more_than_one_key_block_is_refused_whatever_key_signed_the_challenge()
+    {
+        string[] texts = [TestKeys.PublicKey1 + "\n" + TestKeys.PublicKey2, TestKeys.PublicKey2 + "\n" + TestKeys.PublicKey1];
+
+        foreach (var text in texts)
+        {
+            foreach (var signingKey in new[] { TestKeys.PrivateKey1, TestKeys.PrivateKey2 })
+            {
+                var challenge = await _sessions.AddPendingAsync(Connection1);
+                Assert.False(await _sessions.AuthenticateAsync(Connection1, text, TestSignatures.SignChallenge(signingKey, challenge!), null));
+            }
+        }
+
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address2));
+    }
+
+    // Only the key of the node may sign in for another address; the same rule about the text of the key applies.
+    [Fact]
+    public async Task A_text_with_the_key_of_the_node_and_another_key_may_not_sign_in_for_another_address()
+    {
+        string[] texts = [TestKeys.PublicKey3 + "\n" + TestKeys.PublicKey1, TestKeys.PublicKey1 + "\n" + TestKeys.PublicKey3];
+
+        foreach (var text in texts)
+        {
+            var challenge = await _sessions.AddPendingAsync(Connection1);
+            Assert.False(await _sessions.AuthenticateAsync(Connection1, text, TestSignatures.SignChallenge(TestKeys.PrivateKey1, challenge!), TestKeys.Address2));
+        }
+
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address2));
+    }
+
     [Fact]
     public async Task A_second_sign_in_with_the_same_key_takes_the_session_over()
     {
