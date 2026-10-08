@@ -1,10 +1,10 @@
-# Builds the solution and runs the automated tests on every push to a branch other than main.
+# Builds the solution and runs the automated tests on every push to a branch, for that branch only.
 name: Build and test
 
 on:
   push:
-    branches-ignore:
-      - main
+    branches:
+      - '**'
 
 concurrency:
   group: build-and-test-${{ github.ref }}
@@ -15,21 +15,35 @@ permissions:
 
 jobs:
   build-and-test:
-    # The prebuilt libaenigma.so needs glibc 2.38 or later and OpenSSL 3.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
+    # The job runs in Debian 13, the system of the packages and of the virtual machine images. It has
+    # OpenSSL 3.5, which the Debian package requires, and a glibc new enough for the prebuilt libaenigma.so.
+    container:
+      image: debian:13
+      # The tests store a passphrase in the kernel keyring; the default profile of a container blocks those calls.
+      options: --security-opt seccomp=unconfined
+
     steps:
+      # openssl is run by the node to create keys; libkeyutils and the OpenSSL library are loaded by
+      # libaenigma.so; the rest is needed to fetch the sources and to run .NET.
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git openssl libkeyutils1 libicu76
+
+      - name: Check the OpenSSL version
+        run: |
+          openssl version
+          dpkg --compare-versions "$(dpkg-query -W -f '${Version}' openssl)" ge 3.5.0
+
       # The submodule Libaenigma7 is not needed: the native library is in the repository.
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-
-      # libkeyutils is loaded by libaenigma.so; openssl is run by the node to create keys.
-      - name: Install native dependencies
-        run: sudo apt-get update && sudo apt-get install -y libkeyutils1 openssl
 
       - name: Restore
         run: dotnet restore enigma5.sln

@@ -1,4 +1,11 @@
-## Getting Started
+## Aenigma - Federated Messaging System
+
+![Status](https://img.shields.io/badge/status-active-brightgreen)
+![OpenSSL](https://img.shields.io/badge/openssl-%3E%3D%203.5-blue)
+![Platform](https://img.shields.io/badge/platform-linux%20amd64%20%7C%20arm64-lightgrey)
+[![Build and test](https://github.com/m3sserschmitt/aenigma5/actions/workflows/build-and-test.yml/badge.svg?branch=main)](https://github.com/m3sserschmitt/aenigma5/actions/workflows/build-and-test.yml?query=branch%3Amain)
+
+### Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine.
 
