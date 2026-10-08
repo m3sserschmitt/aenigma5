@@ -33,6 +33,18 @@ aenigma (5.1.0) unstable; urgency=medium
     ConnectionIdKey to ConnectionId.
   * The dashboard state is kept by a single thread; a slow dashboard
     session no longer delays the others.
+  * The dashboard shows a peer as connected only while both nodes list
+    each other, and follows locking, unlocking, removed peers and changes
+    of the neighbor list at once. Peers that connected to this node are
+    shown with their host or onion service.
+  * The dashboard shows a message when an action fails and when a peer
+    was added. Removing a peer that is already gone is not an error.
+  * A connection to a peer over Tor gets a new proxy handler at every
+    start, so a retry after an unreachable onion service no longer fails
+    for good. A closed peer connection is always stopped when it leaves
+    the bridge, and a newer connection to the same peer is kept.
+  * GET /Share and GET /File answer 500 instead of 404 when the lookup
+    itself fails; an unknown tag is still answered with 404.
   * The background jobs page is available at /Jobs in the Development
     environment only.
   * Removed code that was never called and unused package references.
