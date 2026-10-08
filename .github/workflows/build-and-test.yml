@@ -1,0 +1,49 @@
+# Builds the solution and runs the automated tests on every push to a branch other than main.
+name: Build and test
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # The prebuilt libaenigma.so needs glibc 2.38 or later and OpenSSL 3.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      # The submodule Libaenigma7 is not needed: the native library is in the repository.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # libkeyutils is loaded by libaenigma.so; openssl is run by the node to create keys.
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y libkeyutils1 openssl
+
+      - name: Restore
+        run: dotnet restore enigma5.sln
+
+      - name: Build
+        run: dotnet build enigma5.sln --no-restore
+
+      - name: Test
+        run: dotnet test enigma5.sln --no-build --logger "trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
