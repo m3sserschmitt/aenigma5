@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models.Tests.TestData;
 using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Models.Tests;
@@ -28,20 +27,20 @@ public class SharedDataCreateDtoTests
     [Fact]
     public void Validate_accepts_data_signed_with_the_given_key()
     {
-        Assert.Empty(new SharedDataCreateDto(TestKeys.PublicKey3, SignedData.SharedPayloadSignedWithKey3).Validate());
-        Assert.Empty(new SharedDataCreateDto(TestKeys.PublicKey3, SignedData.SharedPayloadSignedWithKey3, 5).Validate());
+        Assert.Empty(new SharedDataCreateDto(TestKeys.PublicKey3, TestSignedData.SharedPayloadSignedWithKey3).Validate());
+        Assert.Empty(new SharedDataCreateDto(TestKeys.PublicKey3, TestSignedData.SharedPayloadSignedWithKey3, 5).Validate());
     }
 
     [Fact]
     public void The_access_count_is_one_unless_given()
     {
-        Assert.Equal(1, new SharedDataCreateDto(TestKeys.PublicKey3, SignedData.SharedPayloadSignedWithKey3).AccessCount);
+        Assert.Equal(1, new SharedDataCreateDto(TestKeys.PublicKey3, TestSignedData.SharedPayloadSignedWithKey3).AccessCount);
     }
 
     [Fact]
     public void Validate_refuses_data_signed_with_another_key()
     {
-        var request = new SharedDataCreateDto(TestKeys.PublicKey1, SignedData.SharedPayloadSignedWithKey3);
+        var request = new SharedDataCreateDto(TestKeys.PublicKey1, TestSignedData.SharedPayloadSignedWithKey3);
 
         Assertions.SingleError(request.Validate(), ValidationErrorsDto.INVALID_SIGNATURE, nameof(SharedDataCreateDto.SignedData));
     }
@@ -73,7 +72,7 @@ public class SharedDataCreateDtoTests
     [Fact]
     public void Validate_refuses_a_missing_public_key()
     {
-        var request = new SharedDataCreateDto(null, SignedData.SharedPayloadSignedWithKey3);
+        var request = new SharedDataCreateDto(null, TestSignedData.SharedPayloadSignedWithKey3);
 
         Assertions.SingleError(request.Validate(), ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, nameof(SharedDataCreateDto.PublicKey));
     }
@@ -81,7 +80,7 @@ public class SharedDataCreateDtoTests
     [Fact]
     public void Validate_refuses_a_public_key_that_is_not_in_PEM_form()
     {
-        var request = new SharedDataCreateDto("not a key", SignedData.SharedPayloadSignedWithKey3);
+        var request = new SharedDataCreateDto("not a key", TestSignedData.SharedPayloadSignedWithKey3);
 
         Assertions.SingleError(request.Validate(), ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(SharedDataCreateDto.PublicKey));
     }
@@ -91,7 +90,7 @@ public class SharedDataCreateDtoTests
     [InlineData(-1)]
     public void Validate_refuses_an_access_count_below_one(int accessCount)
     {
-        var request = new SharedDataCreateDto(TestKeys.PublicKey3, SignedData.SharedPayloadSignedWithKey3, accessCount);
+        var request = new SharedDataCreateDto(TestKeys.PublicKey3, TestSignedData.SharedPayloadSignedWithKey3, accessCount);
 
         Assertions.SingleError(request.Validate(), ValidationErrorsDto.INVALID_VALUE_FOR_PROPERTY, nameof(SharedDataCreateDto.AccessCount));
     }

@@ -18,11 +18,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-namespace Enigma5.App.Models.Tests.TestData;
+namespace Enigma5.Tests.Base;
 
 // Values signed with the fixed test keys. A signature cannot be compared with a fresh one,
 // because it is checked with the public key, not reproduced.
-public static class SignedData
+public static class TestSignedData
 {
     // The text "shared-payload", signed with TestKeys.PrivateKey3.
     public const string SharedPayloadSignedWithKey3 =

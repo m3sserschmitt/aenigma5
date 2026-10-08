@@ -217,9 +217,71 @@ scwY6pZjQOpaJL/iLBmqZA==
 
     public static readonly string Passphrase = "12345678";
 
+    // PrivateKey1 without its passphrase, for a node that is started as a process.
+    public static readonly string PlainPrivateKey1 =
+@"-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQD2ZkHzeeevOkV5
+KSSvxq7WuZxgmGnKKQz7iMJ0nkWjC6ZVDxGrfJphVO7PiYVBXIzbwGV3BekbcWIv
+9ozsUcLQfa1sn93iwHnv1Z4YEQuIcNZW8zkOs5+P/tCugU0MDqAjtWa+TqjQEFD4
+uIh5ZOuK9NROSNlahOjfRGW48SlAo7FGgJ2T4Npk3DQUFN1ZSeCRXwWMdCXo5tZZ
+9Dt/f63LEwUcP28wM/6cZeZ3g2yewMwAFnhifSuDJbUIX2mEHXMt06DFb4k2MrrA
+tsKojIoYJ8kWdmloiaC4CN2M8bfXydcBFng+ofctutjM89qcfPwhUZYDi+3UGUNE
+4abHy8l3AgMBAAECggEAaaqWs9xegCXkLz52ri7tQcZdiosyKvEJ0UDn620IfhB7
+51RMBper+PucYkIedFZFTeQnXzCYtB0et2TrMFkry49p9QBl/lz+rdyVLMr6gCur
+r6QknupnDjB/u6ZVrUsEX+vmQMyo1nl40AEK/cxKus+d0GirVYdT+pNxcCtzvnTd
+IPfEeQVtAiXipi5168QEcxmqtJGkd06cIr57Dy5fJbMeQonSW4KNBVY8DV8/52xo
+vKkm97P/7thtqzYhZ/BPTtZYJVfPPPxwioU6ZuBaN7tHyzzbOLIg8F8DKJoM37Er
+P+/PJLFk1Wbriq1Rn9T2N1/wyDs6HE3hkUlzvWolYQKBgQD8+q7aC+VDb5Zr4hpn
+lzgOGcA25fkJEb/Oca1nHbfl2cFMTCBsMRcPcUGb5ZP+a0etlANctOr47PcSvuB2
+04qLHFiW3RdVK1xQnkOAoYIVv7e1ZtnlsKtMW926OgKSX3PDjU79SfMemyMAu14H
+8sb0r2THa+Ya/8SeBlJN9rBYBwKBgQD5V3YUqg8w+yFlBOOo9L3rgYnlOofRqF6X
+BR5J4M5vvhI+Z390n+HlXAackfW42Y7scS0wkMmzQe64/T+xCu9LNxNMxK80TJr1
+Eebdwgtv9qIWhe7jsQr5fwcnXypNk/i9WxpsYuuySBFow5kLbU5RJkjy/TpWeP0a
+WngE8fRHEQKBgQClSBtpNpBpiMRcY/MgbzoebFCbDZGxjTkl5juGvXHi6GxULwCX
+71LDshlNg6c3eFvyWlv/++vxCtE6HB+HQxqnXLO8jWKrMJM10NEFf4AAOawLBtGi
+MdUZJIQvIauAeoCl6PMMpX4EJxOtbL04sDOwtc9AQ4ypYyXQoQyxB1WbjQKBgQCT
+KGpZYdDbcKvR6iPO+LsKPoa7EmNMetlwuiWZJqPP0VcFG6Jem2oAKuMADyj98vDm
+XRl1m05fjJ8u8NBhVfnK43NxkHdzH28pCmq+IKMNbntVXbCTE09N1wnK0+CsrpNU
+dmtO4scGjoAv25j85IMfY8AUIR4IIRoILrK9AGvScQKBgQC6q6wKFBg6R8PIa6i7
+SlfiumesqO/aCPJF0Kj6FxAlTMPBVVizPnOO8AjLVSvZEX713ShkWIUCHg0AO0nc
+Ich5iOdXCBKCYJrkElmCJ7v/B40b+exUHLkYapgqXglBKudLdvmMRmhtWk3fLgsr
+VxdcSovQmfJeNURoQOA0C5T8kA==
+-----END PRIVATE KEY-----";
+
+    // PrivateKey2 without its passphrase, for a node that is started as a process.
+    public static readonly string PlainPrivateKey2 =
+@"-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDXenI6p9sF8M/U
+esLLEzA5GBAESwh+Q3cIXrOxJRvJ1R0pG+zlS8MIOm2tDfL5OGwjnJfCBDIJxqJc
+Kf7ljN+gPyPqvvYSYY9TM5MmzdkEt7sNyyTVw4fjBNMfYcywn/YEpx9vSjZIrlUJ
+Sv/YsTUVC2Pt6gD/vJ+K/E3CdHP4yzJf3SmZ7W6hmwcMEU2KNK69WcRGleSDMJGo
+LpvBiXYB1u/nYYVhwwhMz2iRlyVQfBcg44BUa1BrHv9cI2gII5wVjZhY97HX6JI8
+x/J+DoK4nEq010FngsvX24lIePPXwolkSlRDiVIeGLDy6ws3iZvpyDHu1cmGvWwT
+lv3IMrdlAgMBAAECggEACN7VpCmup/ZeI+XgLip5I3yPWjyO2gh5IRB++WWo7hyL
+wa+7Me72FYO26fccn8WtbqOJZsyz6k2cTPV99La21QVhuzicb4Ice5pwWMUEGwAy
+Sd1+mR3ecp91+SvWQ0DOiKoARAgBfJP6qbIwnpvK7uBuvxz76LXmjnrs+4/o30lw
+ynRsbOLrfPcKcMMyihTrH/4mQAZJho4qsBOz7t0WRbUokILpV9KFJvLYkhb8OdCa
+L3Bl8VG6Vb6zQztgyXx+dxUXKekOKDKHo0QpNH+RTBM+vx7Ea6ajILuU1zu/coJT
+1BlteAllx0hNGFacY5r51hCIPxNV259LDHrEunm8WQKBgQDf5AVZwwQXp7hiKuXJ
+Oli9VQSWu5/U4BMyYrtCHpAd2tEkMbBTVvwmqR72q8ZS6i6MmolOz0mVj9opJaH3
+fVOMw+cnJZrcsLehaUPLSpoeVd2v4qgjcSqOSMtHv2vOMwUb279xrjk68+yPiWdU
+3eLRixLrHU/aRDqU9BpkXk9JSQKBgQD2YZIAYH98/VyfqeBwjoFMIwfQLiIn0SIL
+yUa4XjvO9Lb/PdXF1vMJ09RLgXtsoKC9+VMw2+H9dGYmUBCJcIKOhmEAFguQAtbY
+KKxxmAquu5ZdjU1LpI/BULfQOZkS7RsEyK+t6na8QLl2SMAsh04zx1/K5HIR3cfx
+LvR6fRU5PQKBgHouoPDkaTZTlF8WVAJl8gmY/QEZcVcl1bQYh2LE9Rcl1B6xcy13
++fFLOBeblIapQDABIc+9dcXGFGOCIwrB/TeDrYECl6m6UuwmWxX1J3hImcujoOh+
+mJ+/gBgukbGczDvwx2BNmPPgLAgFDzwUPvTltbRTccGGnIWvVTvS7+fpAoGABQ9n
+8j4JIEYL2vOgOm+S1D9775ii9vJiop9Vpn+49r0r7P4WH+QURcVl/M8B++8onf46
+6Sv67juvxWWrkUcQR2EXKOtK/YAxbWsYb5TR01ji87TtO3p7wVqpC8vDCxJ3lZeR
+lB7WpXMm2/kOiVuWDZYwr3gVp6xIaPmv57wd7XkCgYBqiMgUQht5YeV9Srmpaxl7
+KQHggwqM1Y1iGWtNuqg3Qnp6ps/R5Zv3oWDcaBQ9elXZ97gpp0Twsw3/b4mQbkb/
+vChFCO59dlItmLonSfd8gjJzmDdgRrKzhdFJjBcVtHDfW7rkiVO2YugCVEXSBdz1
+h0S3iEO7QEcXLJAy9HPAbA==
+-----END PRIVATE KEY-----";
+
     public static string PublicKeyOf(string privateKey)
-    => privateKey == PrivateKey1 ? PublicKey1
-        : privateKey == PrivateKey2 ? PublicKey2
+    => privateKey == PrivateKey1 || privateKey == PlainPrivateKey1 ? PublicKey1
+        : privateKey == PrivateKey2 || privateKey == PlainPrivateKey2 ? PublicKey2
         : privateKey == PrivateKey3 ? PublicKey3
         : privateKey == ServerPrivateKey ? ServerPublicKey
         : throw new ArgumentException("Not a test key.", nameof(privateKey));

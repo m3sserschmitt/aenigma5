@@ -18,7 +18,6 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Enigma5.App.Models.Tests.TestData;
 using Enigma5.Tests.Base;
 
 namespace Enigma5.App.Models.Tests;
@@ -28,7 +27,7 @@ public class VertexBroadcastRequestDtoTests
     [Fact]
     public void A_signed_neighborhood_is_read_from_the_signed_data()
     {
-        var request = new VertexBroadcastRequestDto(TestKeys.PublicKey1, SignedData.NeighborhoodSignedWithKey1);
+        var request = new VertexBroadcastRequestDto(TestKeys.PublicKey1, TestSignedData.NeighborhoodSignedWithKey1);
 
         Assert.Empty(request.Validate());
         Assert.Equal(TestKeys.Address1, request.Neighborhood.Address);
@@ -42,7 +41,7 @@ public class VertexBroadcastRequestDtoTests
     [Fact]
     public void The_signature_itself_is_not_checked_by_the_model()
     {
-        var request = new VertexBroadcastRequestDto(TestKeys.PublicKey2, SignedData.NeighborhoodSignedWithKey1);
+        var request = new VertexBroadcastRequestDto(TestKeys.PublicKey2, TestSignedData.NeighborhoodSignedWithKey1);
 
         Assert.Empty(request.Validate());
         Assert.Equal(TestKeys.Address1, request.Neighborhood.Address);
@@ -64,7 +63,7 @@ public class VertexBroadcastRequestDtoTests
     [Fact]
     public void Validate_refuses_a_missing_public_key()
     {
-        var request = new VertexBroadcastRequestDto(null, SignedData.NeighborhoodSignedWithKey1);
+        var request = new VertexBroadcastRequestDto(null, TestSignedData.NeighborhoodSignedWithKey1);
 
         Assert.Equal(
             [ValidationErrorsDto.NULL_REQUIRED_PROPERTIES, ValidationErrorsDto.PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED],
@@ -74,7 +73,7 @@ public class VertexBroadcastRequestDtoTests
     [Fact]
     public void Validate_reports_the_errors_of_the_signed_neighborhood()
     {
-        var request = new VertexBroadcastRequestDto(TestKeys.PublicKey1, SignedData.NeighborhoodWithBadNeighborSignedWithKey1);
+        var request = new VertexBroadcastRequestDto(TestKeys.PublicKey1, TestSignedData.NeighborhoodWithBadNeighborSignedWithKey1);
 
         Assertions.SingleError(request.Validate(), ValidationErrorsDto.PROPERTIES_NOT_IN_CORRECT_FORMAT, nameof(NeighborhoodDto.Neighbors));
     }
