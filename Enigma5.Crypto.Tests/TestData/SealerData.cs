@@ -20,7 +20,7 @@
 
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using Enigma5.Crypto.DataProviders;
+using Enigma5.Tests.Base;
 
 namespace Enigma5.Crypto.Tests.TestData;
 
@@ -29,9 +29,9 @@ public class SealerData : IEnumerable<object[]>
 {
     public IEnumerator<object[]> GetEnumerator()
     {
-        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, PKey.PublicKey1, 256 + 12 + 16 + 12 };
-        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, PKey.PublicKey2, 256 + 12 + 16 + 6 };
-        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, PKey.PublicKey3, 256 + 12 + 16 + 8 };
+        yield return new object[] { new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x23, 0x56, 0x11 }, TestKeys.PublicKey1, 256 + 12 + 16 + 12 };
+        yield return new object[] { new byte[] { 0x05, 0x06, 0x07, 0x08, 0x03, 0x02 }, TestKeys.PublicKey2, 256 + 12 + 16 + 6 };
+        yield return new object[] { new byte[] { 0x03, 0x04, 0x07, 0x01, 0x03, 0x02, 0x09, 0x07 }, TestKeys.PublicKey3, 256 + 12 + 16 + 8 };
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
