@@ -55,8 +55,9 @@ The option `-c` names a folder under `Configs/` that holds the `appsettings.json
 3. builds the package with `dpkg-buildpackage` and checks it with `lintian`.
 
 When the package is built, the native libraries of other processor types are removed from it. The
-package depends on `openssl` (version 3 or newer), which the node uses to create keys, and on `jq`
-and `basez`, which the tools use.
+package depends on `openssl` (version 3.5 or newer), which the node uses to create keys and whose
+library the native library uses, on `libkeyutils1`, which the native library needs for the kernel
+keyring, and on `jq` and `basez`, which the tools use.
 
 ### A.3.2 Files on an installed node
 

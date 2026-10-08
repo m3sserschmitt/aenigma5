@@ -34,6 +34,10 @@ aenigma (5.1.0) unstable; urgency=medium
     bits; its address and every signature check use that one reading.
     Addresses must not be followed by a line end. A hub call without a
     valid request object is refused before it reaches the method.
+  * The package depends on openssl 3.5.0 or later, the current
+    long-term support line; OpenSSL 3.0 is no longer supported upstream.
+    It also declares libkeyutils1, which libaenigma loads for the
+    kernel keyring.
   * Log properties renamed: CommendResult to CommandResult, and
     ConnectionIdKey to ConnectionId.
   * The dashboard state is kept by a single thread; a slow dashboard

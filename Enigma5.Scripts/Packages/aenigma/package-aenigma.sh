@@ -119,7 +119,7 @@ Standards-Version: 4.6.2
 
 Package: $SERVICE_NAME
 Architecture: $ARCH
-Depends: \${misc:Depends}, libc6, openssl (>= 3.0.0), jq (>= 1.6), basez (>= 1.6.2)
+Depends: \${misc:Depends}, libc6, openssl (>= 3.5.0), libkeyutils1 (>= 1.5.9), jq (>= 1.6), basez (>= 1.6.2)
 Description: Federated messaging system
  Aenigma is a federated messaging system providing onion-service
  and VPN-based transport for self-hosted deployments.
