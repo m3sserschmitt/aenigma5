@@ -178,6 +178,7 @@ Uploads a new file.
 |--------|-------------|
 | `200`  | Returns the created [`SharedDataDto`](#shareddatadto) |
 | `400`  | `file` is missing or empty, or `maxAccessCount` is missing or less than 1 |
+| `413`  | Request body larger than `SharedFileMaxSize` (64 MiB by default) |
 | `500`  | Internal Server Error |
 
 ---

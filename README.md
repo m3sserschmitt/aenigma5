@@ -51,6 +51,21 @@ Open you browser and try to access [http://localhost:8080/info](http://localhost
 and [http://localhost:8081/dashboard](http://localhost:8081/dashboard). You should expect
 `200 OK` for both of them.
 
+### Running the tests
+
+The automated tests are run from the root of the repository:
+
+```bash
+dotnet test enigma5.sln
+```
+
+The integration tests start real nodes as separate processes on free ports of the loopback
+address; nothing else has to be set up. To collect code coverage as well:
+
+```bash
+dotnet test enigma5.sln --settings coverage.runsettings --collect "XPlat Code Coverage"
+```
+
 ## Configuration
 
 ### Dev encryption keys
@@ -427,6 +442,14 @@ one of them is used, and it may be the wrong one.
 If a peer stays `Disconnected`, check that the key is unlocked, that the host is reachable
 (through Tor for `.onion` hosts, see `Socks5Proxy`), and that the address is still the peer's
 current one. Press `Retry` to connect again at once.
+
+A node that connected to this one, without being in this node's own list, is shown as an
+`incoming` peer.
+
+Locking the key of a node closes the connections that node opened to its peers, and those peers
+show it as `Disconnected` at once. Nodes that connected *to* it are not told: they keep their
+connection and keep showing the locked node as `Connected`, although a locked node cannot route
+messages. Unlock the key to restore normal operation; nothing has to be done on the other nodes.
 
 ### License
 

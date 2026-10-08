@@ -162,7 +162,7 @@ public class FileTests(SmallLimitsNodeFixture fixture) : IClassFixture<SmallLimi
 
         var response = await Post(new byte[SmallLimitsNodeFixture.SharedFileMaxSize + 1], "1");
 
-        Assert.False(response.IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
         Assert.Equal(before, StoredFiles());
     }
 }
