@@ -67,6 +67,15 @@ internal static partial class Native
     internal static partial int GetAddressSize();
 
     [LibraryImport(App.Common.Constants.Libaenigma)]
+    internal static partial uint DecodeOnionSize([In] byte[] onion);
+
+    [LibraryImport(App.Common.Constants.Libaenigma)]
+    internal static partial int GetEnvelopeSize(uint plaintextLen, [MarshalAs(UnmanagedType.LPStr)] string publicKey);
+
+    [LibraryImport(App.Common.Constants.Libaenigma)]
+    internal static partial int GetSignedDataSize(uint dataSize, [MarshalAs(UnmanagedType.LPStr)] string publicKey);
+
+    [LibraryImport(App.Common.Constants.Libaenigma)]
     internal static partial int GetKernelKeyMaxSize();
 
     [LibraryImport(App.Common.Constants.Libaenigma)]

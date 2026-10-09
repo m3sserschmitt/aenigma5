@@ -21,10 +21,11 @@
 # Get the directory of the running script
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Combine it with the relative path "../Scripts"
-SCRIPTS_PATH="$SCRIPT_DIR/../Enigma5.App"
+# The keys are written next to the application, wherever the script is started from
+APP_DIR="$SCRIPT_DIR/../Enigma5.App"
 
-openssl genrsa -out ../Enigma5.App/private-key.pem
-openssl rsa -in ../Enigma5.App/private-key.pem -outform PEM -pubout -out ../Enigma5.App/public-key.pem
+# Same size as the keys the node creates by itself
+openssl genrsa -out "$APP_DIR/private-key.pem" 4096
+openssl rsa -in "$APP_DIR/private-key.pem" -outform PEM -pubout -out "$APP_DIR/public-key.pem"
 
 exit 0

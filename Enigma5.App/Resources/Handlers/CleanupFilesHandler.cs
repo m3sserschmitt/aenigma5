@@ -42,18 +42,14 @@ public class CleanupFilesHandler(
     public async Task<CommandResult<int>> Handle(CleanupFilesCommand request, CancellationToken cancellationToken)
     {
         var time = (DateTimeOffset.UtcNow - request.TimeSpan).ToUnixTimeSeconds();
-        var webContentDirectory = _configuration.GetWebContentDirectory();
         var filesToBeRemoved = await _context.Files.Where(item => time > item.Timestamp).ToListAsync(cancellationToken: cancellationToken);
         var result = 0;
         foreach (var fileToBeRemoved in filesToBeRemoved)
         {
-            if (!string.IsNullOrEmpty(webContentDirectory) && Directory.Exists(webContentDirectory))
+            var fullPath = _configuration.GetWebContentFilePath(fileToBeRemoved.Tag);
+            if (fullPath is not null && File.Exists(fullPath))
             {
-                var fullPath = Path.Combine(webContentDirectory, fileToBeRemoved.Tag);
-                if (File.Exists(fullPath))
-                {
-                    File.Delete(fullPath);
-                }
+                File.Delete(fullPath);
             }
             result += await _dbWriter.RemoveFileAsync(fileToBeRemoved, cancellationToken);
         }

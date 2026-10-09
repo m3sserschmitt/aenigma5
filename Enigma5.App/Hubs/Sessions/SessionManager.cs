@@ -18,6 +18,8 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Security.Cryptography;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Common.Utils;
 using Enigma5.Crypto.Extensions;
 using Enigma5.Crypto;
@@ -69,8 +71,7 @@ public class SessionManager(
     public Task<string?> AddPendingAsync(string connectionId)
     => _singleThreadExecutor.RunAsync(() =>
         {
-            var nonceData = new byte[Common.Constants.AuthTokenSize];
-            new Random().NextBytes(nonceData);
+            var nonceData = RandomNumberGenerator.GetBytes(Common.Constants.AuthTokenSize);
             var nonce = Convert.ToBase64String(nonceData);
             return AddPending(connectionId, nonce) ? nonce : null;
         },
@@ -83,48 +84,46 @@ public class SessionManager(
         return _connectionsMapper.Remove(connectionId, out address);
     }
 
-    public Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress)
-    => _singleThreadExecutor.RunAsync(
-            async () =>
+    public async Task<bool> AuthenticateAsync(string connectionId, string publicKey, string signature, string? impersonateServiceAddress)
+    {
+        var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
+        if (!address.IsValidAddress())
+        {
+            return false;
+        }
+
+        // Only this node's own key may sign in on behalf of another address (network bridge).
+        var impersonating = !string.IsNullOrWhiteSpace(impersonateServiceAddress);
+        if (impersonating && (!impersonateServiceAddress.IsValidAddress() || await _certificateManager.GetAddressAsync() != address))
+        {
+            return false;
+        }
+
+        return await _singleThreadExecutor.RunAsync(() =>
+        {
+            // A nonce is valid for a single attempt, successful or not.
+            if (!_pending.Remove(connectionId, out var expectedNonce))
             {
-                using var signatureVerifier = SealProvider.Factory.CreateVerifier(publicKey);
-                var decodedSignature = Convert.FromBase64String(signature);
-                var nonce = decodedSignature.GetDataFromSignature(publicKey);
+                return false;
+            }
 
-                if (nonce is null)
-                {
-                    return false;
-                }
+            var decodedSignature = Convert.FromBase64String(signature);
+            var nonce = decodedSignature.GetDataFromSignature(publicKey);
+            if (nonce is null || Convert.ToBase64String(nonce) != expectedNonce)
+            {
+                return false;
+            }
 
-                var encodedNonce = Convert.ToBase64String(nonce);
+            using var signatureVerifier = SealProvider.Factory.CreateVerifier(publicKey);
+            if (!signatureVerifier.Verify(decodedSignature))
+            {
+                return false;
+            }
 
-                if (encodedNonce is null)
-                {
-                    return false;
-                }
-
-                var address = CertificateHelper.GetHexAddressFromPublicKey(publicKey);
-                if (address == null)
-                {
-                    return false;
-                }
-
-                var impersonateAddressNull = string.IsNullOrWhiteSpace(impersonateServiceAddress);
-                if (!_pending.TryGetValue(connectionId, out string? expectedNonce) ||
-                    expectedNonce != encodedNonce ||
-                    !signatureVerifier.Verify(decodedSignature) ||
-                    !Authenticate(connectionId) ||
-                    (!impersonateAddressNull && await _certificateManager.GetAddressAsync() != address)
-                )
-                {
-                    return false;
-                }
-
-                address = !impersonateAddressNull ? impersonateServiceAddress : address;
-                return _connectionsMapper.TryAdd(address!, connectionId);
-            },
-            _logger
-        );
+            Authenticate(connectionId);
+            return _connectionsMapper.TryAdd(impersonating ? impersonateServiceAddress! : address, connectionId);
+        }, _logger);
+    }
 
     public Task<string?> RemoveAsync(string connectionId)
     => _singleThreadExecutor.RunAsync(

@@ -24,17 +24,13 @@ using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Contracts;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
 public class CreatePendingMessageHandler(
-    EnigmaDbContext context,
     IDbWriter dbWriter
 ) : IRequestHandler<CreatePendingMessageCommand, CommandResult<PendingMessageDto>>
 {
-    private readonly EnigmaDbContext _context = context;
-
     private readonly IDbWriter _dbWriter = dbWriter;
 
     public async Task<CommandResult<PendingMessageDto>> Handle(CreatePendingMessageCommand request, CancellationToken cancellationToken)
@@ -52,31 +48,27 @@ public class CreatePendingMessageHandler(
 
         if (request.Uuid != null)
         {
-            var existingEntry = await _context.Messages.FirstOrDefaultAsync(item => item.Uuid == request.Uuid, cancellationToken: cancellationToken);
-            if (existingEntry != null)
-            {
-                return CommandResult.CreateResultFailure(new PendingMessageDto
-                {
-                    Id = existingEntry.Id,
-                    Uuid = existingEntry.Uuid,
-                    Sent = existingEntry.Sent,
-                    Destination = existingEntry.Destination,
-                    Content = existingEntry.Content,
-                    DateReceived = existingEntry.DateCreated
-                });
-            }
             pendingMessage.Uuid = request.Uuid;
         }
 
-        return await _dbWriter.CreatePendingMessageAsync(pendingMessage, cancellationToken) > 0 ?
-        CommandResult.CreateResultSuccess(new PendingMessageDto
+        // A given uuid is checked by the writer: if a message with it is already stored, that one is returned.
+        var storedMessage = await _dbWriter.CreatePendingMessageAsync(pendingMessage, request.Uuid != null, cancellationToken);
+        if (storedMessage is null)
         {
-            Id = pendingMessage.Id,
-            Uuid = pendingMessage.Uuid,
-            Sent = pendingMessage.Sent,
-            Destination = pendingMessage.Destination,
-            Content = pendingMessage.Content,
-            DateReceived = pendingMessage.DateCreated
-        }) : CommandResult.CreateResultFailure<PendingMessageDto>();
+            return CommandResult.CreateResultFailure<PendingMessageDto>();
+        }
+
+        var storedMessageDto = new PendingMessageDto
+        {
+            Id = storedMessage.Id,
+            Uuid = storedMessage.Uuid,
+            Sent = storedMessage.Sent,
+            Destination = storedMessage.Destination,
+            Content = storedMessage.Content,
+            DateReceived = storedMessage.DateCreated
+        };
+
+        return ReferenceEquals(storedMessage, pendingMessage) ?
+        CommandResult.CreateResultSuccess(storedMessageDto) : CommandResult.CreateResultFailure(storedMessageDto);
     }
 }

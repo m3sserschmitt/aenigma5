@@ -20,6 +20,7 @@
 
 using Enigma5.App.Common.Extensions;
 using Enigma5.App.Data;
+using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Security.Contracts;
@@ -30,10 +31,13 @@ namespace Enigma5.App.Resources.Handlers;
 public class UpdateLocalAdjacencyHandler(
     NetworkGraph networkGraph,
     ICertificateManager certificateManager,
+    ISessionManager sessionManager,
     ILogger<UpdateLocalAdjacencyHandler> logger)
 : IRequestHandler<UpdateLocalAdjacencyCommand, CommandResult<VertexBroadcastRequestDto>>
 {
     private readonly NetworkGraph _networkGraph = networkGraph;
+
+    private readonly ISessionManager _sessionManager = sessionManager;
 
     private readonly ICertificateManager _certificateManager = certificateManager;
 
@@ -46,10 +50,28 @@ public class UpdateLocalAdjacencyHandler(
             return CommandResult.CreateResultFailure<VertexBroadcastRequestDto>();
         }
 
-        await _networkGraph.GenerateLocalVertexAsync();
-        var localVertex = request.Add ?
-        await _networkGraph.AddAdjacencyAsync(request.Addresses)
-        : await _networkGraph.RemoveAdjacencyAsync(request.Addresses);
+        Vertex localVertex;
+        if (request.Add)
+        {
+            // Only addresses connected to this node right now may become neighbors.
+            var connected = new List<string>();
+            foreach (var address in request.Addresses)
+            {
+                if (await _sessionManager.TryGetConnectionIdAsync(address) is not null)
+                {
+                    connected.Add(address);
+                }
+            }
+
+            // Re-sign first, so the broadcast carries a fresh lastUpdate even when no neighbor is new.
+            await _networkGraph.GenerateLocalVertexAsync();
+            localVertex = await _networkGraph.AddAdjacencyAsync(connected);
+        }
+        else
+        {
+            // Signs a new vertex only if one of the addresses actually was a neighbor.
+            localVertex = await _networkGraph.RemoveAdjacencyAsync(request.Addresses);
+        }
 
         if(localVertex.SignedData is null)
         {

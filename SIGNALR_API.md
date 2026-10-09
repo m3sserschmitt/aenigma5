@@ -14,6 +14,7 @@ message delivery, and network graph updates.
 - [Session](#session)
 - [Messages](#messages)
 - [Network Graph](#network-graph)
+- [Server-to-Client Messages](#server-to-client-messages)
 - [Data Models](#data-models)
 
 ---
@@ -27,6 +28,7 @@ message delivery, and network graph updates.
 | Timeout | 90 seconds of silence from either side |
 | Handshake timeout | 15 seconds |
 | Reconnect backoff | 2s → 4s → 8s → 16s |
+| Maximum incoming message size | 331,776 bytes (324 KiB); larger messages are dropped without a reply |
 
 ---
 
@@ -83,10 +85,13 @@ Issues a random one-time challenge tied to the connection, to be signed and retu
 
 | Outcome | Description |
 |---|---|
-| Success | Returns a 64-byte encoded challenge value |
+| Success | Returns a base64-encoded challenge of 64 cryptographically random bytes |
 | Failure | `Failed to generate authentication Nonce due to internal errors.` |
 
-**Note:** requesting a new challenge clears any sign-in progress the connection already had.
+**Notes:**
+- Requesting a new challenge clears any sign-in progress the connection already had.
+- A challenge is single-use: every `Authenticate` call consumes it, whether it succeeds or
+  fails. Request a new challenge before each sign-in attempt.
 
 ---
 
@@ -105,8 +110,16 @@ Completes sign-in by verifying a signed challenge against a public key.
 | Failure | `One or more required properties not provided.` |
 | Failure | `One or more properties not in correct format.` |
 
-**Note:** on success, the connection remains signed in as that identity for as long as it
-stays open.
+The first failure message is returned for every rejected sign-in, including when no challenge
+is pending (none was requested, or it was already consumed by an earlier attempt).
+
+**Notes:**
+- On success, the connection remains signed in as that identity for as long as it stays open.
+  The identity's address is the SHA-256 hash of the public key.
+- If another connection later signs in with the same identity, messages are delivered to the
+  most recent connection.
+- The `X-Impersonate-Service` connection header is reserved for the node's own network bridge.
+  It is honored only when the signing key is the node's own key, and is ignored otherwise.
 
 ---
 
@@ -131,7 +144,8 @@ Returns this server's own entry in the network graph.
 
 > Use `Pull2` instead. Will be removed in a future version.
 
-Retrieves up to 1024 pending messages for the signed-in identity. Requires sign-in.
+Retrieves up to 128 pending messages for the signed-in identity, ordered by `id`. Requires
+sign-in. Messages beyond the first 128 stay pending and are returned by later calls.
 
 **Request Payload** — none
 
@@ -147,7 +161,12 @@ Retrieves up to 1024 pending messages for the signed-in identity. Requires sign-
 
 ### `Pull2`
 
-Retrieves a page (20) of pending messages for the signed-in identity. Requires sign-in.
+Retrieves a page of up to 20 pending messages for the signed-in identity, ordered by `id`.
+Requires sign-in.
+
+To page through all pending messages, start with `infId` set to `null`, then pass the `id` of the
+last message received until an empty page is returned. Pulling does not mark messages as
+delivered; call [`Cleanup`](#cleanup) after pulling for that.
 
 **Request Payload** — [`PullRequestDto`](#pullrequestdto)
 
@@ -156,6 +175,7 @@ Retrieves a page (20) of pending messages for the signed-in identity. Requires s
 | Outcome | Description |
 |---|---|
 | Success | Returns an array of [`PendingMessageDto`](#pendingmessagedto) |
+| Failure | `One or more properties have invalid values.` (negative `infId`) |
 | Failure | `Internal error` |
 | Failure | `Authentication required` |
 
@@ -163,7 +183,10 @@ Retrieves a page (20) of pending messages for the signed-in identity. Requires s
 
 ### `Cleanup`
 
-Marks all pending messages for the signed-in identity as delivered. Requires sign-in.
+Marks the signed-in identity's pending messages as delivered, up to the highest message `id`
+that `Pull` or `Pull2` has returned **on the same connection**. Messages that were not returned on
+this connection, including messages that arrived after the last pull, stay pending. If nothing has
+been pulled on this connection, nothing is marked. Requires sign-in.
 
 **Request Payload** — none
 
@@ -193,6 +216,7 @@ Forwards one or more encrypted message payloads toward their destination. Requir
 | Failure | `Invalid data provided for method invocation.` |
 | Failure | `One or more required properties not provided.` |
 | Failure | `Too many payloads for one request.` |
+| Failure | `One or more payloads exceed the maximum onion size.` |
 | Failure | `One or more properties not in correct format.` |
 | Failure | `Authentication required` |
 
@@ -202,8 +226,6 @@ connected receives the message immediately in addition to it being saved; otherw
 saved only, for later retrieval via `Pull2`.
 
 ---
-
-### Network Graph
 
 ### `Broadcast`
 
@@ -227,8 +249,13 @@ Accepts and forwards an adjacency update from a peer. Requires sign-in.
 
 ### `TriggerBroadcast`
 
-Announces this connection's own newly added peers to the network. Requires sign-in.
-Currently blocked on `127.0.0.1:8080`.
+Adds the given addresses to this node's own neighbor list, re-signs the node's graph entry and
+broadcasts it to its neighbors. Requires sign-in.
+
+This method is meant for the node itself: its network bridge calls it through the control
+endpoint (`HttpControl`, `127.0.0.1:8081` by default) after connecting to its peers. It is
+blocked on the public endpoint (`127.0.0.1:8080`) by the default `HubBlacklists`
+configuration, and clients should not call it.
 
 **Request Payload** — [`TriggerBroadcastRequestDto`](#triggerbroadcastrequestdto)
 
@@ -244,6 +271,34 @@ Currently blocked on `127.0.0.1:8080`.
 
 ---
 
+### Server-to-Client Messages
+
+The server also invokes methods on connected clients. A client registers handlers for them on
+its hub connection (for example `connection.On<RoutingRequestDto>("RouteMessage", ...)`).
+
+### `RouteMessage` (server → client)
+
+Pushed to the connection signed in as a message's next-hop address, as soon as the message is
+routed, if that address is currently connected.
+
+**Payload** — [`RoutingRequestDto`](#routingrequestdto) with a single item in `payloads`: the
+message content after this node removed its onion layer, base64-encoded. `uuid` is the
+message's tracking reference.
+
+**Note:** the message is also stored and remains available through [`Pull2`](#pull2) until the
+recipient confirms it with [`Cleanup`](#cleanup). Use `uuid` to detect duplicates.
+
+### `Broadcast` (server → client)
+
+Pushed to the connections of this node's graph neighbors when the node's view of the network
+changes.
+
+**Payload** — [`VertexBroadcastRequestDto`](#vertexbroadcastrequestdto)
+
+**Note:** only other nodes are graph neighbors, so regular clients never receive this message.
+
+---
+
 ### Data Models
 
 ### `AuthenticationRequestDto`
@@ -251,7 +306,7 @@ Currently blocked on `127.0.0.1:8080`.
 | Property | Type | Description |
 |---|---|---|
 | `publicKey` | string | Caller's public key, in PEM format |
-| `signature` | string | The challenge from `GenerateToken`, signed with the caller's private key, base64-encoded |
+| `signature` | string | Base64 encoding of the decoded challenge bytes from `GenerateToken`, followed by their RSA SHA-256 signature made with the caller's private key |
 
 ---
 
@@ -259,7 +314,7 @@ Currently blocked on `127.0.0.1:8080`.
 
 | Property | Type | Description |
 |---|---|---|
-| `infId` | integer or `null` | Marker to continue paging from; omit for the first page |
+| `infId` | integer or `null` | `id` of the last message already received; only messages with a greater `id` are returned. Omit or `null` for the first page; must not be negative |
 
 ---
 
@@ -284,7 +339,7 @@ Currently blocked on `127.0.0.1:8080`.
 
 | Property | Type | Description |
 |---|---|---|
-| `payloads` | string[] | One or more base64-encoded, onion-encrypted message layers (max 20) |
+| `payloads` | string[] | One or more base64-encoded, onion-encrypted message layers (max 20, each at most 16,384 characters) |
 | `uuid` | string or `null` | Caller-supplied tracking reference; only honored when `payloads` contains exactly one item |
 
 ---

@@ -150,6 +150,8 @@ public class ConnectionVector : IDisposable
 
         _source.Closed += OnSourceClosed;
         _target.Closed += OnTargetClosed;
+        _source.Reconnected += OnReconnected;
+        _target.Reconnected += OnReconnected;
 
         _impersonateServiceAddress = impersonateServiceAddress;
         _logger = logger;
@@ -497,6 +499,17 @@ public class ConnectionVector : IDisposable
         _ = Task.Run(() => Closed?.Invoke(ex, this));
     }
 
+    // After a reconnect the hub sees a new connection, which is not signed in. The vector is stopped,
+    // so that the bridge replaces it with a new one that signs in on both sides again.
+    private Task OnReconnected(string? connectionId)
+    {
+        _logger.LogDebug($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} reconnected and is no longer signed in. Stopping it...", this);
+        SourceAuthenticated = false;
+        TargetAuthenticated = false;
+        _ = Task.Run(() => StopAsync());
+        return Task.CompletedTask;
+    }
+
     private ConnectionVector Reversed() => new(this, true);
 
     private async Task<bool> InvokeAsync(HubConnection connection, string method, object? data, CancellationToken cancellationToken = default)
@@ -614,6 +627,8 @@ public class ConnectionVector : IDisposable
             }
             _source.Closed -= OnSourceClosed;
             _target.Closed -= OnTargetClosed;
+            _source.Reconnected -= OnReconnected;
+            _target.Reconnected -= OnReconnected;
             _disposed = true;
         }
     }

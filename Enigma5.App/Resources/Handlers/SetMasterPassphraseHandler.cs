@@ -43,7 +43,7 @@ public class SetMasterPassphraseHandler(
 
     public async Task<CommandResult<bool>> Handle(SetMasterPassphraseCommand request, CancellationToken cancellationToken)
     {
-        var result = await _certificateManager.SetupAsync(request.Passphrase) && await _networkGraph.GenerateLocalVertexAsync();
+        var result = await _certificateManager.SetupAsync(request.GetPassphrase()) && await _networkGraph.GenerateLocalVertexAsync();
         if (result)
         {
             SendInvokeNetworkBridgeCommand();

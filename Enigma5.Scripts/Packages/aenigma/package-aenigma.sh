@@ -160,6 +160,7 @@ usr/bin/aenigma-tor
 usr/bin/aenigma-tor-auth
 usr/bin/aenigma-tor-get-auth
 usr/bin/aenigma-unlock-key
+usr/bin/aenigma-update
 usr/bin/aenigma-vpn-client
 usr/bin/aenigma-vpn-dns
 usr/bin/aenigma-vpn-server

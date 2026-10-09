@@ -87,13 +87,20 @@ public sealed class CertificateManager(
         PassphrasePersistence.Ephemeral => SealProvider.SearchMasterPassphrase(),
         _ => 0
     };
-    
+
+    private int CreateMasterPassphrase(byte[] passphrase) => _configuration.GetPassphrasePersistence() switch
+    {
+        PassphrasePersistence.Persistent => SealProvider.CreatePersistentMasterPassphrase(passphrase),
+        PassphrasePersistence.Ephemeral => SealProvider.CreateMasterPassphrase(passphrase),
+        _ => -1
+    };
+
     public Task<bool> CreateMasterPassphraseAsync(byte[] passphrase)
     => _simpleSingleThreadRunner.RunAsync(() =>
     {
         SearchMasterPassphrase();
         SealProvider.RemoveMasterPassphrase();
-        return SealProvider.CreatePersistentMasterPassphrase(passphrase) > 0;
+        return CreateMasterPassphrase(passphrase) > 0;
     }, _logger);
 
     public Task<bool> RemoveMasterPassphraseAsync() => _simpleSingleThreadRunner.RunAsync(() =>
@@ -102,12 +109,15 @@ public sealed class CertificateManager(
         return SealProvider.RemoveMasterPassphrase();
     }, _logger);
 
-    public Task<IEnvelopeUnsealer> CreateUnsealerAsync()
-    => _simpleSingleThreadRunner.RunAsync(() =>
+    public async Task<IEnvelopeUnsealer> CreateUnsealerAsync()
     {
-        SearchMasterPassphrase();
-        return SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty);
-    }, _logger);
+        var publicKey = await GetPublicKeyAsync() ?? string.Empty;
+        return await _simpleSingleThreadRunner.RunAsync(() =>
+        {
+            SearchMasterPassphrase();
+            return SealProvider.Factory.CreateUnsealerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty, publicKey);
+        }, _logger);
+    }
 
     public Task<IEnvelopeSigner> CreateSignerAsync()
     => _simpleSingleThreadRunner.RunAsync(() =>
@@ -115,6 +125,20 @@ public sealed class CertificateManager(
         SearchMasterPassphrase();
         return SealProvider.Factory.CreateSignerFromFile(_keysProvider.PrivateKeyPath ?? string.Empty);
     }, _logger);
+
+    // True if the private key can be used right now. It signs one byte, so the answer is never out of date.
+    public async Task<bool> CanSignAsync()
+    {
+        try
+        {
+            using var signer = await CreateSignerAsync();
+            return signer?.Sign([0]) is not null;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     public async Task<bool> SetupAsync(char[] passphrase)
     {
@@ -157,15 +181,15 @@ public sealed class CertificateManager(
         var privateKeyFileInfo = new FileInfo(privateKeyPath);
         if (!privateKeyFileInfo.Exists || privateKeyFileInfo.Length == 0)
         {
-            return await KeysGenerator.Generate(privateKeyPath, passphrase) &&
-            await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+            return await KeysGenerator.Generate(privateKeyPath, passphrase, logger: _logger) &&
+            await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase, _logger);
         }
         else
         {
             var publicKeyFileInfo = new FileInfo(publicKeyPath);
             if (!publicKeyFileInfo.Exists || publicKeyFileInfo.Length == 0)
             {
-                return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase);
+                return await KeysGenerator.ExportPublicKey(privateKeyPath, publicKeyPath, passphrase, _logger);
             }
         }
         return true;

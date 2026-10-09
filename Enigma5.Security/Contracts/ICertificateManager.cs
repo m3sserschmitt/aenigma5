@@ -43,5 +43,7 @@ public interface ICertificateManager
 
     Task<IEnvelopeSigner> CreateSignerAsync();
 
+    Task<bool> CanSignAsync();
+
     Task<ExportedContactDataDto> GetExportedContactDataAsync();
 }

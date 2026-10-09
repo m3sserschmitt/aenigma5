@@ -25,5 +25,8 @@ namespace Enigma5.App.Resources.Commands;
 
 public class SetMasterPassphraseCommand(char[] passphrase): IRequest<CommandResult<bool>>
 {
-    public char[] Passphrase { get; private set; } = passphrase;
+    // Not a property on purpose: commands are logged with all their public properties.
+    private readonly char[] _passphrase = passphrase;
+
+    public char[] GetPassphrase() => _passphrase;
 }

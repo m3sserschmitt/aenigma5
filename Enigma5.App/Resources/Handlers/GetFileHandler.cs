@@ -19,33 +19,38 @@
 */
 
 using Enigma5.App.Common.Extensions;
+using Enigma5.App.Data;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Queries;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Resources.Handlers;
 
-public class GetFileHandler(IConfiguration configuration) : IRequestHandler<GetFileQuery, CommandResult<SharedDataDto>>
+public class GetFileHandler(EnigmaDbContext context, IConfiguration configuration) : IRequestHandler<GetFileQuery, CommandResult<SharedDataDto>>
 {
+    private readonly EnigmaDbContext _context = context;
+
     private readonly IConfiguration _configuration = configuration;
 
-    public Task<CommandResult<SharedDataDto>> Handle(GetFileQuery request, CancellationToken cancellationToken)
+    public async Task<CommandResult<SharedDataDto>> Handle(GetFileQuery request, CancellationToken cancellationToken)
     {
-        var webContentDirectory = _configuration.GetWebContentDirectory();
-        if (string.IsNullOrEmpty(webContentDirectory) || !Directory.Exists(webContentDirectory))
+        var fullPath = _configuration.GetWebContentFilePath(request.Tag);
+        if (fullPath is null || !File.Exists(fullPath))
         {
-            return Task.FromResult(CommandResult.CreateResultFailure<SharedDataDto>());
-        }
-        var fullPath = Path.Combine(webContentDirectory, request.Tag);
-        if (!File.Exists(fullPath))
-        {
-            return Task.FromResult(CommandResult.CreateResultFailure<SharedDataDto>());
+            return CommandResult.CreateResultFailure<SharedDataDto>();
         }
 
-        return Task.FromResult(CommandResult.CreateResultSuccess(new SharedDataDto
+        var fileRecord = await _context.Files.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken);
+        if (fileRecord is null)
         {
-            Tag = request.Tag,
+            return CommandResult.CreateResultFailure<SharedDataDto>();
+        }
+
+        return CommandResult.CreateResultSuccess(new SharedDataDto
+        {
+            Tag = fileRecord.Tag,
             File = new FileStream(fullPath, FileMode.Open, FileAccess.Read)
-        }));
+        });
     }
 }

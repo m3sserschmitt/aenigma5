@@ -20,6 +20,7 @@
 
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using Enigma5.App.Common.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
 using Enigma5.App.Resources.Handlers;
@@ -58,12 +59,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var sharedData = await commandRouter.Send(new GetSharedDataQuery(tag));
+        var sharedData = await commandRouter.Send(new GetSharedDataQuery(normalizedTag));
         return sharedData.IsSuccessNotNullResultValue() ? sharedData.CreateGetResponse() : Results.NotFound();
     }
 
@@ -73,12 +75,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(tag));
+        var result = await commandRouter.Send(new IncrementSharedDataAccessCountCommand(normalizedTag));
         return result.CreatePutResponse();
     }
 
@@ -88,12 +91,13 @@ public static class Api
         [FromQuery] string? address,
         [FromServices] IMediator commandRouter)
     {
-        if (address is null)
+        var normalizedAddress = address.NormalizeAddress();
+        if (normalizedAddress is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new GetVertexQuery(address));
+        var result = await commandRouter.Send(new GetVertexQuery(normalizedAddress));
         return result.CreateGetResponse();
     }
 
@@ -125,7 +129,7 @@ public static class Api
         [FromForm] int? maxAccessCount,
         [FromServices] IMediator commandRouter)
     {
-        if (file == null || file.Length == 0 || maxAccessCount == null)
+        if (file == null || file.Length == 0 || maxAccessCount == null || maxAccessCount <= 0)
         {
             return Results.BadRequest();
         }
@@ -140,12 +144,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new GetFileQuery(tag));
+        var result = await commandRouter.Send(new GetFileQuery(normalizedTag));
 
         if (!result.IsSuccessNotNullResultValue() || result.Value?.File is null)
         {
@@ -164,12 +169,13 @@ public static class Api
         [FromQuery] string? tag,
         [FromServices] IMediator commandRouter)
     {
-        if (tag is null)
+        var normalizedTag = tag.NormalizeTag();
+        if (normalizedTag is null)
         {
             return Results.BadRequest();
         }
 
-        var result = await commandRouter.Send(new IncrementFileAccessCountCommand(tag));
+        var result = await commandRouter.Send(new IncrementFileAccessCountCommand(normalizedTag));
         return result.CreatePutResponse();
     }
 }

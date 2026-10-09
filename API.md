@@ -52,12 +52,15 @@ Create a new shared data object.
 
 **Request Body** — [`SharedDataCreateDto`](#shareddatacreatedto) *(required)*
 
+The signature in `signedData` is checked against `publicKey` before the object is stored.
+
 **Responses**
 
 | Status | Description |
 |--------|-------------|
 | `200`  | Returns the created [`SharedDataDto`](#shareddatadto) |
-| `400`  | Bad Request |
+| `400`  | Invalid request; the body lists the errors. Includes `The signature could not be verified.` when `signedData` is not signed with `publicKey`, and an invalid `accessCount` (must be at least 1) |
+| `413`  | Request body larger than `SharedDataMaxSize` (16 KiB by default) |
 | `500`  | Internal Server Error |
 
 ---
@@ -66,40 +69,43 @@ Create a new shared data object.
 
 Returns a shared data object by its identification tag.
 
+Reading does not change the object's access count. After a successful read, the client is
+responsible for calling [`PUT /IncrementSharedDataAccessCount`](#put-incrementshareddataaccesscount).
+
 **Query Parameters**
 
 | Name  | Type   | Required | Description                          |
 |-------|--------|----------|----------------------------------------|
-| `tag` | string | Yes      | Shared data identifier in GUID format |
+| `tag` | string | Yes      | Shared data identifier in GUID format (case-insensitive) |
 
 **Responses**
 
 | Status | Description |
 |--------|-------------|
 | `200`  | Returns a [`SharedDataDto`](#shareddatadto) |
-| `400`  | Bad Request |
-| `404`  | Not Found |
+| `400`  | `tag` is missing or not a valid GUID |
+| `404`  | No shared data with this tag: never created, expired, or maximum access count reached |
 | `500`  | Internal Server Error |
 
 ---
 
 ### `PUT /IncrementSharedDataAccessCount`
 
-Increments a shared data object's current access count. When the current access count equals the maximum access count, the object is scheduled for removal.
+Increments a shared data object's current access count. When the current access count reaches the maximum access count, the object is deleted.
 
 **Query Parameters**
 
 | Name  | Type   | Required | Description                          |
 |-------|--------|----------|----------------------------------------|
-| `tag` | string | Yes      | Shared data identifier in GUID format |
+| `tag` | string | Yes      | Shared data identifier in GUID format (case-insensitive) |
 
 **Responses**
 
 | Status | Description |
 |--------|-------------|
 | `200`  | OK |
-| `400`  | Bad Request |
-| `500`  | Internal Server Error |
+| `400`  | `tag` is missing or not a valid GUID |
+| `500`  | No shared data with this tag, or Internal Server Error |
 
 ---
 
@@ -126,15 +132,15 @@ Returns the node object identified by the given address.
 
 | Name      | Type   | Required | Description                                          |
 |-----------|--------|----------|--------------------------------------------------------|
-| `address` | string | Yes      | Vertex address in SHA-256 format, derived from its public key |
+| `address` | string | Yes      | Vertex address in SHA-256 format, derived from its public key (64 hexadecimal characters, case-insensitive) |
 
 **Responses**
 
 | Status | Description |
 |--------|-------------|
 | `200`  | Returns a [`VertexDto`](#vertexdto) |
-| `400`  | Bad Request |
-| `404`  | Not Found |
+| `400`  | `address` is missing or not a valid address |
+| `404`  | No node with this address in the local ledger |
 | `500`  | Internal Server Error |
 
 ---
@@ -163,14 +169,14 @@ Uploads a new file.
 | Field            | Type    | Required | Description |
 |------------------|---------|----------|-------------|
 | `file`           | binary  | Yes      | The file contents |
-| `maxAccessCount` | integer | Yes      | Maximum number of times the file may be downloaded |
+| `maxAccessCount` | integer | Yes      | Maximum number of times the file may be downloaded; must be at least 1 |
 
 **Responses**
 
 | Status | Description |
 |--------|-------------|
 | `200`  | Returns the created [`SharedDataDto`](#shareddatadto) |
-| `400`  | Bad Request |
+| `400`  | `file` is missing or empty, or `maxAccessCount` is missing or less than 1 |
 | `500`  | Internal Server Error |
 
 ---
@@ -179,40 +185,43 @@ Uploads a new file.
 
 Downloads a file by its tag.
 
+Downloading does not change the file's access count. After a successful download, the client
+is responsible for calling [`PUT /IncrementFileAccessCount`](#put-incrementfileaccesscount).
+
 **Query Parameters**
 
 | Name  | Type   | Required | Description                    |
 |-------|--------|----------|----------------------------------|
-| `tag` | string | Yes      | File identifier in GUID format |
+| `tag` | string | Yes      | File identifier in GUID format (case-insensitive) |
 
 **Responses**
 
 | Status | Description |
 |--------|-------------|
-| `200`  | Returns the file as a binary stream |
-| `400`  | Bad Request |
-| `404`  | Not Found |
+| `200`  | Returns the file as a binary stream (`application/octet-stream`), named after its tag |
+| `400`  | `tag` is missing or not a valid GUID |
+| `404`  | No file with this tag: never uploaded, expired, or maximum access count reached |
 | `500`  | Internal Server Error |
 
 ---
 
 ### `PUT /IncrementFileAccessCount`
 
-Increments a file's current access count. When the current access count equals the maximum access count, the file is scheduled for removal.
+Increments a file's current access count. When the current access count reaches the maximum access count, the file is deleted.
 
 **Query Parameters**
 
 | Name  | Type   | Required | Description                    |
 |-------|--------|----------|----------------------------------|
-| `tag` | string | Yes      | File identifier in GUID format |
+| `tag` | string | Yes      | File identifier in GUID format (case-insensitive) |
 
 **Responses**
 
 | Status | Description |
 |--------|-------------|
 | `200`  | OK |
-| `400`  | Bad Request |
-| `500`  | Internal Server Error |
+| `400`  | `tag` is missing or not a valid GUID |
+| `500`  | No file with this tag, or Internal Server Error |
 
 ---
 

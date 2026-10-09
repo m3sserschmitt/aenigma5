@@ -54,7 +54,7 @@ public class SimpleSingleThreadRunner : IDisposable
 
     public Task<T> RunAsync<T>(Func<T> work, ILogger? logger = null)
     {
-        var tcs = new TaskCompletionSource<T>();
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         _queue.Add(() =>
         {
             try { tcs.SetResult(work()); }
@@ -70,7 +70,7 @@ public class SimpleSingleThreadRunner : IDisposable
 
     public Task<T> RunAsync<T>(Func<Task<T>> work, ILogger? logger = null)
     {
-        var tcs = new TaskCompletionSource<T>();
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         _queue.Add(async () =>
         {
             try { tcs.SetResult(await work()); }

@@ -26,6 +26,10 @@ public static class ValidationErrorsDto
 
     public const string TOO_MANY_PAYLOADS = "Too many payloads for one request.";
 
+    public const string PAYLOAD_TOO_LARGE = "One or more payloads exceed the maximum onion size.";
+
+    public const string INVALID_SIGNATURE = "The signature could not be verified.";
+
     public const string PROPERTIES_NOT_IN_CORRECT_FORMAT = "One or more properties not in correct format.";
 
     public const string PROPERTIES_FORMAT_COULD_NOT_BE_VERIFIED = "One ore more properties format could not be verified due to insufficient/malformed information.";

@@ -34,9 +34,18 @@ public sealed class SealProvider :
 
     private readonly CryptoContext _ctx;
 
-    private SealProvider(CryptoContext ctx)
+    // Sizes derived from the public key matching this context, or -1 when unknown;
+    // libaenigma trusts input lengths, so inputs are checked against these before any native call.
+    private readonly int _envelopeOverhead;
+
+    private readonly int _signatureSize;
+
+    private SealProvider(CryptoContext ctx, string? publicKey = null)
     {
         _ctx = ctx;
+        var validPublicKey = publicKey.IsValidPublicKey();
+        _envelopeOverhead = validPublicKey ? Native.GetEnvelopeSize(0, publicKey!) : -1;
+        _signatureSize = validPublicKey ? Native.GetSignedDataSize(0, publicKey!) : -1;
     }
 
     ~SealProvider()
@@ -65,7 +74,20 @@ public sealed class SealProvider :
 
     public byte[]? Seal(byte[] plaintext) => Execute(plaintext, Native.Run);
 
-    public byte[]? Unseal(byte[] ciphertext) => Execute(ciphertext, Native.Run);
+    public byte[]? Unseal(byte[] ciphertext)
+    => _envelopeOverhead >= 0 && ciphertext.Length > _envelopeOverhead ? Execute(ciphertext, Native.Run) : null;
+
+    private bool IsWellFormedOnion(byte[] onion)
+    {
+        if (_envelopeOverhead < 0 || onion.Length < Constants.OnionLengthBytes)
+        {
+            return false;
+        }
+
+        long envelopeSize = Native.DecodeOnionSize(onion);
+        return envelopeSize == onion.Length - Constants.OnionLengthBytes
+            && envelopeSize - _envelopeOverhead >= Constants.AddressSize;
+    }
 
     public bool UnsealOnion(string onion, ref string? next, ref byte[]? content)
     {
@@ -78,7 +100,7 @@ public sealed class SealProvider :
         {
             var decodedOnion = Convert.FromBase64String(onion);
 
-            if (decodedOnion is null)
+            if (decodedOnion is null || !IsWellFormedOnion(decodedOnion))
             {
                 return false;
             }
@@ -137,15 +159,41 @@ public sealed class SealProvider :
 
     public static int SearchMasterPassphrase() => Native.SearchMasterPassphrase();
 
-    public static int CreateMasterPassphrase(byte[] passphrase) => Native.CreateMasterPassphrase(passphrase);
+    public static int CreateMasterPassphrase(byte[] passphrase)
+    => WithTerminatedCopy(passphrase, Native.CreateMasterPassphrase);
 
-    public static int CreatePersistentMasterPassphrase(byte[] passphrase) => Native.CreatePersistentMasterPassphrase(passphrase);
+    public static int CreatePersistentMasterPassphrase(byte[] passphrase)
+    => WithTerminatedCopy(passphrase, Native.CreatePersistentMasterPassphrase);
+
+    // libaenigma reads the passphrase as a zero-terminated string of at most KernelKeyMaxSize bytes.
+    private static int WithTerminatedCopy(byte[] passphrase, Func<byte[], int> create)
+    {
+        if (passphrase.Length == 0 || passphrase.Length > Constants.KernelKeyMaxSize || Array.IndexOf(passphrase, (byte)0) >= 0)
+        {
+            return -1;
+        }
+
+        var terminated = new byte[passphrase.Length + 1];
+        try
+        {
+            passphrase.CopyTo(terminated, 0);
+            return create(terminated);
+        }
+        finally
+        {
+            Array.Clear(terminated);
+        }
+    }
 
     public static bool RemoveMasterPassphrase() => Native.RemoveMasterPassphrase();
 
     public byte[]? Sign(byte[] plaintext) => !_ctx.IsNull ? Execute(plaintext, Native.Run) : null;
 
-    public bool Verify(byte[] ciphertext) => !_ctx.IsNull && ciphertext.Length > 0 && Native.RunVerification(_ctx, ciphertext, (uint)ciphertext.Length);
+    public bool Verify(byte[] ciphertext)
+    => !_ctx.IsNull
+    && _signatureSize >= 0
+    && ciphertext.Length > _signatureSize
+    && Native.RunVerification(_ctx, ciphertext, (uint)ciphertext.Length);
 
     public void Dispose()
     {
@@ -181,19 +229,19 @@ public sealed class SealProvider :
         => CreateSignerFromFile(path, null);
 
         public static IEnvelopeVerifier CreateVerifier(string key)
-        => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key));
+        => new SealProvider(CryptoContext.Factory.CreateSignatureVerificationContext(key), key);
 
-        public static IEnvelopeUnsealer CreateUnsealer(string key, byte[]? passphrase)
-        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase));
+        public static IEnvelopeUnsealer CreateUnsealer(string key, string publicKey, byte[]? passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContext(key, passphrase), publicKey);
 
-        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path, byte[]? passphrase)
-        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase));
+        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path, string publicKey, byte[]? passphrase)
+        => new SealProvider(CryptoContext.Factory.CreateAsymmetricDecryptionContextFromFile(path, passphrase), publicKey);
 
-        public static IEnvelopeUnsealer CreateUnsealer(string key)
-        => CreateUnsealer(key, null);
+        public static IEnvelopeUnsealer CreateUnsealer(string key, string publicKey)
+        => CreateUnsealer(key, publicKey, null);
 
-        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path)
-        => CreateUnsealerFromFile(path, null);
+        public static IEnvelopeUnsealer CreateUnsealerFromFile(string path, string publicKey)
+        => CreateUnsealerFromFile(path, publicKey, null);
 
         public static IEnvelopeSealer CreateSealer(string key)
         => new SealProvider(CryptoContext.Factory.CreateAsymmetricEncryptionContext(key));

@@ -91,23 +91,37 @@ public static class ConfigurationExtensions
     public static string? GetWebContentDirectory(this IConfiguration configuration)
     => configuration.GetStringValue("WebContentDirectory");
 
+    public static string? GetWebContentFilePath(this IConfiguration configuration, string? tag)
+    {
+        var webContentDirectory = configuration.GetWebContentDirectory();
+        var normalizedTag = tag.NormalizeTag();
+        if (string.IsNullOrWhiteSpace(webContentDirectory) || normalizedTag is null)
+        {
+            return null;
+        }
+
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(webContentDirectory)) + Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(Path.Combine(root, normalizedTag));
+        return fullPath.StartsWith(root, StringComparison.Ordinal) ? fullPath : null;
+    }
+
     public static TimeSpan GetMessageRetentionPeriod(this IConfiguration configuration)
-    => configuration.GetTimeSpan("MessageRetentionPeriod", new(0));
+    => configuration.GetTimeSpan("MessageRetentionPeriod", Constants.DefaultMessageRetentionPeriod);
 
     public static TimeSpan GetSentMessageRetentionPeriod(this IConfiguration configuration)
-    => configuration.GetTimeSpan("SentMessageRetentionPeriod", new(0));
+    => configuration.GetTimeSpan("SentMessageRetentionPeriod", Constants.DefaultSentMessageRetentionPeriod);
 
     public static TimeSpan GetSharedDataRetentionPeriod(this IConfiguration configuration)
-    => configuration.GetTimeSpan("SharedDataRetentionPeriod", new(0));
+    => configuration.GetTimeSpan("SharedDataRetentionPeriod", Constants.DefaultSharedDataRetentionPeriod);
 
     public static TimeSpan GetFilesRetentionPeriod(this IConfiguration configuration)
-    => configuration.GetTimeSpan("FilesRetentionPeriod", new(0));
+    => configuration.GetTimeSpan("FilesRetentionPeriod", Constants.DefaultFilesRetentionPeriod);
 
     public static string? GetPassphraseKeyPath(this IConfiguration configuration)
     => configuration.GetStringValue("PassphrasePath");
 
     public static int GetDelayBetweenConnectionRetries(this IConfiguration configuration)
-    => configuration.GetValue("Network:DelayBetweenConnectionRetries", 0);
+    => configuration.GetValue("Network:DelayBetweenConnectionRetries", Constants.DefaultDelayBetweenConnectionRetries);
 
     private static TimeSpan GetTimeSpan(this IConfiguration configuration, string key, TimeSpan defaultValue)
     {

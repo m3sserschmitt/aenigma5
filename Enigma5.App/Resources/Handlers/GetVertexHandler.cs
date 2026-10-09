@@ -34,9 +34,10 @@ public class GetVertexHandler(NetworkGraph graph)
     {
         var vertex = await _graph.GetVertexAsync(request.Address);
 
+        // Not found is a successful lookup without a value; HTTP callers turn it into 404.
         if (vertex is null)
         {
-            return CommandResult.CreateResultFailure<VertexDto>();
+            return CommandResult.CreateResultSuccess<VertexDto>(null);
         }
 
         return CommandResult.CreateResultSuccess(new VertexDto

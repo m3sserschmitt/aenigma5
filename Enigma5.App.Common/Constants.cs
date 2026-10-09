@@ -28,6 +28,17 @@ public static class Constants
 
     public static readonly TimeSpan DefaultVertexLifetime = TimeSpan.FromMinutes(30);
 
+    public static readonly TimeSpan DefaultMessageRetentionPeriod = TimeSpan.FromDays(14);
+
+    public static readonly TimeSpan DefaultSentMessageRetentionPeriod = TimeSpan.Zero;
+
+    public static readonly TimeSpan DefaultSharedDataRetentionPeriod = TimeSpan.FromDays(14);
+
+    public static readonly TimeSpan DefaultFilesRetentionPeriod = TimeSpan.FromDays(3);
+
+    // Milliseconds.
+    public const int DefaultDelayBetweenConnectionRetries = 3000;
+
     public static readonly TimeSpan SignalRHandshakeTimeout = TimeSpan.FromSeconds(15);
 
     public static readonly TimeSpan SignalRClientTimeoutInterval = TimeSpan.FromSeconds(90);
@@ -52,11 +63,24 @@ public static class Constants
 
     public const int MessagesPageSize = 20;
 
+    // Maximum number of messages returned by the deprecated hub method Pull.
+    public const int LegacyPullMaxMessages = 128;
+
+    // Maximum length of one base64 onion accepted by RouteMessage. Sized for 6 relay nodes plus the
+    // recipient's layer (4096-bit keys) around a signed 256-character client message (~12 900 chars).
+    public const int MaxOnionSize = 16 * 1024;
+
+    // Largest incoming hub message: a full batch of maximum-size onions plus room for JSON framing.
+    public const long SignalRMaximumReceiveMessageSize = MessagesPageSize * MaxOnionSize + 4 * 1024;
+
     public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
 
     public const string HubConnectionLocalIpKey = "HubConnectionLocalIp";
 
     public const string HubConnectionLocalPortKey = "HubConnectionLocalPort";
+
+    // Highest pending message id returned by Pull or Pull2 on a connection; limits what Cleanup confirms.
+    public const string HubConnectionLastPulledMessageIdKey = "HubConnectionLastPulledMessageId";
 
     public const string OnionRoutingEndpoint = "OnionRouting";
 
