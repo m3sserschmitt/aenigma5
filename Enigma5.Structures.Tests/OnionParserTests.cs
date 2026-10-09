@@ -18,31 +18,59 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using Xunit;
-using Enigma5.Structures.Tests.TestData;
+using System.Text;
 using Enigma5.Crypto;
-using FluentAssertions;
-using System.Diagnostics.CodeAnalysis;
+using Enigma5.Security.Contracts;
+using Enigma5.Structures.Tests.TestData;
+using Enigma5.Tests.Base;
+using NSubstitute;
 
 namespace Enigma5.Structures.Tests;
 
-[ExcludeFromCodeCoverage]
 public class OnionParserTests
 {
     [Theory]
     [ClassData(typeof(ParserData))]
-    public void ShouldParse(string onion, string key, string passphrase, bool expectedResult, string? expectedNext, byte[]? expectedPlaintext)
+    public async Task ParseAsync_unseals_one_layer_of_a_stored_onion(string onion, string key, string? passphrase, bool expectedResult, string? expectedNext, byte[]? expectedContent)
     {
-        // Arrange
-        using var unsealer = SealProvider.Factory.CreateUnsealer(key, passphrase);
-        var onionParser = new OnionParser(unsealer);
+        var certificateManager = Substitute.For<ICertificateManager>();
+        certificateManager.CreateUnsealerAsync().Returns(_ => SealProvider.Factory.CreateUnsealer(
+            key, TestKeys.PublicKeyOf(key), passphrase is null ? null : Encoding.UTF8.GetBytes(passphrase + "\0")));
+        var parser = new OnionParser(certificateManager);
 
-        // Act
-        var result = onionParser.ParseAsync(onion);
+        var result = await parser.ParseAsync(onion);
 
-        // Assert
-        result.Should().Be(expectedResult);
-        onionParser.NextAddress.Should().Be(expectedNext);
-        onionParser.Content.Should().Equal(expectedPlaintext);
+        Assert.Equal(expectedResult, result);
+        Assert.Equal(expectedNext, parser.NextAddress);
+        Assert.Equal(expectedContent, parser.Content);
+    }
+
+    [Fact]
+    public async Task ParseAsync_returns_false_when_no_unsealer_can_be_made()
+    {
+        var certificateManager = Substitute.For<ICertificateManager>();
+        certificateManager.CreateUnsealerAsync().Returns<Task<Enigma5.Crypto.Contracts.IEnvelopeUnsealer>>(_ => throw new InvalidOperationException("locked"));
+        var parser = new OnionParser(certificateManager);
+
+        Assert.False(await parser.ParseAsync("AAEC"));
+        Assert.Null(parser.NextAddress);
+        Assert.Null(parser.Content);
+    }
+
+    [Fact]
+    public async Task A_failed_parse_keeps_the_result_of_the_one_before()
+    {
+        var row = new ParserData().First();
+        var (onion, key, passphrase) = ((string)row[0]!, (string)row[1]!, (string?)row[2]);
+        var certificateManager = Substitute.For<ICertificateManager>();
+        certificateManager.CreateUnsealerAsync().Returns(_ => SealProvider.Factory.CreateUnsealer(
+            key, TestKeys.PublicKeyOf(key), passphrase is null ? null : Encoding.UTF8.GetBytes(passphrase + "\0")));
+        var parser = new OnionParser(certificateManager);
+
+        Assert.True(await parser.ParseAsync(onion));
+        Assert.False(await parser.ParseAsync("not an onion"));
+
+        // The filter that uses the parser reads these values only after a successful parse.
+        Assert.Equal((string?)row[4], parser.NextAddress);
     }
 }

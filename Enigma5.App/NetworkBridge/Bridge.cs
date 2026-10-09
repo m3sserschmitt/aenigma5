@@ -95,10 +95,19 @@ public class Bridge(
         _connections.OnAnyClosed += OnConnectionClosedAsync;
     }
 
-    private Task<bool> RemoveConnectionAsync(ConnectionVector connectionVector) => _singleThreadRunner.RunAsync(() =>
+    private Task<bool> RemoveConnectionAsync(ConnectionVector connectionVector) => _singleThreadRunner.RunAsync(async () =>
     {
         _logger.LogDebug($"Invoking {{{Common.Constants.Serilog.BridgeMethodNameKey}}} for connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}}...", nameof(RemoveConnectionAsync), connectionVector);
-        return _connections.RemoveConnection(connectionVector);
+        // A bridge run that was waiting before this removal may have started the vector again. It is then kept.
+        if (connectionVector.Connected)
+        {
+            _logger.LogDebug($"Connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} is connected again, so it is not removed.", connectionVector);
+            return false;
+        }
+        var removed = _connections.RemoveConnection(connectionVector);
+        // A vector that leaves the bridge is always stopped, so that none of its connections stays open untracked.
+        await connectionVector.StopAsync();
+        return removed;
     }, _logger);
 
     private async Task OnConnectionClosedAsync(Exception? ex, ConnectionVector connectionVector)

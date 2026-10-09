@@ -61,7 +61,7 @@ safe_rm_dir() {
 remove_user() {
   if id "$APP_USER" >/dev/null 2>&1; then
     log "Removing user $APP_USER"
-    deluser --remove-home "$APP_USER" || true
+    deluser "$APP_USER" || true
   fi
 }
 

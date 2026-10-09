@@ -41,8 +41,12 @@ configuration file referenced on its command line cannot be found.
 .I /usr/lib/aenigma/Enigma5.App
 The Aenigma application binary, invoked by this script.
 .TP
+.I /usr/lib/aenigma/appsettings.json
+The default settings, installed by the package and read first by
+.BR Enigma5.App .
+.TP
 .I /etc/aenigma/appsettings.json
-The application configuration file, passed to
+The settings of this node that differ from the defaults, passed to
 .B Enigma5.App
 via its
 .B \-\-config

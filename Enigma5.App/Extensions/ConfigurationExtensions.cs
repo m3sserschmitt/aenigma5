@@ -103,6 +103,29 @@ public static class ConfigurationExtensions
         ) ?? false);
     }
 
+    // A blacklist only applies if its endpoint is an absolute URL with an IP address as host (see MatchUrl).
+    public static void WarnAboutBlacklistsThatNeverMatch(this IConfiguration configuration, ILogger logger)
+    {
+        var endpoints = configuration.GetHttpBlacklists().Select(item => (Section: "HttpBlacklists", item.Endpoint))
+            .Concat(configuration.GetHubBlacklists().Select(item => (Section: "HubBlacklists", item.Endpoint)));
+
+        foreach (var (section, endpoint) in endpoints)
+        {
+            if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var parsedUrl) || !IPAddress.TryParse(parsedUrl.Host, out _))
+            {
+                logger.LogWarning("The {Section} entry with endpoint {Endpoint} never applies: the endpoint must be an absolute URL with an IP address as host.", section, endpoint);
+            }
+        }
+    }
+
+    public static void WarnAboutInvalidSettings(this IConfiguration configuration, ILogger logger)
+    {
+        foreach (var setting in configuration.GetInvalidSettings())
+        {
+            logger.LogWarning("The setting {Setting} has the value {Value}, which cannot be read. The default {Default} is used instead.", setting.Key, setting.Value, setting.DefaultValue);
+        }
+    }
+
     public static List<HttpBlacklistDto> GetHttpBlacklists(this IConfiguration configuration)
     => configuration.GetSection("HttpBlacklists").Get<List<HttpBlacklistDto>>() ?? [];
 

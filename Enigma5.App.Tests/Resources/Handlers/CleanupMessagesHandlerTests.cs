@@ -18,92 +18,93 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
+using Enigma5.App.Data;
 using Enigma5.App.Resources.Commands;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Resources.Queries;
 using Enigma5.Tests.Base;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
-[ExcludeFromCodeCoverage]
-public class CleanupMessagesHandlerTests : HandlerTestBase<CleanupMessagesHandler>
+public class CleanupMessagesHandlerTests
 {
-    [Fact]
-    public async Task ShouldCleanupOldMessages()
+    private static readonly TimeSpan Retention = TimeSpan.FromDays(14);
+
+    private static readonly TimeSpan DeliveredRetention = TimeSpan.FromHours(1);
+
+    private static long SecondsAgo(TimeSpan age) => (DateTimeOffset.UtcNow - age).ToUnixTimeSeconds();
+
+    private static PendingMessage Message(TimeSpan age, TimeSpan? deliveredAgo = null) => new()
     {
-        // Arrange
-        var request = new CleanupMessagesCommand(TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(5));
+        Destination = TestKeys.Address2,
+        Content = "dGVzdC1zdHJpbmc=",
+        Timestamp = SecondsAgo(age),
+        Sent = deliveredAgo is not null,
+        SentTimestamp = deliveredAgo is null ? null : SecondsAgo(deliveredAgo.Value)
+    };
 
-        // Act
-        var result = await _handler.Handle(request);
+    private static async Task<List<long>> Stored(TestNode node, params PendingMessage[] messages)
+    {
+        await node.Database(async context =>
+        {
+            context.Messages.AddRange(messages);
+            await context.SaveChangesAsync();
+        });
+        return [.. messages.Select(message => message.Id)];
+    }
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<CommandResult<int>>();
-        result.Success.Should().BeTrue();
-        result.Value.Should().Be(2);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().BeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().BeNull();
+    private static Task<List<long>> Left(TestNode node)
+    => node.Database(context => context.Messages.OrderBy(message => message.Id).Select(message => message.Id).ToListAsync());
+
+    [Fact]
+    public async Task Pending_messages_older_than_the_retention_period_are_removed()
+    {
+        await using var node = await TestNode.StartAsync();
+        var ids = await Stored(node, Message(TimeSpan.FromDays(15)), Message(TimeSpan.FromDays(13)));
+
+        var result = await node.Send(new CleanupMessagesCommand(Retention, DeliveredRetention));
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.Value);
+        Assert.Equal([ids[1]], await Left(node));
     }
 
     [Fact]
-    public async Task ShouldCleanupOldButNotDeliveredMessages()
+    public async Task Delivered_messages_are_removed_once_their_own_period_has_passed_since_delivery()
     {
-        // Arrange
-        var request = new CleanupMessagesCommand(TimeSpan.FromMinutes(15), TimeSpan.FromDays(5));
+        await using var node = await TestNode.StartAsync();
+        var ids = await Stored(node,
+            Message(TimeSpan.FromDays(2), deliveredAgo: TimeSpan.FromHours(2)),
+            Message(TimeSpan.FromDays(2), deliveredAgo: TimeSpan.FromMinutes(10)));
 
-        // Act
-        var result = await _handler.Handle(request);
+        var result = await node.Send(new CleanupMessagesCommand(Retention, DeliveredRetention));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<CommandResult<int>>();
-        result.Success.Should().BeTrue();
-        result.Value.Should().Be(1);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().BeNull();
+        Assert.Equal(1, result.Value);
+        Assert.Equal([ids[1]], await Left(node));
     }
 
     [Fact]
-    public async Task ShouldCleanupDeliveredButNotOldMessages()
+    public async Task With_a_period_of_zero_delivered_messages_are_removed_at_the_next_run()
     {
-        // Arrange
-        var request = new CleanupMessagesCommand(TimeSpan.FromDays(15), TimeSpan.FromMinutes(5));
+        await using var node = await TestNode.StartAsync();
+        var ids = await Stored(node, Message(TimeSpan.FromMinutes(5), deliveredAgo: TimeSpan.FromSeconds(5)), Message(TimeSpan.FromMinutes(5)));
 
-        // Act
-        var result = await _handler.Handle(request);
+        var result = await node.Send(new CleanupMessagesCommand(Retention, TimeSpan.Zero));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<CommandResult<int>>();
-        result.Success.Should().BeTrue();
-        result.Value.Should().Be(1);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().BeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().NotBeNull();
+        Assert.Equal(1, result.Value);
+        Assert.Equal([ids[1]], await Left(node));
     }
 
+    // A delivered message is judged by its delivery time only, however old it is.
     [Fact]
-    public async Task ShouldNotCleanupAnyMessage()
+    public async Task An_old_message_that_was_delivered_a_moment_ago_is_kept_for_its_own_period()
     {
-        // Arrange
-        var request = new CleanupMessagesCommand(TimeSpan.FromDays(15), TimeSpan.FromDays(5));
+        await using var node = await TestNode.StartAsync();
+        var ids = await Stored(node, Message(TimeSpan.FromDays(30), deliveredAgo: TimeSpan.FromMinutes(1)));
 
-        // Act
-        var result = await _handler.Handle(request);
+        var result = await node.Send(new CleanupMessagesCommand(Retention, DeliveredRetention));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<CommandResult<int>>();
-        result.Success.Should().BeTrue();
-        result.Value.Should().Be(0);
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.PendingMessage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.DeliveredPendingMessage.Id)).Should().NotBeNull();
-        (await _dbContext.Messages.FirstOrDefaultAsync(item => item.Id == DataSeeder.DataFactory.OldPendingMessage.Id)).Should().NotBeNull();
+        Assert.Equal(0, result.Value);
+        Assert.Equal(ids, await Left(node));
     }
 }

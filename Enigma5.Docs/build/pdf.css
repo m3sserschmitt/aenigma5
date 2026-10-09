@@ -1,0 +1,251 @@
+/* Paper-style layout for the PDF produced by build-pdf.sh (rendered by WeasyPrint). */
+
+@page {
+  size: A4;
+  margin: 25mm 24mm 25mm 24mm;
+  @top-right {
+    content: string(chapter);
+    font-family: "Bitstream Charter", "Liberation Serif", "DejaVu Serif", serif;
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #555;
+    vertical-align: bottom;
+    padding-bottom: 3mm;
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: "Bitstream Charter", "Liberation Serif", "DejaVu Serif", serif;
+    font-size: 9pt;
+  }
+}
+
+/* No running header or page number on the title page */
+@page :first {
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+html {
+  font-family: "Bitstream Charter", "Liberation Serif", "DejaVu Serif", serif;
+  font-size: 10.5pt;
+  line-height: 1.4;
+  color: #111;
+}
+
+body {
+  margin: 0;
+  text-align: justify;
+  hyphens: auto;
+}
+
+p {
+  margin: 0 0 0.6em 0;
+}
+
+/* Title page */
+header#title-block-header {
+  page-break-after: always;
+  padding-top: 80mm;
+  text-align: center;
+}
+
+header#title-block-header .title {
+  font-size: 28pt;
+  font-weight: bold;
+  text-align: center;
+  margin: 0 0 6mm 0;
+  page-break-before: avoid;
+  string-set: none;
+}
+
+header#title-block-header .subtitle {
+  font-size: 15pt;
+  font-style: italic;
+  margin-bottom: 30mm;
+}
+
+header#title-block-header .date {
+  font-size: 11pt;
+}
+
+/* Table of contents */
+nav#TOC {
+  page-break-after: always;
+  text-align: left;
+}
+
+nav#TOC::before {
+  content: "Contents";
+  display: block;
+  font-size: 18pt;
+  font-weight: bold;
+  margin-bottom: 8mm;
+}
+
+nav#TOC ul {
+  list-style: none;
+  padding-left: 1.4em;
+  margin: 0;
+}
+
+nav#TOC > ul {
+  padding-left: 0;
+}
+
+nav#TOC > ul > li {
+  margin-top: 0.7em;
+  font-weight: bold;
+}
+
+nav#TOC > ul > li li {
+  font-weight: normal;
+}
+
+nav#TOC a {
+  color: inherit;
+  text-decoration: none;
+}
+
+nav#TOC a::after {
+  content: leader(".") target-counter(attr(href), page);
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+  text-align: left;
+  hyphens: manual;
+  page-break-after: avoid;
+}
+
+h1 {
+  string-set: chapter content();
+  page-break-before: always;
+  font-size: 20pt;
+  margin: 12mm 0 8mm 0;
+}
+
+h2 {
+  font-size: 13.5pt;
+  margin: 1.5em 0 0.5em 0;
+}
+
+h3 {
+  font-size: 11pt;
+  margin: 1.2em 0 0.4em 0;
+}
+
+/* Abstract */
+div.abstract {
+  margin: 0 8mm 8mm 8mm;
+  font-size: 9.8pt;
+}
+
+div.abstract p {
+  margin: 0;
+}
+
+/* Links */
+a {
+  color: #1a3f7a;
+  text-decoration: none;
+}
+
+/* Code */
+code {
+  font-family: "DejaVu Sans Mono", "Liberation Mono", monospace;
+  font-size: 8.6pt;
+  hyphens: none;
+}
+
+pre {
+  font-size: 8.6pt;
+  line-height: 1.3;
+  text-align: left;
+  border-top: 0.6pt solid #333;
+  border-bottom: 0.6pt solid #333;
+  padding: 5px 2px;
+  margin: 0.4em 0 1em 0;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
+}
+
+/* Listings: caption above the code */
+div.listing {
+  margin: 1em 0;
+  page-break-inside: avoid;
+}
+
+div.listing div.caption p,
+table caption {
+  font-size: 9.2pt;
+  text-align: left;
+  margin: 0 0 4px 0;
+}
+
+div.listing pre {
+  margin-top: 0;
+}
+
+/* Tables: horizontal rules only, in the style of booktabs */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0 1.2em 0;
+  font-size: 9pt;
+  line-height: 1.3;
+  text-align: left;
+  border-top: 1.2pt solid #111;
+  border-bottom: 1.2pt solid #111;
+}
+
+table caption {
+  caption-side: top;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Keep a caption together with the start of its table or listing */
+thead {
+  break-before: avoid;
+}
+
+div.listing div.caption {
+  break-after: avoid;
+}
+
+th, td {
+  padding: 3px 6px;
+  vertical-align: top;
+  hyphens: manual;
+  text-align: left;
+}
+
+/* Code in tables is set slightly smaller; an identifier breaks only if it cannot fit its column */
+td code, th code {
+  font-size: 7.8pt;
+  overflow-wrap: break-word;
+}
+
+thead th {
+  border-bottom: 0.6pt solid #111;
+  font-weight: bold;
+}
+
+tr {
+  page-break-inside: avoid;
+}
+
+/* Lists */
+ul, ol {
+  margin: 0.3em 0 0.7em 0;
+  padding-left: 1.6em;
+}
+
+li {
+  margin-bottom: 0.2em;
+}
+
+blockquote {
+  margin: 0.8em 2em;
+  font-style: italic;
+}

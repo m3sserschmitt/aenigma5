@@ -22,6 +22,7 @@ using System.Text.RegularExpressions;
 using QRCoder;
 using System.Buffers.Text;
 using System.Net;
+using System.Security.Cryptography;
 
 namespace Enigma5.App.Common.Extensions;
 
@@ -121,23 +122,78 @@ public static partial class StringExtensions
         }
     }
 
-    public static bool IsValidPublicKey(this string? publicKey) => publicKey.IsValidKey(PublicKeyRegex);
+    // A public key is read in one place and in one way only. The address of a key is computed from the
+    // result, and the native library receives the result written out again (NormalizePublicKey), never
+    // the text a caller sent. Two readers of the same text can therefore not disagree about which key it holds.
+    //
+    // Accepted is a single PEM block with the label PUBLIC KEY and nothing but white space around it, whose
+    // content is the DER form of an RSA SubjectPublicKeyInfo, without anything after it and exactly as an
+    // encoder writes it, for a key of an accepted size.
+    private static byte[]? ParsePublicKey(this string? publicKey)
+    {
+        if (string.IsNullOrWhiteSpace(publicKey) || publicKey.Length > Constants.MaxPublicKeyLength)
+        {
+            return null;
+        }
+
+        try
+        {
+            var match = PublicKeyRegex().Match(publicKey);
+            if (!match.Success)
+            {
+                return null;
+            }
+
+            var content = match.Groups[1].Value.Replace("\n", string.Empty).Replace("\r", string.Empty);
+            var der = new byte[content.Length];
+            if (!Convert.TryFromBase64String(content, der, out var length))
+            {
+                return null;
+            }
+            der = der[..length];
+
+            using var rsa = RSA.Create();
+            rsa.ImportSubjectPublicKeyInfo(der, out var bytesRead);
+            if (bytesRead != der.Length
+                || rsa.KeySize < Constants.MinPublicKeySize
+                || rsa.KeySize > Constants.MaxPublicKeySize
+                || !rsa.ExportSubjectPublicKeyInfo().AsSpan().SequenceEqual(der))
+            {
+                return null;
+            }
+
+            return der;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public static bool IsValidPublicKey(this string? publicKey) => publicKey.ParsePublicKey() is not null;
+
+    // The one text form of a public key that is handed to the native library, or null if the value is not a public key.
+    public static string? NormalizePublicKey(this string? publicKey)
+    => publicKey.ParsePublicKey() is byte[] der ? PemEncoding.WriteString("PUBLIC KEY", der) : null;
 
     public static bool IsValidPrivateKey(this string? privateKey) => privateKey.IsValidKey(PrivateKeyRegex);
 
-    public static string? GetPublicKeyBase64(this string? publicKey) => publicKey.GetKeyBase64Content(PublicKeyRegex);
+    public static string? GetPublicKeyBase64(this string? publicKey)
+    => publicKey.ParsePublicKey() is byte[] der ? Convert.ToBase64String(der) : null;
 
     [GeneratedRegex(@"^-----BEGIN(?: [A-Z]+)* PRIVATE KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PRIVATE KEY-----$", RegexOptions.Multiline)]
     private static partial Regex PrivateKeyRegex();
 
-    [GeneratedRegex(@"^-----BEGIN(?: [A-Z]+)* PUBLIC KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PUBLIC KEY-----$", RegexOptions.Multiline)]
+    // The whole text, not a line of it: \A and \z, and no Multiline option.
+    [GeneratedRegex(@"\A\s*-----BEGIN PUBLIC KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END PUBLIC KEY-----\s*\z")]
     private static partial Regex PublicKeyRegex();
 
     public static bool IsValidBase64(this string? data) => !string.IsNullOrWhiteSpace(data) && Base64.IsValid(data);
 
-    [GeneratedRegex(@"^[a-f0-9]{64}$")]
+    // \z, not $: $ also matches before a line feed at the end.
+    [GeneratedRegex(@"\A[a-f0-9]{64}\z")]
     private static partial Regex AddressRegex();
 
-    [GeneratedRegex(@"^(?:[a-z2-7]{16}|[a-z2-7]{56})\.onion$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+    [GeneratedRegex(@"\A(?:[a-z2-7]{16}|[a-z2-7]{56})\.onion\z", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
     private static partial Regex OnionAddressRegex();
 }

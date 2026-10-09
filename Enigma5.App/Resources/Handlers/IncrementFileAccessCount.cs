@@ -52,7 +52,8 @@ public class IncrementFileAccessCountHandler(
         var fileRecord = await _dbWriter.IncrementFileAccessCountAsync(request.Tag, cancellationToken);
         if (fileRecord is null)
         {
-            return CommandResult.CreateResultFailure<int>();
+            // The value is the number of records changed; 0 means that no record has this tag.
+            return CommandResult.CreateResultSuccess(0);
         }
 
         RemoveFile(fileRecord);

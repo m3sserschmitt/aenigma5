@@ -41,6 +41,7 @@ using System.Text.Json.Serialization;
 using Enigma5.App.Middlewares;
 using Enigma5.App.Common.Utils;
 using Enigma5.App.Models;
+using Microsoft.Extensions.Primitives;
 
 namespace Enigma5.App;
 
@@ -113,6 +114,17 @@ public class StartupConfiguration(IConfiguration configuration)
         {
             endpoints.MapRazorComponents<UI.App>().AddInteractiveServerRenderMode();
 
+            if (env.IsDevelopment())
+            {
+                // Hangfire's own page, for development only. It only tells local requests apart,
+                // so it is also blacklisted on the public endpoint.
+                endpoints.MapHangfireDashboard(Constants.JobsDashboardEndpoint, new DashboardOptions
+                {
+                    DashboardTitle = "Aenigma jobs",
+                    IsReadOnlyFunc = _ => true
+                });
+            }
+
             endpoints.MapHub<RoutingHub>(Constants.OnionRoutingEndpoint, options =>
             {
                 options.AllowStatefulReconnects = true;
@@ -146,6 +158,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPut(Constants.IncrementSharedDataAccessCountEndpoint, Api.IncrementSharedDataAccessCount)
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithDescription("Increment shared data current access count. When current access count equals maximum access count the object is scheduled for removal.");
 
@@ -190,6 +203,7 @@ public class StartupConfiguration(IConfiguration configuration)
             endpoints.MapPut(Constants.IncrementFileAccessCountEndpoint, Api.IncrementFileAccessCount)
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithDescription("Increment file current access count. When current access count equals maximum access count the object is scheduled for removal.");
 
@@ -198,9 +212,14 @@ public class StartupConfiguration(IConfiguration configuration)
                 endpoints.MapOpenApi();
             }
         });
-        serviceProvider.UseAsHangfireActivator();
+        var logger = serviceProvider.GetRequiredService<ILogger<StartupConfiguration>>();
+        configuration.WarnAboutInvalidSettings(logger);
+        // Configuration files are loaded again when they change; their new values are checked as well.
+        ChangeToken.OnChange(configuration.GetReloadToken, () => configuration.WarnAboutInvalidSettings(logger));
+
         serviceProvider.MigrateDatabase();
         serviceProvider.SetupMasterPassphrase();
+        configuration.WarnAboutBlacklistsThatNeverMatch(logger);
 
         StartJobs(configuration);
     }
@@ -227,6 +246,12 @@ public class StartupConfiguration(IConfiguration configuration)
                 new CleanupFilesCommand(configuration.GetFilesRetentionPeriod())
             ),
             Constants.FilesCleanupJobInterval
+        );
+
+        RecurringJob.AddOrUpdate<MediatorHangfireBridge>(
+            Constants.GraphCleanupRecurringJob,
+            bridge => bridge.Send(new CleanupGraphCommand()),
+            Constants.GraphCleanupJobInterval
         );
     }
 }

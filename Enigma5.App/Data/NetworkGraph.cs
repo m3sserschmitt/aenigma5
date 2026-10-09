@@ -156,6 +156,8 @@ public class NetworkGraph : IDisposable
         if (await UpdateLocalNeighborhoodAsync(vertex, mayAddNeighbor))
         {
             updatedVertices.Add(_localVertex.CopyBySerialization());
+            // The dashboard depends on the local neighbor list, also when the received vertex itself is not new.
+            await NotifyPeersChangedAsync();
         }
 
         if (!_vertices.TryGetValue(vertex, out var previous)) // vertex not existent;
@@ -176,6 +178,17 @@ public class NetworkGraph : IDisposable
         return updatedVertices;
     }, _logger);
 
+    // Run by a background job, so that old vertices are removed even when nothing else changes the graph.
+    public Task<int> CleanupAsync() => _singleThreadRunner.RunAsync(async () =>
+    {
+        var removed = CleanupGraph();
+        if (removed > 0)
+        {
+            await NotifyPeersChangedAsync();
+        }
+        return removed;
+    }, _logger);
+
     public Task<bool> GenerateLocalVertexAsync()
     => _singleThreadRunner.RunAsync(async () =>
         {
@@ -183,9 +196,11 @@ public class NetworkGraph : IDisposable
             if (v is null)
             {
                 ReplaceLocalVertex(Vertex.Factory.Create(await _certificateManager.GetAddressAsync()));
+                await NotifyPeersChangedAsync();
                 return false;
             }
             ReplaceLocalVertex(v);
+            await NotifyPeersChangedAsync();
             return true;
         }, _logger);
 
@@ -196,8 +211,11 @@ public class NetworkGraph : IDisposable
         {
             return;
         }
-        await _dashboardUIState.SetInboundPeersAsync([.. _vertices.Where(v => v.Neighborhood.Neighbors.Contains(address)).Select(v => new PeerDto {
-            Host = v.Neighborhood.Hostname,
+        // A peer counts as connected only when both sides agree: its vertex lists this node and the local
+        // vertex lists it. The local list follows the live sessions, so it is right as soon as a connection closes.
+        var localNeighbors = _localVertex.Neighborhood.Neighbors;
+        await _dashboardUIState.SetInboundPeersAsync([.. _vertices.Where(v => v.Neighborhood.Address is string peer && v.Neighborhood.Neighbors.Contains(address) && localNeighbors.Contains(peer)).Select(v => new PeerDto {
+            Host = v.Neighborhood.Hostname ?? v.Neighborhood.OnionService,
             Address = v.Neighborhood.Address,
             Connected = true
             })
@@ -255,14 +273,18 @@ public class NetworkGraph : IDisposable
         return union;
     }
 
-    private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan vertexLifetime)
-    => !IsLocalVertex(vertex) && (vertex.LastUpdateExceeded(vertexLifetime) || !neighborhoodsUnion.TryGetValue(vertex, out var _));
+    // A vertex that no vertex lists is removed only after a grace period, because the vertex that
+    // lists it may still be on its way.
+    private bool IsRemovalCandidate(Vertex vertex, HashSet<Vertex> neighborhoodsUnion, TimeSpan vertexLifetime, TimeSpan unlistedGracePeriod)
+    => !IsLocalVertex(vertex) && (vertex.LastUpdateExceeded(vertexLifetime)
+        || (!neighborhoodsUnion.TryGetValue(vertex, out var _) && vertex.LastUpdateExceeded(unlistedGracePeriod)));
 
-    private void CleanupGraph()
+    private int CleanupGraph()
     {
         var vertexLifetime = _configuration.GetVertexLifetime();
+        var unlistedGracePeriod = _configuration.GetUnlistedVertexGracePeriod();
         var neighborhoodsUnion = GetNeighborhoodsUnion();
-        _vertices.RemoveWhere(item => IsRemovalCandidate(item, neighborhoodsUnion, vertexLifetime));
+        return _vertices.RemoveWhere(item => IsRemovalCandidate(item, neighborhoodsUnion, vertexLifetime, unlistedGracePeriod));
     }
 
     private int LocalAdjacencyChanged(Vertex vertex2)

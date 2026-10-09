@@ -1,0 +1,307 @@
+/*
+    Aenigma - Federated messaging system
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+using System.Net;
+using Enigma5.App.Common.Extensions;
+using Enigma5.Tests.Base;
+
+namespace Enigma5.App.Common.Tests.Extensions;
+
+public class StringExtensionsTests
+{
+    private const string Guid = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
+
+    private const string Onion = "scsdxdhyp5ljpruh65tzkkopwd2fcdn7tyq6a2fndkh2323xsbsgn3id.onion";
+
+    #region Guids and tags
+
+    [Fact]
+    public void IsValidGuid_accepts_the_standard_form()
+    {
+        Assert.True(Guid.IsValidGuid());
+    }
+
+    [Fact]
+    public void IsValidGuid_accepts_upper_case()
+    {
+        Assert.True(Guid.ToUpperInvariant().IsValidGuid());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("abc")]
+    [InlineData("3f2504e0-4f89-11d3-9a0c")]
+    [InlineData("../3f2504e0-4f89-11d3-9a0c-0305e82c3301")]
+    public void IsValidGuid_refuses_anything_else(string? value)
+    {
+        Assert.False(value.IsValidGuid());
+    }
+
+    [Fact]
+    public void NormalizeGuid_returns_the_lower_case_form()
+    {
+        Assert.Equal(Guid, Guid.ToUpperInvariant().NormalizeGuid());
+    }
+
+    [Fact]
+    public void NormalizeGuid_returns_null_for_a_value_that_is_not_a_guid()
+    {
+        Assert.Null("abc".NormalizeGuid());
+    }
+
+    [Fact]
+    public void NormalizeTag_follows_the_rules_for_guids()
+    {
+        Assert.Equal(Guid, Guid.ToUpperInvariant().NormalizeTag());
+        Assert.Null("../etc/passwd".NormalizeTag());
+        Assert.Null(((string?)null).NormalizeTag());
+    }
+
+    #endregion
+
+    #region Addresses
+
+    [Fact]
+    public void IsValidAddress_accepts_64_lower_case_hex_characters()
+    {
+        Assert.True(TestKeys.Address1.IsValidAddress());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("cbff2e12")]
+    [InlineData("CBFF2E12FB1F752CB17185F080F2B40301165A1051531CC0614E495EE2620EF9")]
+    [InlineData("zbff2e12fb1f752cb17185f080f2b40301165a1051531cc0614e495ee2620ef9")]
+    [InlineData("cbff2e12fb1f752cb17185f080f2b40301165a1051531cc0614e495ee2620ef9a")]
+    public void IsValidAddress_refuses_other_values(string? value)
+    {
+        Assert.False(value.IsValidAddress());
+    }
+
+    [Fact]
+    public void NormalizeAddress_trims_and_lowers_the_value()
+    {
+        Assert.Equal(TestKeys.Address1, $"  {TestKeys.Address1.ToUpperInvariant()} ".NormalizeAddress());
+    }
+
+    [Fact]
+    public void NormalizeAddress_returns_null_for_a_value_that_is_not_an_address()
+    {
+        Assert.Null("cbff2e12".NormalizeAddress());
+        Assert.Null(((string?)null).NormalizeAddress());
+    }
+
+    #endregion
+
+    #region Keys and base64
+
+    [Fact]
+    public void IsValidPublicKey_accepts_a_public_key_in_PEM_form()
+    {
+        Assert.True(TestKeys.PublicKey1.IsValidPublicKey());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not a key")]
+    [InlineData("-----BEGIN PUBLIC KEY-----\n!!!!\n-----END PUBLIC KEY-----")]
+    public void IsValidPublicKey_refuses_other_values(string? value)
+    {
+        Assert.False(value.IsValidPublicKey());
+    }
+
+    // A public key must be readable in one way only: one block, nothing around it, and content that is
+    // exactly one key. Otherwise two readers of the same text could take it for two different keys.
+    private static string Body(string publicKey)
+    => publicKey.Replace("-----BEGIN PUBLIC KEY-----", string.Empty).Replace("-----END PUBLIC KEY-----", string.Empty).Replace("\n", string.Empty).Replace("\r", string.Empty).Trim();
+
+    private static string Pem(byte[] der) => $"-----BEGIN PUBLIC KEY-----\n{Convert.ToBase64String(der)}\n-----END PUBLIC KEY-----";
+
+    // A key of 1024 bits, below the smallest accepted size.
+    private const string SmallPublicKey = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC1j0DaYAg4G7iq8mt26vDwtSOJt0KjfP2VeYnfNnFexYYm0GTWLdkY2abYpjeYBsaeHOxw2E6rG0tyROA0OBywuBREUIDWy0dX/R+1v5MPBNEEH0dG43tDng1YFYXZLysREwTJzZp5HJhKmPxAX6jj47BPPpM7bB6xgIqkRutgzwIDAQAB\n-----END PUBLIC KEY-----";
+
+    public static TheoryData<string> TextsWithMoreThanOneKeyBlock => new()
+    {
+        TestKeys.PublicKey1 + "\n" + TestKeys.PublicKey2,
+        TestKeys.PublicKey1 + TestKeys.PublicKey1,
+        "comment\n" + TestKeys.PublicKey1,
+        TestKeys.PublicKey1 + "\ncomment",
+        TestKeys.PublicKey1.Replace("PUBLIC KEY", "RSA PUBLIC KEY"),
+        TestKeys.PublicKey1.Replace("-----END PUBLIC KEY-----", "-----END RSA PUBLIC KEY-----")
+    };
+
+    [Theory]
+    [MemberData(nameof(TextsWithMoreThanOneKeyBlock))]
+    public void A_public_key_is_one_block_with_the_label_PUBLIC_KEY_and_nothing_else(string text)
+    {
+        Assert.False(text.IsValidPublicKey());
+        Assert.Null(text.NormalizePublicKey());
+        Assert.Null(text.GetPublicKeyBase64());
+    }
+
+    [Fact]
+    public void A_public_key_holds_exactly_one_key_without_anything_after_it()
+    {
+        var der = Convert.FromBase64String(Body(TestKeys.PublicKey1));
+
+        Assert.True(Pem(der).IsValidPublicKey());
+        Assert.False(Pem([.. der, 0]).IsValidPublicKey());
+        Assert.False(Pem([.. der, .. der]).IsValidPublicKey());
+        Assert.False(Pem(der[..^1]).IsValidPublicKey());
+        Assert.False(Pem([1, 2, 3, 4]).IsValidPublicKey());
+    }
+
+    [Fact]
+    public void A_public_key_below_the_smallest_size_or_longer_than_the_longest_text_is_refused()
+    {
+        Assert.False(SmallPublicKey.IsValidPublicKey());
+        Assert.False((TestKeys.PublicKey1 + new string('\n', Constants.MaxPublicKeyLength)).IsValidPublicKey());
+    }
+
+    [Fact]
+    public void Every_accepted_way_of_writing_a_key_gives_the_same_normalized_text_and_content()
+    {
+        var body = Body(TestKeys.PublicKey1);
+        string[] forms =
+        [
+            TestKeys.PublicKey1,
+            TestKeys.PublicKey1.Replace("\r", string.Empty).Replace("\n", "\r\n"),
+            "\n  " + TestKeys.PublicKey1 + "\n\n",
+            $"-----BEGIN PUBLIC KEY-----\n{body}\n-----END PUBLIC KEY-----"
+        ];
+
+        Assert.All(forms, form => Assert.True(form.IsValidPublicKey()));
+        Assert.Single(forms.Select(form => form.NormalizePublicKey()).Distinct());
+        Assert.Equal([body], forms.Select(form => form.GetPublicKeyBase64()).Distinct());
+    }
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData(" ")]
+    public void An_address_or_onion_address_with_anything_after_it_is_refused(string tail)
+    {
+        Assert.True(TestKeys.Address1.IsValidAddress());
+        Assert.False((TestKeys.Address1 + tail).IsValidAddress());
+        Assert.False((tail + TestKeys.Address1).IsValidAddress());
+        Assert.False((new string('a', 56) + ".onion" + tail).IsValidOnionAddress());
+    }
+
+    [Fact]
+    public void IsValidPublicKey_refuses_a_private_key()
+    {
+        Assert.False(TestKeys.PrivateKey1.IsValidPublicKey());
+    }
+
+    [Fact]
+    public void IsValidPrivateKey_accepts_plain_and_encrypted_private_keys()
+    {
+        Assert.True(TestKeys.PrivateKey3.IsValidPrivateKey());
+        Assert.True(TestKeys.PrivateKey1.IsValidPrivateKey());
+    }
+
+    [Fact]
+    public void IsValidPrivateKey_refuses_a_public_key()
+    {
+        Assert.False(TestKeys.PublicKey1.IsValidPrivateKey());
+    }
+
+    [Fact]
+    public void GetPublicKeyBase64_returns_the_key_without_header_and_line_breaks()
+    {
+        var content = TestKeys.PublicKey1.GetPublicKeyBase64();
+
+        Assert.NotNull(content);
+        Assert.DoesNotContain("-----", content);
+        Assert.DoesNotContain("\n", content);
+        Assert.True(content.IsValidBase64());
+    }
+
+    [Theory]
+    [InlineData("dGVzdC1zdHJpbmc=", true)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    [InlineData("not base64!", false)]
+    public void IsValidBase64_tells_base64_from_other_text(string? value, bool expected)
+    {
+        Assert.Equal(expected, value.IsValidBase64());
+    }
+
+    #endregion
+
+    #region Onion addresses and URLs
+
+    [Theory]
+    [InlineData("http://" + Onion, true)]
+    [InlineData("http://" + Onion + "/", true)]
+    [InlineData("https://" + Onion + ":8080/path", true)]
+    [InlineData(Onion, false)]
+    [InlineData("http://example.com", false)]
+    [InlineData("http://tooshort.onion", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsValidOnionUrl_needs_an_absolute_url_with_an_onion_host(string? value, bool expected)
+    {
+        Assert.Equal(expected, value.IsValidOnionUrl());
+    }
+
+    [Theory]
+    [InlineData(Onion, true)]
+    [InlineData("expyuzz4wqqyqhjn.onion", true)]
+    [InlineData("example.com", false)]
+    [InlineData("abc.onion", false)]
+    [InlineData(null, false)]
+    public void IsValidOnionAddress_accepts_16_and_56_character_names(string? value, bool expected)
+    {
+        Assert.Equal(expected, value.IsValidOnionAddress());
+    }
+
+    #endregion
+
+    #region MatchUrl
+
+    [Theory]
+    [InlineData("http://127.0.0.1:8080", "127.0.0.1", 8080, true)]
+    [InlineData("http://127.0.0.1:8080/", "127.0.0.1", 8080, true)]
+    [InlineData("http://127.0.0.1:8080", "127.0.0.1", 8081, false)]
+    [InlineData("http://127.0.0.1:8080", "10.0.0.1", 8080, false)]
+    [InlineData("http://0.0.0.0:8080", "10.0.0.1", 8080, true)]
+    [InlineData("http://0.0.0.0:8080", "10.0.0.1", 8081, false)]
+    [InlineData("http://127.0.0.1:8080", "::ffff:127.0.0.1", 8080, true)]
+    public void MatchUrl_compares_address_and_port(string url, string address, int port, bool expected)
+    {
+        Assert.Equal(expected, url.MatchUrl(IPAddress.Parse(address), port));
+    }
+
+    [Theory]
+    [InlineData("http://localhost:8080")]
+    [InlineData("127.0.0.1:8080")]
+    [InlineData("nonsense")]
+    [InlineData(null)]
+    public void MatchUrl_never_matches_a_url_without_an_ip_address(string? url)
+    {
+        Assert.False(url.MatchUrl(IPAddress.Loopback, 8080));
+    }
+
+    #endregion
+}

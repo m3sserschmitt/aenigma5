@@ -68,8 +68,9 @@ internal sealed class CryptoContext : IDisposable
 
     internal static class Factory
     {
+        // The native library never receives the text of a public key as a caller sent it, only its normalized form.
         public static CryptoContext CreateAsymmetricEncryptionContext(string publicKey)
-        => new(publicKey.IsValidPublicKey() ? Native.CreateAsymmetricEncryptionContext(publicKey) : IntPtr.Zero);
+        => new(publicKey.NormalizePublicKey() is string normalized ? Native.CreateAsymmetricEncryptionContext(normalized) : IntPtr.Zero);
 
         public static CryptoContext CreateAsymmetricDecryptionContext(string privateKey, byte[]? passphrase)
         => new(privateKey.IsValidPrivateKey() ? Native.CreateAsymmetricDecryptionContext(privateKey, passphrase) : IntPtr.Zero);
@@ -85,6 +86,6 @@ internal sealed class CryptoContext : IDisposable
 
 
         public static CryptoContext CreateSignatureVerificationContext(string publicKey)
-        => new(publicKey.IsValidPublicKey() ? Native.CreateVerificationContext(publicKey) : IntPtr.Zero);
+        => new(publicKey.NormalizePublicKey() is string normalized ? Native.CreateVerificationContext(normalized) : IntPtr.Zero);
     }
 }

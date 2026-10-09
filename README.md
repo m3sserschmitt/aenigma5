@@ -1,4 +1,11 @@
-## Getting Started
+## Aenigma - Federated Messaging System
+
+![Status](https://img.shields.io/badge/status-active-brightgreen)
+![OpenSSL](https://img.shields.io/badge/openssl-%3E%3D%203.5-blue)
+![Platform](https://img.shields.io/badge/platform-linux%20amd64%20%7C%20arm64-lightgrey)
+[![Build and test](https://github.com/m3sserschmitt/aenigma5/actions/workflows/build-and-test.yml/badge.svg?branch=main)](https://github.com/m3sserschmitt/aenigma5/actions/workflows/build-and-test.yml?query=branch%3Amain)
+
+### Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine.
 
@@ -51,6 +58,21 @@ Open you browser and try to access [http://localhost:8080/info](http://localhost
 and [http://localhost:8081/dashboard](http://localhost:8081/dashboard). You should expect
 `200 OK` for both of them.
 
+### Running the tests
+
+The automated tests are run from the root of the repository:
+
+```bash
+dotnet test enigma5.sln
+```
+
+The integration tests start real nodes as separate processes on free ports of the loopback
+address; nothing else has to be set up. To collect code coverage as well:
+
+```bash
+dotnet test enigma5.sln --settings coverage.runsettings --collect "XPlat Code Coverage"
+```
+
 ## Configuration
 
 ### Dev encryption keys
@@ -69,7 +91,8 @@ cd ./Enigma5.Scripts
 
 Depending on your environment, you might want to change the default configuration
 values within `./Enigma5.App/appsettings.json`. Let's walk through the file and
-explain all sections.
+explain all sections. A setting that is missing takes the default given below; a value that
+cannot be read is replaced by that default, and the log shows a warning naming the setting.
 
 ```json
 "ConnectionStrings": {
@@ -129,6 +152,13 @@ configure granular access to the [API](./API.md).
             "GET",
             "POST"
           ]
+        },
+        {
+          "Path": "/Jobs",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
         }
       ]
     }
@@ -138,9 +168,11 @@ configure granular access to the [API](./API.md).
 As the name suggests, this section can be used to effectively block access to a specific
 API path on a given endpoint. In this default configuration `GET /Dashboard` http
 requests, and the `/_blazor` connection the dashboard page uses, will be blocked on
-`http://127.0.0.1:8080`. Similarly we can define other rules and control who can access
-what. The `Endpoint` must be written with an IP address (not a host name such as
-`localhost`), otherwise the rule never applies.
+`http://127.0.0.1:8080`. The `/Jobs` rule blocks the background jobs page, which exists only
+when the app runs in the `Development` environment (`run-dev.sh`), where it can be opened at
+[http://localhost:8081/Jobs](http://localhost:8081/Jobs). Similarly we can define other rules
+and control who can access what. The `Endpoint` must be written with an IP address (not a host name such as
+`localhost`), otherwise the rule never applies and a warning is logged at startup.
 
 ---
 
@@ -346,6 +378,17 @@ about every 10 minutes.
 ---
 
 ```json
+"UnlistedVertexGracePeriod": "00:06:00"
+```
+
+How long a node is kept in the local graph when no other node lists it as a neighbor,
+for example because it has left the network. A short grace period is needed because
+information about distant nodes arrives piece by piece. It should be shorter than
+`VertexLifetime` and longer than about a minute. Default is 6 minutes.
+
+---
+
+```json
 "Network": {
     "DelayBetweenConnectionRetries": 3000
 }
@@ -406,6 +449,14 @@ one of them is used, and it may be the wrong one.
 If a peer stays `Disconnected`, check that the key is unlocked, that the host is reachable
 (through Tor for `.onion` hosts, see `Socks5Proxy`), and that the address is still the peer's
 current one. Press `Retry` to connect again at once.
+
+A node that connected to this one, without being in this node's own list, is shown as an
+`incoming` peer.
+
+Locking the key of a node closes the connections that node opened to its peers, and those peers
+show it as `Disconnected` at once. Nodes that connected *to* it are not told: they keep their
+connection and keep showing the locked node as `Connected`, although a locked node cannot route
+messages. Unlock the key to restore normal operation; nothing has to be done on the other nodes.
 
 ### License
 

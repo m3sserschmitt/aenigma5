@@ -71,7 +71,9 @@ public class HubConnectionsProxy(
 
     public bool RemoveConnection(ConnectionVector connectionVector)
     {
-        if (_connections.Remove(connectionVector))
+        // Vectors are equal when they connect the same hosts. Only the very object asked for is removed, so that
+        // a removal requested for a closed vector cannot take the vector that has replaced it in the meantime.
+        if (_connections.TryGetValue(connectionVector, out var current) && ReferenceEquals(current, connectionVector) && _connections.Remove(connectionVector))
         {
             _logger.LogDebug($"Connection vector {{{Common.Constants.Serilog.ConnectionVectorKey}}} removed successfully.", connectionVector);
             return true;

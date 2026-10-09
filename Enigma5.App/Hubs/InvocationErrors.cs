@@ -48,5 +48,7 @@ public class InvocationErrors
 
     public static readonly string ONION_PARSING_FAILED = "Could not parse onion.";
 
+    public static readonly string RELAY_ROUTING_RULES_VIOLATED = "Relays must route one message per request, with its uuid.";
+
     public static readonly string INTERNAL_ERROR = "Internal error";
 }

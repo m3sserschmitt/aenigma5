@@ -1,3 +1,65 @@
+aenigma (5.1.0) unstable; urgency=medium
+
+  [ Romulus Ruja ]
+  * New hub method Cleanup2 confirms pending messages up to a given id;
+    Pull and Cleanup are deprecated in favor of Pull2 and Cleanup2. The
+    bridge uses Cleanup2 and falls back to Cleanup for 5.0.x peers.
+  * RouteMessage: a uuid must be a GUID and is allowed only with a single
+    payload; it is stored in lowercase form. Relays must route one message
+    per request, with its uuid.
+  * PUT /IncrementSharedDataAccessCount and PUT /IncrementFileAccessCount
+    answer 404 when no record has the given tag.
+  * A new job removes expired and unlisted vertices from the graph every
+    five minutes. New setting UnlistedVertexGracePeriod (default 00:06:00).
+  * Every setting has a default; a value that cannot be read is replaced
+    by its default and reported with a warning, at startup and when the
+    configuration is reloaded.
+  * A blacklist whose endpoint can never match is reported with a warning
+    at startup.
+  * The default log level of the package is Warning.
+  * /etc/aenigma/appsettings.json is no longer a conffile. It holds only
+    the settings that differ from the defaults in /usr/lib/aenigma, so an
+    upgrade no longer stops at a configuration prompt and new defaults
+    always apply. An existing file is reduced to its changed settings;
+    the full file is kept as appsettings.json.dpkg-bak.
+  * /var/log/aenigma has mode 750. New installations create the service
+    user without a home directory, and a purge no longer tries to remove
+    one.
+  * The service is confined by systemd: the file system is read-only for
+    it except /var/lib/aenigma, /var/log/aenigma and /srv/aenigma, and it
+    has a private /tmp, no access to /home and a restricted set of system
+    calls.
+  * Security: a public key is accepted only as a single PEM block with
+    the label PUBLIC KEY that holds exactly one RSA key of 2048 to 8192
+    bits; its address and every signature check use that one reading.
+    Addresses must not be followed by a line end. A hub call without a
+    valid request object is refused before it reaches the method.
+  * The package depends on openssl 3.5.0 or later, the current
+    long-term support line; OpenSSL 3.0 is no longer supported upstream.
+    It also declares libkeyutils1, which libaenigma loads for the
+    kernel keyring.
+  * Log properties renamed: CommendResult to CommandResult, and
+    ConnectionIdKey to ConnectionId.
+  * The dashboard state is kept by a single thread; a slow dashboard
+    session no longer delays the others.
+  * The dashboard shows a peer as connected only while both nodes list
+    each other, and follows locking, unlocking, removed peers and changes
+    of the neighbor list at once. Peers that connected to this node are
+    shown with their host or onion service.
+  * The dashboard shows a message when an action fails and when a peer
+    was added. Removing a peer that is already gone is not an error.
+  * A connection to a peer over Tor gets a new proxy handler at every
+    start, so a retry after an unreachable onion service no longer fails
+    for good. A closed peer connection is always stopped when it leaves
+    the bridge, and a newer connection to the same peer is kept.
+  * GET /Share and GET /File answer 500 instead of 404 when the lookup
+    itself fails; an unknown tag is still answered with 404.
+  * The background jobs page is available at /Jobs in the Development
+    environment only.
+  * Removed code that was never called and unused package references.
+
+ -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 06 Oct 2026 17:15:00 +0300
+
 aenigma (5.0.1) unstable; urgency=high
 
   [ Romulus Ruja ]

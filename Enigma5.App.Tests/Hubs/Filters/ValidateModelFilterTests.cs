@@ -18,71 +18,59 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.Tests.Base;
-using FluentAssertions;
-using NSubstitute;
-using NSubstitute.ExceptionExtensions;
-using Xunit;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Tests.Hubs.Filters;
 
-[ExcludeFromCodeCoverage]
-public class ValidateModelFilterTests : FiltersTestBase<ValidateModelFilter>
+public class ValidateModelFilterTests
 {
     [Fact]
-    public async Task ShouldValidateModel()
+    public async Task A_valid_request_passes()
     {
-        // Arrange
-        var request = DataSeeder.ModelsFactory.CreateSignatureRequest();
-        _hubMethodArguments[0].Returns(request);
+        await using var node = await TestNode.StartAsync();
+        var call = node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), new CleanupRequestDto(5));
 
-        // Act
-        await _filter.Handle(_hubInvocationContext, _next);
-
-        // Assert
-        await _next.Received(1)(_hubInvocationContext);
+        Assert.Equal(FilterCalls.Passed, await FilterCalls.Run(node.Create<ValidateModelFilter>(), call));
     }
 
     [Fact]
-    public async Task ShouldNotValidateForNotExistentIValidatableObject()
+    public async Task A_request_that_breaks_a_rule_is_answered_with_the_errors_of_the_model()
     {
-        // Arrange
-        _hubMethodArguments[0].Throws(new IndexOutOfRangeException());
+        await using var node = await TestNode.StartAsync();
+        var call = node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), new CleanupRequestDto(-1));
 
-        // Act
-        var result = await _filter.Handle(_hubInvocationContext, _next);
+        var result = await FilterCalls.Run(node.Create<ValidateModelFilter>(), call);
 
-        // Assert
-        var response = result as EmptyErrorResultDto;
-        response.Should().NotBeNull();
-        response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_INVOCATION_DATA);
-        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
+        Assert.Equal(ValidationErrorsDto.INVALID_VALUE_FOR_PROPERTY, FilterCalls.SingleError(result));
+        Assert.False(Assert.IsAssignableFrom<InvocationResultDto<object>>(result).Success);
     }
 
     [Fact]
-    public async Task ShouldReturnErrorsForInvalidRequest()
+    public async Task A_call_without_its_request_is_refused()
     {
-        // Arrange
-        var request = new SignatureRequestDto { Nonce = null };
-        _hubMethodArguments[0].Returns(request);
+        await using var node = await TestNode.StartAsync();
+        var filter = node.Create<ValidateModelFilter>();
 
-        // Act
-        var result = await _filter.Handle(_hubInvocationContext, _next);
+        // A call that the filter cannot validate never reaches the hub method.
+        var withNull = await FilterCalls.Run(filter, node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), [null]));
+        var withoutArgument = await FilterCalls.Run(filter, node.HubCall("connection-2", nameof(RoutingHub.Cleanup2)));
+        var withAnotherKind = await FilterCalls.Run(filter, node.HubCall("connection-2", nameof(RoutingHub.Cleanup2), "text"));
 
-        // Assert
-        var response = result as EmptyErrorResultDto;
-        response.Should().NotBeNull();
-        response!.Errors.Should().HaveCount(1);
-        var error = response.Errors.First();
-        error.Message.Should().Be(ValidationErrorsDto.NULL_REQUIRED_PROPERTIES);
-        error.Properties.Should().HaveCount(1);
-        error.Properties.Should().Contain(nameof(SignatureRequestDto.Nonce));
-        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
+        Assert.Equal(InvocationErrors.INVALID_INVOCATION_DATA, FilterCalls.SingleError(withNull));
+        Assert.Equal(InvocationErrors.INVALID_INVOCATION_DATA, FilterCalls.SingleError(withoutArgument));
+        Assert.Equal(InvocationErrors.INVALID_INVOCATION_DATA, FilterCalls.SingleError(withAnotherKind));
+    }
+
+    [Fact]
+    public async Task A_method_without_request_passes()
+    {
+        await using var node = await TestNode.StartAsync();
+
+        Assert.Equal(FilterCalls.Passed, await FilterCalls.Run(node.Create<ValidateModelFilter>(), node.HubCall("connection-2", nameof(RoutingHub.Pull))));
     }
 }

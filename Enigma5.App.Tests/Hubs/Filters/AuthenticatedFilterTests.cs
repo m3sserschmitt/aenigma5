@@ -18,51 +18,59 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
 using Enigma5.App.Hubs;
 using Enigma5.App.Hubs.Filters;
+using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.Crypto.DataProviders;
-using FluentAssertions;
-using NSubstitute;
-using Xunit;
+using Enigma5.Tests.Base;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Tests.Hubs.Filters;
 
-[ExcludeFromCodeCoverage]
-public class AuthenticatedFilterTests : FiltersTestBase<AuthenticatedFilter>
+public class AuthenticatedFilterTests
 {
     [Fact]
-    public async Task ShouldResolveClientAddress()
+    public async Task A_signed_in_connection_passes_and_the_hub_learns_its_address()
     {
-        // Arrange
-        
-        // Act
-        await _filter.Handle(_hubInvocationContext, _next);
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn("connection-2", TestKeys.PrivateKey2);
+        var call = node.HubCall("connection-2", nameof(RoutingHub.Pull));
 
-        // Assert
-        _hub.ClientAddress.Should().Be(PKey.Address1);
-        await _next.Received(1)(_hubInvocationContext);
+        var result = await FilterCalls.Run(node.Create<AuthenticatedFilter>(), call);
+
+        Assert.Equal(FilterCalls.Passed, result);
+        Assert.Equal(TestKeys.Address2, ((RoutingHub)call.Hub).ClientAddress);
     }
 
     [Fact]
-    public async Task ShouldNotResolveNotExistentConnectionId()
+    public async Task A_connection_that_is_not_signed_in_is_refused()
     {
-        // Arrange
-        _sessionManager.TryGetAddress(Arg.Any<string>(), out Arg.Any<string?>()).Returns(call => {
-            call[1] = null;
-            return false;
-        });
+        await using var node = await TestNode.StartAsync();
 
-        // Act
-        var result = await _filter.Handle(_hubInvocationContext, _next);
+        var result = await FilterCalls.Run(node.Create<AuthenticatedFilter>(), node.HubCall("connection-2", nameof(RoutingHub.Pull)));
 
-        // Assert
-        _hub.ClientAddress.Should().BeNull();
-        var response = result as EmptyErrorResultDto;
-        response.Should().NotBeNull();
-        response!.Errors.Should().HaveCount(1);
-        response.Errors.Single().Message.Should().Be(InvocationErrors.AUTHENTICATION_REQUIRED);
-        await _next.DidNotReceiveWithAnyArgs()(_hubInvocationContext);
+        Assert.Equal(InvocationErrors.AUTHENTICATION_REQUIRED, FilterCalls.SingleError(result));
+    }
+
+    [Fact]
+    public async Task A_connection_whose_session_was_taken_over_is_refused()
+    {
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn("connection-2", TestKeys.PrivateKey2);
+        await node.SignIn("connection-3", TestKeys.PrivateKey2);
+
+        var result = await FilterCalls.Run(node.Create<AuthenticatedFilter>(), node.HubCall("connection-2", nameof(RoutingHub.Pull)));
+
+        Assert.Equal(InvocationErrors.AUTHENTICATION_REQUIRED, FilterCalls.SingleError(result));
+    }
+
+    [Fact]
+    public async Task A_method_that_needs_no_sign_in_passes_without_one()
+    {
+        await using var node = await TestNode.StartAsync();
+
+        var result = await FilterCalls.Run(node.Create<AuthenticatedFilter>(), node.HubCall("connection-2", nameof(RoutingHub.GenerateToken)));
+
+        Assert.Equal(FilterCalls.Passed, result);
     }
 }

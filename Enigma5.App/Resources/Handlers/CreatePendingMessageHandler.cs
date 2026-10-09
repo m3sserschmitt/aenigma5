@@ -68,6 +68,8 @@ public class CreatePendingMessageHandler(
             DateReceived = storedMessage.DateCreated
         };
 
+        // An exception to the rule that a failure carries no value: for a uuid that is already stored the result
+        // is a failure with the stored message, so the hub can accept the request without delivering it again.
         return ReferenceEquals(storedMessage, pendingMessage) ?
         CommandResult.CreateResultSuccess(storedMessageDto) : CommandResult.CreateResultFailure(storedMessageDto);
     }

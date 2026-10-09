@@ -18,154 +18,269 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
+using Enigma5.App.Common.Utils;
 using Enigma5.App.Hubs.Sessions;
-using Enigma5.Crypto.DataProviders;
-using Enigma5.Crypto.Extensions;
 using Enigma5.Tests.Base;
-using FluentAssertions;
-using Xunit;
 
 namespace Enigma5.App.Tests.Hubs.Sessions;
 
-[ExcludeFromCodeCoverage]
-public class SessionManagerTests
+public sealed class SessionManagerTests : IDisposable
 {
-    [Fact]
-    public void ShouldAddPending()
+    private const string Connection1 = "connection-1";
+
+    private const string Connection2 = "connection-2";
+
+    private readonly SimpleSingleThreadRunner _runner = new();
+
+    // The node itself has key 3. Keys 1 and 2 belong to clients.
+    private readonly SessionManager _sessions;
+
+    public SessionManagerTests()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
+        _sessions = new SessionManager(new ConnectionsMapper(), FixedKeyCertificateManager.Key3(), _runner, new CapturingLogger<SessionManager>());
+    }
 
-        // Act
-        var nonce = sessionManager.AddPending("test-connection-id");
+    public void Dispose() => _runner.Dispose();
 
-        // Assert
-        sessionManager.Pending.TryGetValue("test-connection-id", out string? value).Should().BeTrue();
-        sessionManager.Authenticated.Should().BeEmpty();
-        sessionManager.ConnectionsMapper.Connections.Should().BeEmpty();
-        value.IsValidBase64().Should().BeTrue();
-        nonce.Should().Be(value);
+    private async Task<bool> SignIn(string connectionId, string privateKey, string? impersonate = null)
+    {
+        var challenge = await _sessions.AddPendingAsync(connectionId);
+        return await _sessions.AuthenticateAsync(connectionId, TestKeys.PublicKeyOf(privateKey), TestSignatures.SignChallenge(privateKey, challenge!), impersonate);
+    }
+
+    #region Challenge
+
+    [Fact]
+    public async Task A_challenge_is_64_random_bytes_in_base64()
+    {
+        var first = await _sessions.AddPendingAsync(Connection1);
+        var second = await _sessions.AddPendingAsync(Connection2);
+
+        Assert.Equal(64, Convert.FromBase64String(first!).Length);
+        Assert.NotEqual(first, second);
+        Assert.Equal(first, _sessions.Pending[Connection1]);
     }
 
     [Fact]
-    public void ShouldNotAddPendingTwice()
+    public async Task A_new_challenge_replaces_the_one_before()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
+        var first = await _sessions.AddPendingAsync(Connection1);
+        var second = await _sessions.AddPendingAsync(Connection1);
 
-        // Act
-        var nonce1 = sessionManager.AddPending("test-connection-id");
-        var nonce2 = sessionManager.AddPending("test-connection-id");
+        Assert.NotEqual(first, second);
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, TestSignatures.SignChallenge(TestKeys.PrivateKey1, first!), null));
+    }
 
-        // Assert
-        sessionManager.Pending.TryGetValue("test-connection-id", out string? value).Should().BeTrue();
-        sessionManager.Authenticated.Should().BeEmpty();
-        sessionManager.ConnectionsMapper.Connections.Should().BeEmpty();
-        value.IsValidBase64().Should().BeTrue();
-        nonce1.Should().Be(value);
-        nonce2.Should().BeNull();
+    #endregion
+
+    #region Sign-in
+
+    [Fact]
+    public async Task A_connection_that_signs_its_challenge_is_signed_in_under_the_address_of_its_key()
+    {
+        Assert.True(await SignIn(Connection1, TestKeys.PrivateKey1));
+
+        Assert.Equal(TestKeys.Address1, await _sessions.TryGetAddressAsync(Connection1));
+        Assert.Equal(Connection1, await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.Contains(Connection1, _sessions.Authenticated);
+        Assert.Empty(_sessions.Pending);
     }
 
     [Fact]
-    public void ShouldAuthenticate()
+    public async Task A_challenge_can_be_used_once()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
-        var nonce = sessionManager.AddPending("test-connection-id");
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
-        
-        // Act
-        var authenticated = sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
-    
-        // Assert
-        authenticated.Should().BeTrue();
-        sessionManager.Pending.Should().BeEmpty();
-        sessionManager.Authenticated.Should().Contain("test-connection-id");
-        sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connectionId).Should().BeTrue();
-        connectionId.Should().Be("test-connection-id");
+        var challenge = await _sessions.AddPendingAsync(Connection1);
+        var signature = TestSignatures.SignChallenge(TestKeys.PrivateKey1, challenge!);
+
+        Assert.True(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, signature, null));
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, signature, null));
+
+        Assert.Equal(TestKeys.Address1, await _sessions.TryGetAddressAsync(Connection1));
     }
 
     [Fact]
-    public void ShouldNotAuthenticateTwice()
+    public async Task A_failed_attempt_also_uses_the_challenge_up()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
-        var nonce = sessionManager.AddPending("test-connection-id");
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
-        
-        // Act
-        var authenticated1 = sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
-        var authenticated2 = sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
-    
-        // Assert
-        authenticated1.Should().BeTrue();
-        authenticated2.Should().BeFalse();
-        sessionManager.Pending.Should().BeEmpty();
-        sessionManager.Authenticated.Should().Contain("test-connection-id");
-        sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connectionId).Should().BeTrue();
-        connectionId.Should().Be("test-connection-id");
+        var challenge = await _sessions.AddPendingAsync(Connection1);
+
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, TestSignatures.SignChallenge(TestKeys.PrivateKey2, challenge!), null));
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, TestSignatures.SignChallenge(TestKeys.PrivateKey1, challenge!), null));
+
+        Assert.Null(await _sessions.TryGetAddressAsync(Connection1));
     }
 
     [Fact]
-    public void ShouldLogOut()
+    public async Task A_signature_made_with_another_key_is_refused()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
-        var nonce = sessionManager.AddPending("test-connection-id");
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
-        sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
+        var challenge = await _sessions.AddPendingAsync(Connection1);
 
-        // Act
-        var result = sessionManager.Remove("test-connection-id", out string? address);
-
-        // Assert
-        result.Should().BeTrue();
-        address.Should().Be(PKey.Address1);
-        sessionManager.Pending.Should().BeEmpty();
-        sessionManager.Authenticated.Should().BeEmpty();
-        sessionManager.ConnectionsMapper.Connections.Should().BeEmpty();
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, TestSignatures.SignChallenge(TestKeys.PrivateKey2, challenge!), null));
     }
 
     [Fact]
-    public void ShouldGetConnectionId()
+    public async Task A_signature_over_another_challenge_is_refused()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
-        var nonce = sessionManager.AddPending("test-connection-id");
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
-        sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
+        await _sessions.AddPendingAsync(Connection1);
+        var other = await _sessions.AddPendingAsync(Connection2);
 
-        // Act
-        var result = sessionManager.TryGetConnectionId(PKey.Address1, out string? connectionId);
-
-        // Assert
-        result.Should().BeTrue();
-        connectionId.Should().Be("test-connection-id");
-        sessionManager.Pending.Should().BeEmpty();
-        sessionManager.Authenticated.Should().Contain("test-connection-id");
-        sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connId).Should().BeTrue();
-        connId.Should().Be("test-connection-id");
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, TestSignatures.SignChallenge(TestKeys.PrivateKey1, other!), null));
     }
 
     [Fact]
-    public void ShouldGetAddress()
+    public async Task A_connection_without_challenge_is_refused()
     {
-        // Arrange
-        var sessionManager = new SessionManager(new());
-        var nonce = sessionManager.AddPending("test-connection-id");
-        var request = DataSeeder.ModelsFactory.CreateAuthenticationRequest(nonce!);
-        sessionManager.Authenticate("test-connection-id", request.PublicKey!, request.Signature!);
+        var challenge = await _sessions.AddPendingAsync(Connection2);
 
-        // Act
-        var result = sessionManager.TryGetAddress("test-connection-id", out string? address);
-
-        // Assert
-        result.Should().BeTrue();
-        address.Should().Be(PKey.Address1);
-        sessionManager.Pending.Should().BeEmpty();
-        sessionManager.Authenticated.Should().Contain("test-connection-id");
-        sessionManager.ConnectionsMapper.Connections.TryGetValue(PKey.Address1, out string? connId).Should().BeTrue();
-        connId.Should().Be("test-connection-id");
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, TestKeys.PublicKey1, TestSignatures.SignChallenge(TestKeys.PrivateKey1, challenge!), null));
     }
+
+    [Fact]
+    public async Task Text_that_is_not_a_public_key_is_refused()
+    {
+        var challenge = await _sessions.AddPendingAsync(Connection1);
+
+        Assert.False(await _sessions.AuthenticateAsync(Connection1, "not a key", TestSignatures.SignChallenge(TestKeys.PrivateKey1, challenge!), null));
+        // The challenge was not used up, because the request was refused before it was looked at.
+        Assert.Single(_sessions.Pending);
+    }
+
+    #endregion
+
+    #region One session for each address
+
+    // The address of a session and the check of the signature must come from the same key. A text that holds
+    // more than one key block could be read as one key for the address and as another for the signature.
+    [Fact]
+    public async Task A_text_with_more_than_one_key_block_is_refused_whatever_key_signed_the_challenge()
+    {
+        string[] texts = [TestKeys.PublicKey1 + "\n" + TestKeys.PublicKey2, TestKeys.PublicKey2 + "\n" + TestKeys.PublicKey1];
+
+        foreach (var text in texts)
+        {
+            foreach (var signingKey in new[] { TestKeys.PrivateKey1, TestKeys.PrivateKey2 })
+            {
+                var challenge = await _sessions.AddPendingAsync(Connection1);
+                Assert.False(await _sessions.AuthenticateAsync(Connection1, text, TestSignatures.SignChallenge(signingKey, challenge!), null));
+            }
+        }
+
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address2));
+    }
+
+    // Only the key of the node may sign in for another address; the same rule about the text of the key applies.
+    [Fact]
+    public async Task A_text_with_the_key_of_the_node_and_another_key_may_not_sign_in_for_another_address()
+    {
+        string[] texts = [TestKeys.PublicKey3 + "\n" + TestKeys.PublicKey1, TestKeys.PublicKey1 + "\n" + TestKeys.PublicKey3];
+
+        foreach (var text in texts)
+        {
+            var challenge = await _sessions.AddPendingAsync(Connection1);
+            Assert.False(await _sessions.AuthenticateAsync(Connection1, text, TestSignatures.SignChallenge(TestKeys.PrivateKey1, challenge!), TestKeys.Address2));
+        }
+
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address2));
+    }
+
+    [Fact]
+    public async Task A_second_sign_in_with_the_same_key_takes_the_session_over()
+    {
+        Assert.True(await SignIn(Connection1, TestKeys.PrivateKey1));
+
+        Assert.True(await SignIn(Connection2, TestKeys.PrivateKey1));
+
+        Assert.Equal(Connection2, await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.Equal(TestKeys.Address1, await _sessions.TryGetAddressAsync(Connection2));
+        Assert.Null(await _sessions.TryGetAddressAsync(Connection1));
+    }
+
+    [Fact]
+    public async Task Two_keys_have_two_sessions()
+    {
+        Assert.True(await SignIn(Connection1, TestKeys.PrivateKey1));
+        Assert.True(await SignIn(Connection2, TestKeys.PrivateKey2));
+
+        Assert.Equal(Connection1, await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.Equal(Connection2, await _sessions.TryGetConnectionIdAsync(TestKeys.Address2));
+    }
+
+    [Fact]
+    public async Task Asking_for_a_new_challenge_ends_the_session_of_the_connection()
+    {
+        await SignIn(Connection1, TestKeys.PrivateKey1);
+
+        await _sessions.AddPendingAsync(Connection1);
+
+        Assert.Null(await _sessions.TryGetAddressAsync(Connection1));
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.DoesNotContain(Connection1, _sessions.Authenticated);
+    }
+
+    #endregion
+
+    #region Signing in for another address
+
+    [Fact]
+    public async Task The_key_of_the_node_may_sign_in_for_another_address()
+    {
+        Assert.True(await SignIn(Connection1, TestKeys.PrivateKey3, impersonate: TestKeys.Address1));
+
+        Assert.Equal(TestKeys.Address1, await _sessions.TryGetAddressAsync(Connection1));
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address3));
+    }
+
+    [Fact]
+    public async Task Any_other_key_may_not_sign_in_for_another_address()
+    {
+        Assert.False(await SignIn(Connection1, TestKeys.PrivateKey1, impersonate: TestKeys.Address2));
+
+        Assert.Null(await _sessions.TryGetAddressAsync(Connection1));
+        // Refused before the challenge was looked at.
+        Assert.Single(_sessions.Pending);
+    }
+
+    [Fact]
+    public async Task The_other_address_must_be_a_valid_address()
+    {
+        Assert.False(await SignIn(Connection1, TestKeys.PrivateKey3, impersonate: "not-an-address"));
+    }
+
+    #endregion
+
+    #region Removal
+
+    [Fact]
+    public async Task Removing_a_connection_ends_its_session_and_gives_its_address()
+    {
+        await SignIn(Connection1, TestKeys.PrivateKey1);
+
+        Assert.Equal(TestKeys.Address1, await _sessions.RemoveAsync(Connection1));
+
+        Assert.Null(await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+        Assert.DoesNotContain(Connection1, _sessions.Authenticated);
+    }
+
+    [Fact]
+    public async Task Removing_a_connection_that_never_signed_in_gives_no_address_and_drops_its_challenge()
+    {
+        await _sessions.AddPendingAsync(Connection1);
+
+        Assert.Null(await _sessions.RemoveAsync(Connection1));
+
+        Assert.Empty(_sessions.Pending);
+    }
+
+    [Fact]
+    public async Task Removing_a_connection_whose_session_was_taken_over_gives_no_address_and_leaves_the_new_session()
+    {
+        await SignIn(Connection1, TestKeys.PrivateKey1);
+        await SignIn(Connection2, TestKeys.PrivateKey1);
+
+        Assert.Null(await _sessions.RemoveAsync(Connection1));
+
+        Assert.Equal(Connection2, await _sessions.TryGetConnectionIdAsync(TestKeys.Address1));
+    }
+
+    #endregion
 }

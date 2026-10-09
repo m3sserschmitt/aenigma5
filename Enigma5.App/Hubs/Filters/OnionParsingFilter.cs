@@ -27,13 +27,18 @@ using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Models.Extensions;
 using Enigma5.App.Models.Contracts.Hubs;
+using Enigma5.App.Common.Extensions;
+using Enigma5.App.Resources.Queries;
+using MediatR;
 
 namespace Enigma5.App.Hubs.Filters;
 
-public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> logger)
+public class OnionParsingFilter(OnionParser parser, IMediator commandRouter, ILogger<OnionParsingFilter> logger)
 : BaseFilter<IOnionParsingHub, OnionParsingAttribute>
 {
     private readonly OnionParser _parser = parser;
+
+    private readonly IMediator _commandRouter = commandRouter;
 
     private readonly ILogger<OnionParsingFilter> _logger = logger;
 
@@ -48,6 +53,15 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
             object? successResult = null;
             var errors = new HashSet<ErrorDto>();
             var payloads = request.Payloads ?? [];
+            var uuid = payloads.Count == 1 ? request.Uuid.NormalizeGuid() : null;
+
+            // Relays (neighbors of this node) route one message per request and must pass its uuid.
+            if (await IsNeighborAsync(new IdentityHubAdapter(invocationContext.Hub).ClientAddress) && (payloads.Count != 1 || uuid is null))
+            {
+                _logger.LogDebug($"Relay routing rules violated by connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.", invocationContext.Context.ConnectionId);
+                return ErrorResultDto.Create(InvocationErrors.RELAY_ROUTING_RULES_VIOLATED);
+            }
+
             foreach (var item in payloads)
             {
                 if (await _parser.ParseAsync(item!))
@@ -56,7 +70,7 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
                     {
                         Content = _parser.Content,
                         Next = _parser.NextAddress,
-                        Uuid = payloads.Count == 1 ? request.Uuid : null
+                        Uuid = uuid
                     };
                     dynamic? nextResult = await next(invocationContext);
                     var nextErrors = nextResult?.Errors as HashSet<ErrorDto>;
@@ -82,5 +96,16 @@ public class OnionParsingFilter(OnionParser parser, ILogger<OnionParsingFilter> 
 
         _logger.LogDebug($"Invalid input data for {{{Common.Constants.Serilog.HubMethodNameKey}}} method {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.", invocationContext.HubMethodName, invocationContext.HubMethodArguments);
         return ErrorResultDto.Create(InvocationErrors.INVALID_INVOCATION_DATA);
+    }
+
+    private async Task<bool> IsNeighborAsync(string? address)
+    {
+        if (address is null)
+        {
+            return false;
+        }
+
+        var neighbors = await _commandRouter.Send(new GetNeighborAddressesQuery());
+        return neighbors.Value?.Contains(address) ?? false;
     }
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federated messaging system
     Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
@@ -18,139 +18,83 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
-using Autofac;
+using Enigma5.App.Data;
 using Enigma5.App.Data.Extensions;
 using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Resources.Queries;
+using Enigma5.App.UI;
 using Enigma5.Tests.Base;
-using FluentAssertions;
-using Xunit;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
-[ExcludeFromCodeCoverage]
-public class BroadcastHandlerTests : AppTestBase
+// The node has key 1. Key 2 belongs to another node.
+public class BroadcastHandlerTests
 {
-    private readonly BroadcastHandler _handler;
+    private static async Task<VertexBroadcastRequestDto> VertexOfKey2(params string[] neighbors)
+    => (await Vertex.Factory.CreateAsync(FixedKeyCertificateManager.Key2(), [.. neighbors])).ToVertexBroadcast();
 
-    public BroadcastHandlerTests()
+    [Fact]
+    public async Task A_vertex_from_a_node_with_a_session_makes_that_node_a_neighbor()
     {
-        _handler = _container.Resolve<BroadcastHandler>();
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn("connection-2", TestKeys.PrivateKey2);
+
+        var result = await node.Send(new HandleBroadcastCommand(await VertexOfKey2(TestKeys.Address1)));
+
+        Assert.True(result.Success);
+        // What must be passed on: the received vertex, and the node's own, which now lists the sender.
+        Assert.Equal([TestKeys.Address2, TestKeys.Address1], result.Value!.Select(vertex => vertex.Neighborhood.Address).Order());
+        Assert.Equal([TestKeys.Address2], await node.Get<NetworkGraph>().GetNeighborAddressesAsync());
     }
 
     [Fact]
-    public async Task ShouldAddNewNeighbor()
+    public async Task A_vertex_from_a_node_without_a_session_is_stored_but_gives_no_neighbor()
     {
-        // Arrange
-        var vertex = _container.ResolveAdjacentVertex();
-        var broadcast = vertex.ToVertexBroadcast();
-        var request = new HandleBroadcastCommand(broadcast);
+        await using var node = await TestNode.StartAsync();
 
-        // Act
-        var result = await _handler.Handle(request);
+        var result = await node.Send(new HandleBroadcastCommand(await VertexOfKey2(TestKeys.Address1)));
 
-        // Assert
-        var localVertex = _graph.LocalVertex;
-        var broadcasts = result.Value;
-        broadcasts.Should().NotBeNull();
-        localVertex.Should().BeOfType<Enigma5.App.Data.Vertex>();
-        broadcasts.Should().AllBeOfType<VertexBroadcastRequestDto>();
-        localVertex!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
-        broadcasts.Should().HaveCount(2);
-        var broadcastLocal = broadcasts!.Single(item => item.PublicKey == localVertex.PublicKey);
-        var broadcastRemote = broadcasts!.Single(item => item.PublicKey == vertex.PublicKey);
-        broadcastLocal.SignedData.Should().Be(localVertex.SignedData);
-        broadcastRemote.SignedData.Should().Be(vertex.SignedData);
-        _graph.Vertices.Should().OnlyContain(item => !item.IsLeaf);
+        Assert.True(result.Success);
+        Assert.Equal([TestKeys.Address2], result.Value!.Select(vertex => vertex.Neighborhood.Address));
+        Assert.Empty(await node.Get<NetworkGraph>().GetNeighborAddressesAsync());
+        Assert.NotNull(await node.Get<NetworkGraph>().GetVertexAsync(TestKeys.Address2));
     }
 
     [Fact]
-    public async Task ShouldAddLeaf()
+    public async Task A_vertex_the_node_already_has_gives_nothing_to_pass_on()
     {
-        // Arrange
-        var vertex = _container.ResolveAdjacentLeaf();
-        var vertexBroadcast = vertex.ToVertexBroadcast();
-        var request = new HandleBroadcastCommand(vertexBroadcast);
+        await using var node = await TestNode.StartAsync();
+        var vertex = await VertexOfKey2();
+        await node.Send(new HandleBroadcastCommand(vertex));
 
-        // Act
-        var result = await _handler.Handle(request);
+        var result = await node.Send(new HandleBroadcastCommand(vertex));
 
-        // Assert
-        var localVertex = _graph.LocalVertex;
-        localVertex!.Neighborhood.Neighbors.Should().BeEmpty();
-        result.Value.Should().HaveCount(1);
-        var broadcast = result.Value!.Single();
-        broadcast.PublicKey.Should().Be(vertexBroadcast.PublicKey);
-        broadcast.SignedData.Should().Be(vertexBroadcast.SignedData);
-        broadcast.Neighborhood.Address.Should().Be(vertexBroadcast.Neighborhood.Address);
-        broadcast.Neighborhood.Hostname.Should().Be(vertexBroadcast.Neighborhood.Hostname);
-        broadcast.Neighborhood.Neighbors.Should().Equal(vertexBroadcast.Neighborhood.Neighbors);
-        var addedLeaf = _graph.Vertices.FirstOrDefault(item => item == vertex);
-        addedLeaf.Should().NotBeNull();
-        addedLeaf!.IsLeaf.Should().BeTrue();
-        addedLeaf.PublicKey.Should().BeNull();
-        addedLeaf.Neighborhood.Should().NotBeNull();
-        addedLeaf.Neighborhood.Address.Should().Be(vertex.Neighborhood.Address);
-        addedLeaf.Neighborhood.Hostname.Should().BeNull();
-        addedLeaf.Neighborhood.Neighbors.Should().Equal(vertex.Neighborhood.Neighbors);
+        Assert.True(result.Success);
+        Assert.Empty(result.Value!);
     }
 
     [Fact]
-    public async Task ShouldNotAddNeighborTwice()
+    public async Task A_request_without_usable_key_or_data_is_refused()
     {
-        // Arrange
-        var vertex = _container.ResolveAdjacentVertex();
-        var broadcast = vertex.ToVertexBroadcast();
-        var request = new HandleBroadcastCommand(broadcast);
+        await using var node = await TestNode.StartAsync();
+        var valid = await VertexOfKey2();
 
-        // Act
-        var result1 = await _handler.Handle(request);
-        var localVertex1 = _graph.LocalVertex;
-        var result2 = await _handler.Handle(request);
-        var localVertex2 = _graph.LocalVertex;
-
-        // Assert
-        var broadcasts1 = result1.Value;
-        var broadcasts2 = result2.Value;
-        broadcasts1.Should().NotBeNull();
-        broadcasts2.Should().NotBeNull();
-        localVertex1!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
-        broadcasts1.Should().HaveCount(2);
-        localVertex2!.Neighborhood.Neighbors.Single().Should().Be(vertex.Neighborhood.Address);
-        broadcasts2.Should().BeEmpty();
+        Assert.False((await node.Send(new HandleBroadcastCommand(new VertexBroadcastRequestDto("not a key", valid.SignedData)))).Success);
+        Assert.False((await node.Send(new HandleBroadcastCommand(new VertexBroadcastRequestDto(valid.PublicKey, "not base64!")))).Success);
     }
 
     [Fact]
-    public async Task ShouldAddAndRemoveNeighbor()
+    public async Task A_vertex_signed_with_another_key_is_dropped()
     {
-        // Arrange
-        var adjacentVertex = _container.ResolveAdjacentVertex();
-        var nonAdjacentVertex = _container.ResolveNonAdjacentVertex();
-        var initialBroadcast = adjacentVertex.ToVertexBroadcast();
-        var finalBroadcast = nonAdjacentVertex.ToVertexBroadcast();
-        var request1 = new HandleBroadcastCommand(initialBroadcast);
-        var request2 = new HandleBroadcastCommand(finalBroadcast);
-    
-        // Act
-        var result1 = await _handler.Handle(request1);
-        var localVertex1 = _graph.LocalVertex;
-        var result2 = await _handler.Handle(request2);
-        var localVertex2 = _graph.LocalVertex;
+        await using var node = await TestNode.StartAsync();
+        var valid = await VertexOfKey2();
 
-        // Assert
-        var broadcasts1 = result1.Value;
-        var broadcasts2 = result2.Value;
-        broadcasts1.Should().NotBeNull();
-        broadcasts2.Should().NotBeNull();
-        localVertex1!.Neighborhood.Neighbors.Single().Should().Be(adjacentVertex.Neighborhood.Address);
-        broadcasts1.Should().HaveCount(2);
-        localVertex2!.Neighborhood.Neighbors.Should().BeEmpty();
-        broadcasts2.Should().HaveCount(2);
-        broadcasts2.Should().Contain(item => item.PublicKey == adjacentVertex.PublicKey);
-        broadcasts2.Should().Contain(item => item.PublicKey == localVertex1.PublicKey);
-        broadcasts1.Should().Contain(item => item.PublicKey == adjacentVertex.PublicKey);
-        broadcasts1.Should().Contain(item => item.PublicKey == localVertex1.PublicKey);
+        var result = await node.Send(new HandleBroadcastCommand(new VertexBroadcastRequestDto(TestKeys.PublicKey3, valid.SignedData)));
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Value!);
+        Assert.Null(await node.Get<NetworkGraph>().GetVertexAsync(TestKeys.Address2));
     }
 }

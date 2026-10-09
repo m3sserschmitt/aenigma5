@@ -13,11 +13,14 @@ configuration
 .B \-h
 .SH DESCRIPTION
 .B aenigma-config
-updates a single property in the Aenigma application's JSON
-configuration file,
+sets a single property in
 .IR /etc/aenigma/appsettings.json ,
 using
 .BR jq (1).
+This file holds only the settings that differ from the defaults in
+.IR /usr/lib/aenigma/appsettings.json ,
+which is replaced on every upgrade and must not be edited.
+If the file does not exist, it is created.
 .PP
 .I PROPERTY
 is a dot-separated path identifying the property to set, e.g.
@@ -88,10 +91,15 @@ Display a usage summary and exit.
 The property was updated successfully.
 .TP
 .B 1
-Missing or invalid arguments, the script was not run as root, or
-.I /etc/aenigma/appsettings.json
-does not exist.
+Missing or invalid arguments, or the script was not run as root.
 .SH FILES
+.TP
+.I /usr/lib/aenigma/appsettings.json
+The default settings, installed by the package. A list in
+.I /etc/aenigma/appsettings.json
+is combined with the default list by position: its items replace the
+default items at the same positions, and further default items still
+apply.
 .TP
 .I /etc/aenigma/appsettings.json
 The Aenigma application configuration file; read and rewritten by

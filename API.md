@@ -105,7 +105,8 @@ Increments a shared data object's current access count. When the current access 
 |--------|-------------|
 | `200`  | OK |
 | `400`  | `tag` is missing or not a valid GUID |
-| `500`  | No shared data with this tag, or Internal Server Error |
+| `404`  | No shared data with this tag: never created, expired, or maximum access count reached |
+| `500`  | Internal Server Error |
 
 ---
 
@@ -177,6 +178,7 @@ Uploads a new file.
 |--------|-------------|
 | `200`  | Returns the created [`SharedDataDto`](#shareddatadto) |
 | `400`  | `file` is missing or empty, or `maxAccessCount` is missing or less than 1 |
+| `413`  | Request body larger than `SharedFileMaxSize` (64 MiB by default) |
 | `500`  | Internal Server Error |
 
 ---
@@ -221,7 +223,8 @@ Increments a file's current access count. When the current access count reaches 
 |--------|-------------|
 | `200`  | OK |
 | `400`  | `tag` is missing or not a valid GUID |
-| `500`  | No file with this tag, or Internal Server Error |
+| `404`  | No file with this tag: never uploaded, expired, or maximum access count reached |
+| `500`  | Internal Server Error |
 
 ---
 

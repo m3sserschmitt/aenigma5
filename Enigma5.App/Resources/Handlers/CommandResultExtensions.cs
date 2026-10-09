@@ -24,9 +24,6 @@ namespace Enigma5.App.Resources.Handlers;
 
 public static class CommandResultExtensions
 {
-    public static bool IsNotNullResultValue<T>(this CommandResult<T>? result)
-    => result is not null && result.Value is not null;
-
     public static bool IsSuccessNotNullResultValue<T>(this CommandResult<T>? result)
     => result is not null && result.Success && result.Value is not null;
 
@@ -55,6 +52,14 @@ public static class CommandResultExtensions
     public static IResult CreatePostResponse<T>(this CommandResult<T>? result)
     => result.IsSuccessNotNullResultValue() ? Results.Ok(result!.Value) : Results.Problem(statusCode: 500);
 
-    public static IResult CreatePutResponse<T>(this CommandResult<T>? result)
-    => result.IsSuccessResult() ? Results.Ok() : Results.Problem(statusCode: 500);
+    // The value is the number of records the request changed.
+    public static IResult CreatePutResponse(this CommandResult<int>? result)
+    {
+        if (!result.IsSuccessResult())
+        {
+            return Results.Problem(statusCode: 500);
+        }
+
+        return result!.Value > 0 ? Results.Ok() : Results.NotFound();
+    }
 }

@@ -35,16 +35,18 @@ public class GetFileHandler(EnigmaDbContext context, IConfiguration configuratio
 
     public async Task<CommandResult<SharedDataDto>> Handle(GetFileQuery request, CancellationToken cancellationToken)
     {
+        // Not found is a successful lookup without a value; HTTP callers turn it into 404.
+        // A file needs both its record and its content on disk.
         var fullPath = _configuration.GetWebContentFilePath(request.Tag);
         if (fullPath is null || !File.Exists(fullPath))
         {
-            return CommandResult.CreateResultFailure<SharedDataDto>();
+            return CommandResult.CreateResultSuccess<SharedDataDto>(null);
         }
 
         var fileRecord = await _context.Files.FirstOrDefaultAsync(item => item.Tag == request.Tag, cancellationToken);
         if (fileRecord is null)
         {
-            return CommandResult.CreateResultFailure<SharedDataDto>();
+            return CommandResult.CreateResultSuccess<SharedDataDto>(null);
         }
 
         return CommandResult.CreateResultSuccess(new SharedDataDto

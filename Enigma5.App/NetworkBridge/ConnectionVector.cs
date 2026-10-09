@@ -26,6 +26,7 @@ using Enigma5.App.Models.Contracts.Hubs;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.Security.Contracts;
 using Microsoft.AspNetCore.Http.Connections.Client;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Net;
 
@@ -44,6 +45,14 @@ public class ConnectionVector : IDisposable
     private bool _sourceToTargetSynchronized;
 
     private bool _targetToSourceSynchronized;
+
+    // Highest message id pulled from each side during the last synchronization (null: none).
+    private long? _sourceLastPulledId;
+
+    private long? _targetLastPulledId;
+
+    // Error text of a SignalR hub when the invoked method does not exist on it.
+    private const string HubMethodMissingMessage = "Method does not exist";
 
     private string? _sourceAddress;
 
@@ -131,12 +140,13 @@ public class ConnectionVector : IDisposable
                 {
                     return;
                 }
-                var handler = new HttpClientHandler
+                // A new handler for every start: SignalR disposes the handler when a connection fails or stops,
+                // and a disposed handler would make every later start of this vector fail.
+                options.HttpMessageHandlerFactory = _ => new HttpClientHandler
                 {
                     Proxy = new WebProxy(socks5ProxyAddress),
                     UseProxy = true
                 };
-                options.HttpMessageHandlerFactory = _ => handler;
                 options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
             }
         });
@@ -231,7 +241,8 @@ public class ConnectionVector : IDisposable
     public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
 
-    public async Task<bool> CleanupAsync(HubConnection connection, CancellationToken cancellationToken = default)
+    // Confirms the messages pulled from the connection, up to supId (null: nothing was pulled).
+    private async Task<bool> CleanupAsync(HubConnection connection, long? supId, CancellationToken cancellationToken = default)
     {
         if (!Authenticated || !Connected)
         {
@@ -239,10 +250,24 @@ public class ConnectionVector : IDisposable
             return false;
         }
 
+        if (supId is null)
+        {
+            return true;
+        }
+
         try
         {
-            var result1 = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Cleanup), cancellationToken);
-            return result1.Success;
+            var result = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Cleanup2), new CleanupRequestDto(supId), cancellationToken);
+            return result.Success;
+        }
+        catch (HubException ex) when (ex.Message.Contains(HubMethodMissingMessage))
+        {
+            // Peers running an older version do not have Cleanup2; their Cleanup confirms all pending messages.
+            _logger.LogDebug($"Hub of connection vector {{{Constants.Serilog.ConnectionVectorKey}}} has no {nameof(IEnigmaHub.Cleanup2)}; falling back to {nameof(IEnigmaHub.Cleanup)}.", this);
+#pragma warning disable CS0618 // Cleanup is obsolete, but it is the only method older peers offer
+            var result = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Cleanup), cancellationToken);
+#pragma warning restore CS0618
+            return result.Success;
         }
         catch (Exception ex)
         {
@@ -254,9 +279,9 @@ public class ConnectionVector : IDisposable
     public async Task<bool> CleanupAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug($"Cleaning up source for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, cancellationToken);
+        var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, _sourceLastPulledId, cancellationToken);
         _logger.LogDebug($"Cleaning up target for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, cancellationToken);
+        var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, _targetLastPulledId, cancellationToken);
         var result = result1 && result2;
         if (!result)
         {
@@ -265,24 +290,26 @@ public class ConnectionVector : IDisposable
         return result;
     }
 
-    private async Task<bool> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
+    // Pulls all pending messages from c1 and routes them to c2; returns the highest id pulled.
+    private async Task<(bool Success, long? LastPulledId)> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
     {
         if (!Authenticated || !Connected)
         {
             _logger.LogError($"Connection vector {{{Constants.Serilog.ConnectionVectorKey}}} was not properly started. Aborting...", this);
-            return false;
+            return (false, null);
         }
 
         try
         {
+            long? lastPulledId = null;
             var pendingMessages = new List<PendingMessageDto>();
             do
             {
-                var pullResult = await c1.InvokeAsync<InvocationResultDto<List<PendingMessageDto>>>(nameof(IEnigmaHub.Pull2), new PullRequestDto(pendingMessages.LastOrDefault()?.Id), cancellationToken);
+                var pullResult = await c1.InvokeAsync<InvocationResultDto<List<PendingMessageDto>>>(nameof(IEnigmaHub.Pull2), new PullRequestDto(lastPulledId), cancellationToken);
                 if (!pullResult.Success)
                 {
                     _logger.LogError($"Failed to pull pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
-                    return false;
+                    return (false, null);
                 }
                 pendingMessages = pullResult.Data ?? [];
                 foreach (var message in pendingMessages)
@@ -291,27 +318,28 @@ public class ConnectionVector : IDisposable
                     if (!routeResult.Success)
                     {
                         _logger.LogError($"Failed to route pending message on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
-                        return false;
+                        return (false, null);
                     }
+                    lastPulledId = message.Id;
                 }
 
             } while (pendingMessages.Count > 0);
             _logger.LogDebug($"Pending messages synchronized on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-            return true;
+            return (true, lastPulledId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Exception encountered while invoking {{{Constants.Serilog.ConnectionVectorMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", nameof(SyncMessagesAsync), this);
-            return false;
+            return (false, null);
         }
     }
 
     public async Task<bool> SyncMessagesAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug($"Syncing source to target pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        _sourceToTargetSynchronized = await SyncMessagesAsync(_source, _target, cancellationToken);
+        (_sourceToTargetSynchronized, _sourceLastPulledId) = await SyncMessagesAsync(_source, _target, cancellationToken);
         _logger.LogDebug($"Syncing target to source pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        _targetToSourceSynchronized = await SyncMessagesAsync(_target, _source, cancellationToken);
+        (_targetToSourceSynchronized, _targetLastPulledId) = await SyncMessagesAsync(_target, _source, cancellationToken);
         var result = _sourceToTargetSynchronized && _targetToSourceSynchronized;
         if (!result)
         {

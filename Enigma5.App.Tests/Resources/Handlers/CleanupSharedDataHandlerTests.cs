@@ -18,34 +18,53 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
+using Enigma5.App.Data;
+using Enigma5.App.Models;
 using Enigma5.App.Resources.Commands;
-using Enigma5.App.Resources.Handlers;
+using Enigma5.App.Resources.Queries;
 using Enigma5.Tests.Base;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace Enigma5.App.Tests.Resources.Handlers;
 
-[ExcludeFromCodeCoverage]
-public class CleanupSharedDataHandlerTests : HandlerTestBase<CleanupSharedDataHandler>
+public class CleanupSharedDataHandlerTests
 {
-    [Fact]
-    public async Task ShouldCleanupOldSharedData()
+    private static SharedData Data(TimeSpan age) => new()
     {
-        // Arrange
-        var command = new CleanupSharedDataCommand(TimeSpan.FromDays(1));
+        Data = TestSignedData.SharedPayloadSignedWithKey3,
+        PublicKey = TestKeys.PublicKey3,
+        Timestamp = (DateTimeOffset.UtcNow - age).ToUnixTimeSeconds()
+    };
 
-        // Act
-        var result = await _handler.Handle(command);
+    [Fact]
+    public async Task Shared_data_older_than_the_retention_period_is_removed()
+    {
+        await using var node = await TestNode.StartAsync();
+        var old = Data(TimeSpan.FromDays(15));
+        var recent = Data(TimeSpan.FromDays(13));
+        await node.Database(async context =>
+        {
+            context.SharedData.AddRange(old, recent);
+            await context.SaveChangesAsync();
+        });
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<CommandResult<int>>();
-        result.Success.Should().BeTrue();
-        result.Value.Should().Be(1);
-        (await _dbContext.SharedData.FirstOrDefaultAsync(item => item.Tag == DataSeeder.DataFactory.SharedData.Tag)).Should().NotBeNull();
-        (await _dbContext.SharedData.FirstOrDefaultAsync(item => item.Tag == DataSeeder.DataFactory.OldSharedData.Tag)).Should().BeNull();
+        var result = await node.Send(new CleanupSharedDataCommand(TimeSpan.FromDays(14)));
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.Value);
+        Assert.Equal([recent.Tag], await node.Database(context => context.SharedData.Select(item => item.Tag).ToListAsync()));
+    }
+
+    [Fact]
+    public async Task Nothing_is_removed_when_nothing_is_old_enough()
+    {
+        await using var node = await TestNode.StartAsync();
+        await node.Database(async context =>
+        {
+            context.SharedData.Add(Data(TimeSpan.FromMinutes(1)));
+            await context.SaveChangesAsync();
+        });
+
+        Assert.Equal(0, (await node.Send(new CleanupSharedDataCommand(TimeSpan.FromDays(14)))).Value);
     }
 }

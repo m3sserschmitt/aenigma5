@@ -96,7 +96,7 @@ public partial class RoutingHub(
         return Ok(result.Value!);
     }
 
-    [Obsolete("Use PullPaged instead; Still here for compatibility with previous versions and will be removed in the future;")]
+    [Obsolete("Use Pull2 instead; Still here for compatibility with previous versions and will be removed in the future;")]
     [Authenticated]
     [BlacklistAuthorization]
     public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull()
@@ -128,10 +128,17 @@ public partial class RoutingHub(
         return Ok(await GetPendingMessagesAsync(ClientAddress, request.InfId, Constants.MessagesPageSize));
     }
 
+    [Obsolete("Use Cleanup2 instead; Still here for compatibility with previous versions and will be removed in the future;")]
     [Authenticated]
     [BlacklistAuthorization]
     public Task<InvocationResultDto<bool>> Cleanup()
     => ConfirmDeliveryAsync(nameof(Cleanup), null);
+
+    [Authenticated]
+    [ValidateModel]
+    [BlacklistAuthorization]
+    public Task<InvocationResultDto<bool>> Cleanup2(CleanupRequestDto request)
+    => ConfirmDeliveryAsync(nameof(Cleanup2), request.SupId);
 
     [ValidateModel]
     [BlacklistAuthorization]

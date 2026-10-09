@@ -18,596 +18,406 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Diagnostics.CodeAnalysis;
-using Autofac;
-using Enigma5.App.Data.Extensions;
 using Enigma5.App.Hubs;
+using Enigma5.App.Hubs.Sessions.Contracts;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
-using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Resources.Queries;
-using Enigma5.Crypto.Contracts;
-using Enigma5.Crypto.DataProviders;
-using Enigma5.Crypto.Extensions;
 using Enigma5.Tests.Base;
-using FluentAssertions;
-using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using NSubstitute;
-using NSubstitute.ExceptionExtensions;
-using NSubstitute.ReturnsExtensions;
-using Xunit;
 
 namespace Enigma5.App.Tests.Hubs;
 
-[ExcludeFromCodeCoverage]
-public class RoutingHubTests : AppTestBase
+// The node has key 1. The filters of the hub have tests of their own; here the methods are called directly.
+public class RoutingHubTests
 {
-    #region GENERATE_NONCE
+    private const string Connection = "connection-1";
 
-    [Fact]
-    public async Task ShouldGenerateNonce()
+    private const string OtherConnection = "connection-2";
+
+    private static string SingleError<T>(InvocationResultDto<T> result)
     {
-        // Arrange
-
-        // Act
-        var result = await _hub.GenerateToken();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<string>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().Be(_testNonce1);
-        _sessionManager.Received(1).AddPending(_testConnectionId1);
+        Assert.False(result.Success);
+        return Assert.Single(result.Errors).Message!;
     }
 
-    [Fact]
-    public async Task ShouldReturnErrorWhenNonceNotGenerated()
+    private static async Task Store(TestNode node, string destination, int count)
     {
-        // Arrange
-        _sessionManager.AddPending("").ReturnsNullForAnyArgs();
-
-        // Act
-        var result = await _hub.GenerateToken();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<string>>();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.NONCE_GENERATION_ERROR);
-    }    
-
-    #endregion GENERATE_NONCE
-
-    #region PULL
-
-    [Fact]
-    public async Task ShouldPullPendingMessages()
-    {
-        // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
-        var oldPendingMessage = DataSeeder.DataFactory.OldPendingMessage;
-        var deliveredPendingMessage = DataSeeder.DataFactory.DeliveredPendingMessage;
-        _hub.ClientAddress = pendingMessage!.Destination;
-
-        // Act
-        var result = await _hub.Pull();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<List<PendingMessageDto>>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().NotBeNull();
-        result.Data!.Count.Should().Be(3);
-        result.Data.FirstOrDefault(item =>
-        item.Destination == pendingMessage.Destination
-        && item.Content == pendingMessage.Content
-        && item.DateReceived == pendingMessage.DateCreated
-        && !item.Sent
-        && item.Uuid == pendingMessage.Uuid).Should().NotBeNull();
-        result.Data.FirstOrDefault(item =>
-        item.Destination == oldPendingMessage.Destination
-        && item.Content == oldPendingMessage.Content
-        && item.DateReceived == oldPendingMessage.DateCreated
-        && !item.Sent
-        && item.Uuid == oldPendingMessage.Uuid).Should().NotBeNull();
-        result.Data.FirstOrDefault(item =>
-        item.Destination == deliveredPendingMessage.Destination
-        && item.Content == deliveredPendingMessage.Content
-        && item.DateReceived == deliveredPendingMessage.DateCreated
-        && item.Sent
-        && item.Uuid == deliveredPendingMessage.Uuid).Should().NotBeNull();
-        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
-        pendingMessages.Should().HaveCount(3);
-        pendingMessages.Should().OnlyContain(item => item.Sent && item.DateSent != null);
-    }
-
-    [Fact]
-    public async Task ShouldNotPullPendingMessagesWhenClientAddressNull()
-    {
-        // Arrange
-        _hub.ClientAddress = null;
-
-        // Act
-        var result = await _hub.Pull();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<List<PendingMessageDto>>>();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Data.Should().BeNull();
-        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
-    }
-
-    [Fact]
-    public async Task ShouldNotPullWhenGetPendingMessagesQueryFails()
-    {
-        // Arrange
-        var mediator = Substitute.For<IMediator>();
-        var logger = Substitute.For<ILogger<RoutingHub>>();
-        mediator.Send(Arg.Any<GetPendingMessagesByDestinationQuery>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<List<PendingMessageDto>>()));
-        var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, mediator, logger)
+        for (var index = 0; index < count; index++)
         {
-            ClientAddress = PKey.Address2
-        };
-        ConfigureSignalRHub(hub);
-
-        // Act
-        var result = await hub.Pull();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
-        result.Data.Should().BeNull();
-        logger.ReceivedWithAnyArgs(1).LogError("");
+            Assert.True((await node.Send(new CreatePendingMessageCommand(destination, $"content {index}", null))).Success);
+        }
     }
 
-    #endregion PULL
+    private static Task<int> Confirmed(TestNode node) => node.Database(context => context.Messages.CountAsync(message => message.Sent));
 
-    #region CLEANUP
+    private static Task<List<string>> NeighborsOfTheNode(TestNode node)
+    => node.Database(async context => (await node.Send(new Enigma5.App.Resources.Queries.GetNeighborAddressesQuery())).Value!.ToList());
 
     [Fact]
-    public async Task ShouldCleanup()
+    public async Task GenerateToken_and_Authenticate_give_the_connection_a_session()
     {
-        // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
-        _hub.ClientAddress = pendingMessage!.Destination;
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
 
-        // Act
-        var result = await _hub.Cleanup();
+        var token = await connection.Hub.GenerateToken();
+        var signedIn = await connection.Hub.Authenticate(new AuthenticationRequestDto(TestKeys.PublicKey3, TestSignatures.SignChallenge(TestKeys.PrivateKey3, token.Data!)));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
-        pendingMessages.Should().BeEmpty();
+        Assert.True(token.Success);
+        Assert.True(signedIn.Success);
+        Assert.True(signedIn.Data);
+        Assert.Equal(Connection, await node.Get<ISessionManager>().TryGetConnectionIdAsync(TestKeys.Address3));
     }
 
     [Fact]
-    public async Task ShouldNotCleanupWhenClientAddressNull()
+    public async Task Authenticate_refuses_a_token_signed_with_another_key()
     {
-        // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
-        _hub.ClientAddress = null;
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+        var token = await connection.Hub.GenerateToken();
 
-        // Act
-        var result = await _hub.Cleanup();
+        var result = await connection.Hub.Authenticate(new AuthenticationRequestDto(TestKeys.PublicKey3, TestSignatures.SignChallenge(TestKeys.PrivateKey2, token.Data!)));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
-        result.Data.Should().BeFalse();
-        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
-        pendingMessages.Should().HaveCount(3);
+        Assert.Equal(InvocationErrors.INVALID_NONCE_SIGNATURE, SingleError(result));
+        Assert.Null(await node.Get<ISessionManager>().TryGetConnectionIdAsync(TestKeys.Address3));
     }
 
     [Fact]
-    public async Task ShouldReturnErrorWhenRemoveMessagesCommandFails()
+    public async Task Authenticate_refuses_a_connection_that_asked_for_no_token()
     {
-        // Arrange
-        var pendingMessage = DataSeeder.DataFactory.PendingMessage;
-        var mediator = Substitute.For<IMediator>();
-        var logger = Substitute.For<ILogger<RoutingHub>>();
-        mediator.Send(Arg.Any<RemoveMessagesCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<int>()));
-        var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, mediator, logger)
-        {
-            ClientAddress = PKey.Address2
-        };
-        ConfigureSignalRHub(hub);
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
 
-        // Act
-        var result = await hub.Cleanup();
+        var result = await connection.Hub.Authenticate(new AuthenticationRequestDto(TestKeys.PublicKey3, TestSignatures.SignChallenge(TestKeys.PrivateKey3, "bm8gdG9rZW4=")));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.INTERNAL_ERROR);
-        result.Data.Should().BeFalse();
-        logger.ReceivedWithAnyArgs(1).LogError("");
-        var pendingMessages = await _dbContext.Messages.Where(item => item.Destination == pendingMessage.Destination).ToListAsync();
-        pendingMessages.Should().HaveCount(3);
-    }
-
-    #endregion CLEANUP
-
-    #region AUTHENTICATE
-
-    [Fact]
-    public async Task ShouldAuthenticate()
-    {
-        // Arrange
-        var request = new AuthenticationRequestDto(PKey.PublicKey1, "test-signature");
-
-        // Act
-        var result = await _hub.Authenticate(request);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<bool>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        _sessionManager.Received(1).Authenticate(_testConnectionId1, request.PublicKey!, request.Signature!);
+        Assert.Equal(InvocationErrors.INVALID_NONCE_SIGNATURE, SingleError(result));
     }
 
     [Fact]
-    public async Task ShouldReturnErrorWhenAuthenticationFails()
+    public async Task GetLocalVertex_returns_the_vertex_of_the_node()
     {
-        // Arrange
-        var request = new AuthenticationRequestDto(PKey.PublicKey1, "test-signature");
-        _sessionManager.Authenticate("", "", "").ReturnsForAnyArgs(false);
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
 
-        // Act
-        var result = await _hub.Authenticate(request);
+        var result = await connection.Hub.GetLocalVertex();
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<bool>>();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.INVALID_NONCE_SIGNATURE);
-    }
-
-    #endregion AUTHENTICATE
-
-    #region SIGN_NONCE
-
-    [Fact]
-    public async Task ShouldSignNonce()
-    {
-        // Arrange
-        var request = DataSeeder.ModelsFactory.CreateSignatureRequest();
-
-        // Act
-        var result = await _hub.SignToken(request);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<SignatureDto>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().NotBeNull();
-        result.Data!.PublicKey.Should().Be(_certificateManager.PublicKey);
-        result.Data.SignedData.IsValidBase64().Should().BeTrue();
-        Convert.FromBase64String(result.Data.SignedData).GetDataFromSignature(_certificateManager.PublicKey).Should().Equal(Convert.FromBase64String(request.Nonce!));
-    }
-
-    #endregion SIGN_NONCE
-
-    #region BROADCAST
-
-    [Fact]
-    public async Task ShouldBroadcast()
-    {
-        // Arrange
-        var vertex = _container.ResolveAdjacentVertex();
-        var request = vertex.ToVertexBroadcast();
-
-        // Act
-        var result = await _hub.Broadcast(request);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<bool>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        _graph.LocalVertex.Should().NotBeNull();
-        _graph.Vertices.Count.Should().Be(2);
-        _graph.Vertices.TryGetValue(_graph.LocalVertex!, out Enigma5.App.Data.Vertex? _).Should().BeTrue();
-        _graph.Vertices.TryGetValue(vertex, out Enigma5.App.Data.Vertex? _).Should().BeTrue();
-        _graph.LocalVertex!.Neighborhood.Neighbors.Should().HaveCount(1);
-        _graph.LocalVertex!.Neighborhood.Neighbors.Should().Contain(vertex.Neighborhood.Address);
-        _hub.Clients.Received(2).Client(_testConnectionId1);
-        await _hub.Clients.Client(_testConnectionId1).ReceivedWithAnyArgs(2).SendAsync("");
+        Assert.True(result.Success);
+        Assert.Equal(TestKeys.Address1, result.Data!.Neighborhood!.Address);
     }
 
     [Fact]
-    public async Task ShouldNotBroadcastWithInvalidKey()
+    public async Task Pull_and_Pull2_return_the_messages_of_the_caller_only()
     {
-        // Arrange
-        var vertex = _container.ResolveAdjacentVertex();
-        var request = new VertexBroadcastRequestDto("invalid-key", vertex.SignedData!);
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 3);
+        await Store(node, TestKeys.Address2, 2);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
 
-        // Act
-        var result = await _hub.Broadcast(request);
+#pragma warning disable CS0618 // The old method is still served to old clients.
+        var all = await connection.Hub.Pull();
+#pragma warning restore CS0618
+        var page = await connection.Hub.Pull2(new PullRequestDto());
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<bool>>();
-        result.Success.Should().BeFalse();
-        result.Data.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.BROADCAST_HANDLING_ERROR);
-        _graph.Vertices.Count.Should().Be(1);
-        _graph.Vertices.TryGetValue(vertex, out Enigma5.App.Data.Vertex? _).Should().BeFalse();
-        _hub.Clients.DidNotReceiveWithAnyArgs().Client("");
+        Assert.Equal(3, all.Data!.Count);
+        Assert.Equal(3, page.Data!.Count);
+        Assert.All(page.Data, message => Assert.Equal(TestKeys.Address3, message.Destination));
     }
 
     [Fact]
-    public async Task ShouldNotBroadcastWithInvalidSignedData()
+    public async Task Pull2_continues_after_the_given_message()
     {
-        // Arrange
-        var request = new VertexBroadcastRequestDto(PKey.PublicKey1, "invalid-signed-data");
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 3);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
+        var first = await connection.Hub.Pull2(new PullRequestDto());
 
-        // Act
-        var result = await _hub.Broadcast(request);
+        var rest = await connection.Hub.Pull2(new PullRequestDto(first.Data![0].Id));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<bool>>();
-        result.Success.Should().BeFalse();
-        result.Data.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.BROADCAST_HANDLING_ERROR);
-        _graph.Vertices.Count.Should().Be(1);
-        _hub.Clients.DidNotReceiveWithAnyArgs().Client("");
+        Assert.Equal(first.Data.Skip(1).Select(message => message.Id), rest.Data!.Select(message => message.Id));
     }
 
     [Fact]
-    public async Task ShouldReturnErrorOnBroadcastWhenSendAsyncFails()
+    public async Task Pull_Pull2_Cleanup_and_Cleanup2_fail_when_the_caller_has_no_address()
     {
-        // Arrange
-        var singleClientProxy = Substitute.For<ISingleClientProxy>();
-        singleClientProxy.SendAsync("", default).ThrowsForAnyArgs(new Exception("client not reachable"));
-        _hub.Clients.Client(_testConnectionId1).Returns(singleClientProxy);
-        var vertex = _container.ResolveAdjacentVertex();
-        var request = vertex.ToVertexBroadcast();
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
 
-        // Act
-        var result = await _hub.Broadcast(request);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<bool>>();
-        result.Success.Should().BeFalse();
-        result.Data.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.BROADCAST_FORWARDING_ERROR);
-    }
-
-    #endregion BROADCAST
-
-    #region TRIGGER_BROADCAST
-        
-    [Fact]
-    public async Task ShouldTriggerBroadcast()
-    {
-        // Arrange
-        var request = new TriggerBroadcastRequestDto {
-            NewAddresses = [ PKey.Address1 ]
-        };
-
-        // Act
-        var result = await _hub.TriggerBroadcast(request);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<bool>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        _graph.LocalVertex.Should().NotBeNull();
-        _graph.Vertices.Count.Should().Be(1);
-        _graph.Vertices.TryGetValue(_graph.LocalVertex!, out Enigma5.App.Data.Vertex? _).Should().BeTrue();
-        _graph.LocalVertex!.Neighborhood.Neighbors.Should().HaveCount(1);
-        _graph.LocalVertex!.Neighborhood.Neighbors.Should().Contain(PKey.Address1);
+#pragma warning disable CS0618
+        Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Pull()));
+        Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Cleanup()));
+#pragma warning restore CS0618
+        Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Pull2(new PullRequestDto())));
+        Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Cleanup2(new CleanupRequestDto())));
     }
 
     [Fact]
-    public async Task ShouldTriggerBroadcastWithoutNewAddress()
+    public async Task Cleanup_confirms_nothing_on_a_connection_that_has_pulled_nothing()
     {
-        // Arrange
-        var request = new TriggerBroadcastRequestDto();
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 3);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
 
-        // Act
-        var result = await _hub.TriggerBroadcast(request);
+#pragma warning disable CS0618
+        var old = await connection.Hub.Cleanup();
+#pragma warning restore CS0618
+        var current = await connection.Hub.Cleanup2(new CleanupRequestDto(long.MaxValue));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<bool>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        _graph.LocalVertex.Should().NotBeNull();
-        _graph.Vertices.Count.Should().Be(1);
-        _graph.Vertices.TryGetValue(_graph.LocalVertex!, out Enigma5.App.Data.Vertex? _).Should().BeTrue();
-        _graph.LocalVertex.Should().NotBeNull();
-        _graph.LocalVertex!.Neighborhood.Neighbors.Should().BeEmpty();
+        Assert.True(old.Success);
+        Assert.True(current.Success);
+        Assert.Equal(0, await Confirmed(node));
     }
 
     [Fact]
-    public async Task ShouldNotTriggerBroadcastWhenAddAdjacencyCommandFails()
+    public async Task Cleanup_confirms_the_messages_the_connection_has_pulled_and_none_that_came_later()
     {
-        // Arrange
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<UpdateLocalAdjacencyCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultFailure<VertexBroadcastRequestDto>()));
-        var logger = Substitute.For<ILogger<RoutingHub>>();
-        var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, mediator, logger);
-        ConfigureSignalRHub(hub);
-        var request = new TriggerBroadcastRequestDto {
-            NewAddresses = [ PKey.Address1 ]
-        };
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 2);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
+        await connection.Hub.Pull2(new PullRequestDto());
+        await Store(node, TestKeys.Address3, 1);
 
-        // Act
-        var result = await hub.TriggerBroadcast(request);
+#pragma warning disable CS0618
+        var result = await connection.Hub.Cleanup();
+#pragma warning restore CS0618
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<bool>>();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.BROADCAST_TRIGGERING_WARNING);
-        result.Data.Should().BeTrue();
-        _graph.LocalVertex.Should().NotBeNull();
-        _graph.Vertices.Count.Should().Be(1);
-        _graph.Vertices.TryGetValue(_graph.LocalVertex!, out Enigma5.App.Data.Vertex? _).Should().BeTrue();
-        _graph.LocalVertex!.Neighborhood.Neighbors.Should().BeEmpty();
-        hub.Clients.DidNotReceiveWithAnyArgs().Client("");
-        logger.ReceivedWithAnyArgs(1).LogWarning("");
-    }
-
-    #endregion TRIGGER_BROADCAST
-
-    #region ROUTE_MESSAGE
-
-    [Fact]
-    public async Task ShouldRouteMessage()
-    {
-        // Arrange
-        _hub.Content = [0x01, 0x02, 0x03];
-        _hub.DestinationConnectionId = _testConnectionId2;
-        _hub.Next = PKey.Address2;
-
-        // Act
-        var result = await _hub.RouteMessage(new());
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<bool>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        _hub.Clients.Received(1).Client(_testConnectionId2);
-        await _hub.Clients.Client(_testConnectionId2).ReceivedWithAnyArgs(1).SendAsync("");
-        var pendingMessage = await _dbContext.Messages.FirstOrDefaultAsync(item => item.Destination == PKey.Address2 && item.Content == "AQID");
-        pendingMessage.Should().NotBeNull();
+        Assert.True(result.Success);
+        Assert.Equal(2, await Confirmed(node));
     }
 
     [Fact]
-    public async Task ShouldStorePendingMessageWhenDestinationConnectionIdNull()
+    public async Task Cleanup2_confirms_up_to_the_given_message()
     {
-        // Arrange
-        _hub.Content = [0x01, 0x02, 0x03];
-        _hub.Next = PKey.Address2;
-        _hub.DestinationConnectionId = null;
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 3);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
+        var pulled = await connection.Hub.Pull2(new PullRequestDto());
 
-        // Act
-        var result = await _hub.RouteMessage(new());
+        var result = await connection.Hub.Cleanup2(new CleanupRequestDto(pulled.Data![1].Id));
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeOfType<SuccessResultDto<bool>>();
-        result.Success.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-        result.Data.Should().BeTrue();
-        var pendingMessage = await _dbContext.Messages.FirstOrDefaultAsync(item => item.Destination == PKey.Address2 && item.Content == "AQID");
-        pendingMessage.Should().NotBeNull();
-        _hub.Clients.DidNotReceiveWithAnyArgs().Client("");
+        Assert.True(result.Success);
+        Assert.Equal(2, await Confirmed(node));
     }
 
     [Fact]
-    public async Task ShouldNotRouteMessageWhenDestinationConnectionIdAndContentNull()
+    public async Task Cleanup2_never_confirms_beyond_what_the_connection_has_pulled()
     {
-        // Arrange
-        _hub.DestinationConnectionId = null;
-        _hub.Content = null;
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 2);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
+        await connection.Hub.Pull2(new PullRequestDto());
+        await Store(node, TestKeys.Address3, 2);
 
-        // Act
-        var result = await _hub.RouteMessage(new());
+        var result = await connection.Hub.Cleanup2(new CleanupRequestDto(long.MaxValue));
 
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ErrorResultDto<bool>>();
-        result.Success.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors.Single().Message.Should().Be(InvocationErrors.ONION_ROUTING_FAILED);
-        result.Data.Should().BeFalse();
+        Assert.True(result.Success);
+        Assert.Equal(2, await Confirmed(node));
     }
 
     [Fact]
-    public async Task ShouldStorePendingMessageWhenSendAsyncFails()
+    public async Task Broadcast_from_a_connected_node_that_lists_this_node_makes_it_a_neighbor_and_sends_it_the_new_local_vertex()
     {
-        // Arrange
-        var singleClientProxy = Substitute.For<ISingleClientProxy>();
-        singleClientProxy.SendAsync("", default).ThrowsForAnyArgs(new Exception("client not reachable"));
-        _hub.Clients.Client(_testConnectionId2).Returns(singleClientProxy);
-        _hub.Content = [0x01, 0x02, 0x03];
-        _hub.Next = PKey.Address2;
-        _hub.DestinationConnectionId = _testConnectionId2;
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn(Connection, TestKeys.PrivateKey2);
+        await using var connection = new HubConnection(node, Connection);
 
-        // Act
-        var result = await _hub.RouteMessage(new());
+        var result = await connection.Hub.Broadcast(TestVertices.Signed(TestKeys.PrivateKey2, TestKeys.Address1));
 
-        // Assert
-        var pendingMessage = await _dbContext.Messages.FirstOrDefaultAsync(item => item.Destination == PKey.Address2 && item.Content == "AQID");
-        pendingMessage.Should().NotBeNull();
+        Assert.True(result.Success);
+        Assert.Contains(TestKeys.Address2, await NeighborsOfTheNode(node));
+        // The changed local vertex and the received one are sent to the new neighbor, in no fixed order.
+        (string ConnectionId, string Method, object? Argument)[] sent = [await connection.NextSent(), await connection.NextSent()];
+        Assert.All(sent, item => Assert.Equal((Connection, nameof(RoutingHub.Broadcast)), (item.ConnectionId, item.Method)));
+        var owners = sent.Select(item => Assert.IsType<VertexBroadcastRequestDto>(item.Argument).PublicKey).ToList();
+        Assert.Contains(TestKeys.PublicKey1, owners);
+        Assert.Contains(TestKeys.PublicKey2, owners);
     }
 
-    #endregion ROUTE_MESSAGE
-
-    #region ON_DISCONNECTED
-
+    // The graph does not take such a vertex, and the hub has nothing to pass on. The caller is not told.
     [Fact]
-    public async Task ShouldLogOutWhenClientDisconnected()
+    public async Task Broadcast_of_a_vertex_that_does_not_match_its_signature_changes_nothing_and_sends_nothing()
     {
-        // Arrange
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<UpdateLocalAdjacencyCommand>()).ReturnsForAnyArgs(Task.FromResult(CommandResult.CreateResultSuccess(new VertexBroadcastRequestDto())));
-        var graph = Substitute.For<Enigma5.App.Data.NetworkGraph>(_container.Resolve<IEnvelopeSigner>(), _certificateManager, _configuration, Substitute.For<ILogger<Enigma5.App.Data.NetworkGraph>>());
-        graph.NeighboringAddresses.Returns([PKey.Address1]);
-        var hub = new RoutingHub(_sessionManager, _certificateManager, graph, mediator, Substitute.For<ILogger<RoutingHub>>());
-        ConfigureSignalRHub(hub);
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn(Connection, TestKeys.PrivateKey2);
+        await using var connection = new HubConnection(node, Connection);
+        var signedByKey3 = TestVertices.Signed(TestKeys.PrivateKey3, TestKeys.Address1);
 
-        // Act
-        await hub.OnDisconnectedAsync(null);
+        var result = await connection.Hub.Broadcast(new VertexBroadcastRequestDto(TestKeys.PublicKey2, signedByKey3.SignedData));
 
-        // Assert
-        _sessionManager.Received(1).Remove(_testConnectionId1, out Arg.Any<string?>());
-        hub.Clients.Received(1).Client(_testConnectionId1);
-        await hub.Clients.Client(_testConnectionId1).ReceivedWithAnyArgs(1).SendAsync("");
+        Assert.True(result.Success);
+        Assert.Empty(await NeighborsOfTheNode(node));
+        await Task.Delay(100);
+        Assert.Empty(connection.Sent);
     }
 
     [Fact]
-    public async Task ShouldLogWarningWhenUpdateAdjacencyCommandFails()
+    public async Task Broadcast_without_a_public_key_fails()
     {
-        // Arrange
-        var logger = Substitute.For<ILogger<RoutingHub>>();
-        _sessionManager.Remove("", out string? _).ReturnsForAnyArgs(false);
-        var hub = new RoutingHub(_sessionManager, _certificateManager, _graph, _mediator, logger);
-        ConfigureSignalRHub(hub);
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
 
-        // Act
-        await hub.OnDisconnectedAsync(null);
+        var result = await connection.Hub.Broadcast(new VertexBroadcastRequestDto("not a key", TestVertices.Signed(TestKeys.PrivateKey2).SignedData));
 
-        // Assert
-        _sessionManager.Received(1).Remove(_testConnectionId1, out Arg.Any<string?>());
-        hub.Clients.DidNotReceiveWithAnyArgs().Client("");
-        logger.ReceivedWithAnyArgs(2).LogWarning("");
+        Assert.Equal(InvocationErrors.BROADCAST_HANDLING_ERROR, SingleError(result));
     }
 
-    #endregion ON_DISCONNECTED
+    [Fact]
+    public async Task TriggerBroadcast_adds_a_connected_node_as_neighbor_and_sends_it_the_local_vertex()
+    {
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn(OtherConnection, TestKeys.PrivateKey2);
+        await using var connection = new HubConnection(node, Connection);
+
+        var result = await connection.Hub.TriggerBroadcast(new TriggerBroadcastRequestDto([TestKeys.Address2]));
+
+        Assert.True(result.Success);
+        Assert.Contains(TestKeys.Address2, await NeighborsOfTheNode(node));
+        var sent = await connection.NextSent();
+        Assert.Equal(OtherConnection, sent.ConnectionId);
+        Assert.Equal(nameof(RoutingHub.Broadcast), sent.Method);
+    }
+
+    [Fact]
+    public async Task TriggerBroadcast_does_not_add_an_address_that_is_not_connected()
+    {
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+
+        var result = await connection.Hub.TriggerBroadcast(new TriggerBroadcastRequestDto([TestKeys.Address2]));
+
+        Assert.True(result.Success);
+        Assert.Empty(await NeighborsOfTheNode(node));
+        await Task.Delay(100);
+        Assert.Empty(connection.Sent);
+    }
+
+    [Fact]
+    public async Task TriggerBroadcast_with_something_that_is_not_an_address_reports_it_and_sends_nothing()
+    {
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+
+        var result = await connection.Hub.TriggerBroadcast(new TriggerBroadcastRequestDto(["not an address"]));
+
+        Assert.Equal(InvocationErrors.BROADCAST_TRIGGERING_WARNING, SingleError(result));
+        Assert.True(result.Data);
+        Assert.Empty(connection.Sent);
+    }
+
+    [Fact]
+    public async Task RouteMessage_stores_the_parsed_onion_for_its_next_address()
+    {
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.Next = TestKeys.Address3;
+        connection.Hub.Content = [1, 2, 3];
+
+        var result = await connection.Hub.RouteMessage(new RoutingRequestDto(["unused"]));
+
+        Assert.True(result.Success);
+        var stored = await node.Database(context => context.Messages.SingleAsync());
+        Assert.Equal(TestKeys.Address3, stored.Destination);
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), stored.Content);
+        Assert.False(stored.Sent);
+        Assert.Empty(connection.Sent);
+    }
+
+    [Fact]
+    public async Task RouteMessage_stores_the_message_under_the_uuid_of_the_request_and_only_once()
+    {
+        await using var node = await TestNode.StartAsync();
+        var uuid = Guid.NewGuid().ToString();
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.Next = TestKeys.Address3;
+        connection.Hub.Content = [1, 2, 3];
+        connection.Hub.Uuid = uuid;
+
+        var first = await connection.Hub.RouteMessage(new RoutingRequestDto(["unused"], uuid));
+        var second = await connection.Hub.RouteMessage(new RoutingRequestDto(["unused"], uuid));
+
+        Assert.True(first.Success);
+        Assert.True(second.Success);
+        Assert.Equal(uuid, (await node.Database(context => context.Messages.SingleAsync())).Uuid);
+    }
+
+    [Fact]
+    public async Task RouteMessage_also_sends_the_message_with_its_uuid_to_a_connected_destination()
+    {
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.Next = TestKeys.Address3;
+        connection.Hub.Content = [1, 2, 3];
+        connection.Hub.DestinationConnectionId = OtherConnection;
+
+        var result = await connection.Hub.RouteMessage(new RoutingRequestDto(["unused"]));
+
+        Assert.True(result.Success);
+        var stored = await node.Database(context => context.Messages.SingleAsync());
+        var sent = await connection.NextSent();
+        Assert.Equal(OtherConnection, sent.ConnectionId);
+        Assert.Equal(nameof(RoutingHub.RouteMessage), sent.Method);
+        var request = Assert.IsType<RoutingRequestDto>(sent.Argument);
+        Assert.Equal([Convert.ToBase64String([1, 2, 3])], request.Payloads!);
+        Assert.Equal(stored.Uuid, request.Uuid);
+    }
+
+    [Fact]
+    public async Task RouteMessage_fails_when_no_onion_was_parsed()
+    {
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+
+        var result = await connection.Hub.RouteMessage(new RoutingRequestDto(["unused"]));
+
+        Assert.Equal(InvocationErrors.ONION_ROUTING_FAILED, SingleError(result));
+        Assert.Equal(0, await node.Database(context => context.Messages.CountAsync()));
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_keeps_the_local_endpoint_and_the_impersonation_header_of_the_connection()
+    {
+        await using var node = await TestNode.StartAsync();
+        await using var connection = new HubConnection(node, Connection);
+        connection.HttpContext.Connection.LocalIpAddress = System.Net.IPAddress.Loopback;
+        connection.HttpContext.Connection.LocalPort = 8080;
+        connection.HttpContext.Request.Headers[Common.Constants.XImpersonateServiceHeaderKey] = TestKeys.Address2;
+
+        await connection.Hub.OnConnectedAsync();
+
+        var items = connection.Hub.Context.Items;
+        Assert.Equal(System.Net.IPAddress.Loopback, items[Common.Constants.HubConnectionLocalIpKey]);
+        Assert.Equal(8080, items[Common.Constants.HubConnectionLocalPortKey]);
+        Assert.Equal(TestKeys.Address2, items[Common.Constants.XImpersonateServiceHeaderKey]?.ToString());
+    }
+
+    [Fact]
+    public async Task OnDisconnectedAsync_ends_the_session_and_removes_the_caller_from_the_neighbors()
+    {
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn(Connection, TestKeys.PrivateKey2);
+        await using var connection = new HubConnection(node, Connection);
+        Assert.True((await connection.Hub.Broadcast(TestVertices.Signed(TestKeys.PrivateKey2, TestKeys.Address1))).Success);
+
+        await connection.Hub.OnDisconnectedAsync(null);
+
+        Assert.Null(await node.Get<ISessionManager>().TryGetConnectionIdAsync(TestKeys.Address2));
+        Assert.DoesNotContain(TestKeys.Address2, await NeighborsOfTheNode(node));
+    }
+
+    [Fact]
+    public async Task OnDisconnectedAsync_of_a_connection_without_session_changes_nothing()
+    {
+        await using var node = await TestNode.StartAsync();
+        await node.SignIn(OtherConnection, TestKeys.PrivateKey2);
+        await using var connection = new HubConnection(node, Connection);
+
+        await connection.Hub.OnDisconnectedAsync(null);
+
+        Assert.Equal(OtherConnection, await node.Get<ISessionManager>().TryGetConnectionIdAsync(TestKeys.Address2));
+    }
 }

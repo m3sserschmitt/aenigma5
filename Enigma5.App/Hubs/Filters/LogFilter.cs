@@ -31,7 +31,7 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
     public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         _logger.LogDebug(
-            $"Invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{nameof(Common.Constants.Serilog.ConnectionIdKey)}}} with the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
+            $"Invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} with the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
             invocationContext.HubMethodName,
             invocationContext.Context.ConnectionId,
             invocationContext.HubMethodArguments
