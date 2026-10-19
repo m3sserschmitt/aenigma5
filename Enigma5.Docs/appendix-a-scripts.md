@@ -225,10 +225,10 @@ The package installs the tools of Table A.4 to `/usr/bin`. Each has a manual pag
 | **Reverse proxy** | |
 | `aenigma-proxy` | Installs Apache as a reverse proxy for a domain in front of the node, including the WebSocket connections of the hub. |
 | **VPN** | |
-| `aenigma-vpn-server` | Sets up an OpenVPN server instance with its own certificate authority. |
+| `aenigma-vpn-server` | Sets up an OpenVPN server instance with its own certificate authority. Its tunnel interface gets a fixed name, `tun-` and 11 characters of the SHA-256 hash of the domain unless given with `-f`. |
 | `aenigma-vpn-server-client` | Issues a client certificate on the server. |
 | `aenigma-vpn-server-host` | Gives a VPN client a fixed address and a host name. |
-| `aenigma-vpn-dns` | Sets up `dnsmasq` to answer DNS queries inside the VPN. `dnsmasq` binds the tunnel interface whenever it appears (`bind-dynamic`), so it does not depend on starting after OpenVPN. |
+| `aenigma-vpn-dns` | Sets up `dnsmasq` to answer DNS queries inside the VPN, on the tunnel interface named in the server's configuration. `dnsmasq` binds the interface whenever it appears (`bind-dynamic`), so it does not depend on starting after OpenVPN. |
 | `aenigma-vpn-client` | Configures and starts the VPN on a client machine. |
 
 The three key tools change the key file in place, through a temporary file, so that a failed or

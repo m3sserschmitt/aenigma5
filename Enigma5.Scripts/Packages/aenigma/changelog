@@ -20,6 +20,11 @@ aenigma (5.1.1) unstable; urgency=medium
     OpenVPN restart. Run aenigma-vpn-dns again on existing VPN servers.
     aenigma-vpn-dns no longer ends with exit status 1 when no CNAME is
     given.
+  * aenigma-vpn-server gives the tunnel interface a fixed name (option -f;
+    by default tun- and 11 characters of the SHA-256 hash of the domain),
+    and aenigma-vpn-dns takes the interface from the server's
+    configuration, so -f is optional there. Servers set up before keep
+    "dev tun"; aenigma-vpn-dns(8) explains how to give them a fixed name.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 

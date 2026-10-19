@@ -28,13 +28,15 @@ EASYRSA_PKI="$EASYRSA_DIRECTORY/pki"
 export EASYRSA_PKI
 
 show_help() {
-    echo "Usage: $0 -d DOMAIN -p PORT -a ADDRESS -n NETMASK"
+    echo "Usage: $0 -d DOMAIN -p PORT -a ADDRESS -n NETMASK [-f INTERFACE]"
     echo ""
     echo "Options:"
     echo "  -d DOMAIN       The domain name for the server (e.g., example.com)"
     echo "  -p PORT         VPN port (e.g., 1194)"
     echo "  -a ADDRESS      VPN network address (e.g., 10.8.0.0)"
     echo "  -n NETMASK      VPN network netmask (e.g., 255.255.255.0)"
+    echo "  [-f INTERFACE]  (Optional) Name of the tunnel interface, at most 15 characters"
+    echo "                  (default: tun- and 11 characters of the SHA-256 hash of DOMAIN)"
     echo ""
     echo "Example:"
     echo "  sudo $0 -d example.com -p 1194 -a 10.8.0.0 -n 255.255.255.0"
@@ -47,12 +49,13 @@ if [ "$#" -lt 8 ]; then
     show_help
 fi
 
-while getopts "d:p:a:n:h" opt; do
+while getopts "d:p:a:n:f:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
         p) PORT=$OPTARG ;;
         a) ADDRESS=$OPTARG ;;
         n) NETMASK=$OPTARG ;;
+        f) INTERFACE=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
@@ -62,6 +65,23 @@ if [[ ! -v DOMAIN || ! -v PORT || ! -v ADDRESS || ! -v NETMASK ]]; then
     echo "Error: DOMAIN, PORT, ADDRESS, NETMASK are required."
     show_help
 fi
+
+# The tunnel interface gets a fixed name, so that other tools (aenigma-vpn-dns) and the operator can refer
+# to it. With "dev tun" the kernel would number the interfaces of all servers in the order they start.
+if [[ ! -v INTERFACE ]]; then
+    INTERFACE="tun-$(printf '%s' "$DOMAIN" | sha256sum | cut -c1-11)"
+fi
+if [[ ${#INTERFACE} -gt 15 || ! "$INTERFACE" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    echo "ERROR: '$INTERFACE' is not a valid interface name: at most 15 letters, digits, '.', '_' or '-'."
+    exit 1
+fi
+for OTHER_CONF in "$OPENVPN_DIRECTORY"/*.conf; do
+    [[ -f "$OTHER_CONF" && "$OTHER_CONF" != "$OPENVPN_DIRECTORY/$DOMAIN.conf" ]] || continue
+    if grep -qx "dev $INTERFACE" "$OTHER_CONF"; then
+        echo "ERROR: The interface name '$INTERFACE' is already used by $OTHER_CONF. Choose another one with -f."
+        exit 1
+    fi
+done
 
 LOG_DIRECTORY="/var/log/openvpn/$DOMAIN"
 CLIENT_CONFIGS_DIRECTORY="$OPENVPN_DIRECTORY/ccd/$DOMAIN"
@@ -123,7 +143,8 @@ chmod -v 600 "$SERVER_DIRECTORY/ta.key"
 cat > "$OPENVPN_DIRECTORY/$DOMAIN.conf" << CONF
 port $PORT
 proto udp
-dev tun
+dev $INTERFACE
+dev-type tun
 tun-mtu 1378
 
 ca   $OPENVPN_DIRECTORY/ca.crt
@@ -164,3 +185,4 @@ echo "  Cert/key/ta.key:  $SERVER_DIRECTORY/"
 echo "  CCD directory:    $CLIENT_CONFIGS_DIRECTORY/"
 echo "  Logs/status:      $LOG_DIRECTORY/"
 echo "  Service:          openvpn@${DOMAIN}"
+echo "  Tunnel interface: $INTERFACE"
