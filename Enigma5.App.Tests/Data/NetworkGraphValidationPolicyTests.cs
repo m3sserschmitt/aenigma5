@@ -49,6 +49,28 @@ public class NetworkGraphValidationPolicyTests
         Assert.False(policy.Validate(vertex));
     }
 
+    // Signed vertices always carry the current time, so these are built unsigned: the age is checked first.
+    private static Vertex Dated(DateTimeOffset? lastUpdate) => new(new([], TestKeys.Address1, null, null, lastUpdate), null, null);
+
+    [Fact]
+    public void A_vertex_without_a_time_is_expired()
+    {
+        Assert.False(_policy.IsNotExpired(Dated(null)));
+    }
+
+    [Fact]
+    public void A_vertex_dated_further_ahead_than_the_clock_tolerance_is_expired()
+    {
+        Assert.False(_policy.IsNotExpired(Dated(DateTimeOffset.UtcNow.AddHours(1))));
+        Assert.False(_policy.IsNotExpired(Dated(DateTimeOffset.UtcNow.AddYears(50))));
+    }
+
+    [Fact]
+    public void A_vertex_dated_a_little_ahead_is_not_expired()
+    {
+        Assert.True(_policy.IsNotExpired(Dated(DateTimeOffset.UtcNow.AddMinutes(1))));
+    }
+
     [Fact]
     public async Task A_vertex_that_lists_itself_is_not_valid()
     {

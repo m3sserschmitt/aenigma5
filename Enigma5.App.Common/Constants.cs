@@ -30,6 +30,9 @@ public static class Constants
 
     public static readonly TimeSpan DefaultVertexLifetime = TimeSpan.FromMinutes(30);
 
+    // How far ahead of the node's clock the time of a received vertex may be (Enigma5.Docs, Chapter 10).
+    public static readonly TimeSpan MaxVertexClockSkew = TimeSpan.FromMinutes(5);
+
     // How long a vertex that no other vertex lists is kept before a cleanup may remove it.
     public static readonly TimeSpan DefaultUnlistedVertexGracePeriod = TimeSpan.FromMinutes(6);
 

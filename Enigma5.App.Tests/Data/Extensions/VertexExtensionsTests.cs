@@ -42,10 +42,35 @@ public class VertexExtensionsTests
     }
 
     [Fact]
-    public void LastUpdateExceeded_is_false_without_a_vertex_or_a_time()
+    public void LastUpdateExceeded_is_false_without_a_vertex()
     {
         Assert.False(((Vertex?)null).LastUpdateExceeded(TimeSpan.Zero));
-        Assert.False(Create(null).LastUpdateExceeded(TimeSpan.Zero));
+    }
+
+    // Otherwise a vertex without a time would never expire.
+    [Fact]
+    public void LastUpdateExceeded_is_true_for_a_vertex_without_a_time()
+    {
+        Assert.True(Create(null).LastUpdateExceeded(TimeSpan.FromMinutes(30)));
+    }
+
+    #endregion
+
+    #region LastUpdateInFuture
+
+    [Fact]
+    public void LastUpdateInFuture_allows_for_clocks_that_differ_a_little()
+    {
+        Assert.False(Create(Now).LastUpdateInFuture());
+        Assert.False(Create(DateTimeOffset.UtcNow.AddMinutes(4)).LastUpdateInFuture());
+        Assert.True(Create(DateTimeOffset.UtcNow.AddMinutes(6)).LastUpdateInFuture());
+        Assert.True(Create(DateTimeOffset.UtcNow.AddYears(50)).LastUpdateInFuture());
+    }
+
+    [Fact]
+    public void LastUpdateInFuture_is_false_for_a_vertex_without_a_time()
+    {
+        Assert.False(Create(null).LastUpdateInFuture());
     }
 
     #endregion
