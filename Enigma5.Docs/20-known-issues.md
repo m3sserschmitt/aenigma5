@@ -87,7 +87,7 @@ the node.
 | C1 | Confirm messages with `Cleanup2` and the `Id` of the last message of a page, instead of `Cleanup`. | 9 |
 | C2 | Accept `Pull2` responses of up to about 320 KiB: a page of 20 messages, each up to 16,384 characters. | 9, 15 |
 | C3 | Send no `uuid` with a call that has several payloads; such calls are rejected. | 9 |
-| C4 | Send every public key as a single PEM block with the label `PUBLIC KEY`, for an RSA key of 2,048 to 8,192 bits, in standard encoding. Any other form is refused. | 5 |
+| C4 | Send every public key as a single PEM block with the label `PUBLIC KEY`, for an RSA key of 2,048 to 4,096 bits, in standard encoding. Any other form is refused. | 5 |
 
 ## 20.7 Summary
 

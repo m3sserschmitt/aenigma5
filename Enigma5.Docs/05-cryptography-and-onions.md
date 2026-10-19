@@ -66,8 +66,8 @@ such a context returns `null` or `false`.
 
 A public key from a caller is read in one place and in one way (`StringExtensions.ParsePublicKey`).
 The text must be a single PEM block with the label `PUBLIC KEY` and nothing but white space around
-it, at most 4 096 characters long. Its content must be the DER form of one RSA key
-(SubjectPublicKeyInfo) of 2 048 to 8 192 bits, with nothing after it, written exactly as an encoder
+it, at most 2 048 characters long. Its content must be the DER form of one RSA key
+(SubjectPublicKeyInfo) of 2 048 to 4 096 bits, with nothing after it, written exactly as an encoder
 writes it. The address of the key is computed from this content (Section 5.4.1), and the native
 library receives the content written out again as PEM (`NormalizePublicKey`), never the text the
 caller sent. The address and every check of a signature therefore always refer to the same key.
