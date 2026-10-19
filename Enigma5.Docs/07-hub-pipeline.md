@@ -140,7 +140,10 @@ A filter cannot change the arguments of a call, so it passes data to the hub met
 object instead. The *adapter* classes in `Hubs/Adapters` do this. Each adapter takes the hub object,
 checks that it implements the matching interface, and sets properties on it. For example,
 `AuthenticatedFilter` runs `new IdentityHubAdapter(hub) { ClientAddress = address }`. Since SignalR
-creates a new hub object for every call, these values belong to one call only.
+creates a new hub object for every call, these values belong to one call only. Within a call with
+several onions, `OnionParsingFilter` runs the rest of the chain once per onion on the same hub
+object, so the values are set again for each onion; `OnionRoutingFilter` sets
+`DestinationConnectionId` to null when the next address of that onion is not connected.
 
 ## 7.4 Results and errors
 

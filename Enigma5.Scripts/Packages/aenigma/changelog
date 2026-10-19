@@ -28,6 +28,9 @@ aenigma (5.1.1) unstable; urgency=medium
   * The dependencies are updated to their latest versions (MediatR to
     12.5.0, its last version under the Apache license), which removes
     three packages with known vulnerabilities.
+  * In a request with several onions, an onion whose next address is not
+    connected is only stored; before, it was also pushed to the
+    connection found for an earlier onion of the same request.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 

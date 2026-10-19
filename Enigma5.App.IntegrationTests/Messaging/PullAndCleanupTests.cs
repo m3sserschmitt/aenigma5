@@ -210,6 +210,28 @@ public class PullAndCleanupTests(NodeAFixture fixture) : IClassFixture<NodeAFixt
         Assert.Equal(1, _node.Pending(Recipient));
     }
 
+    // The onion for node B, which is not connected, comes after one for the connected recipient in the same request.
+    // The sender must not use key 2, the key of node B, which would then be connected. It uses key 1, the node's own
+    // key, without asking to act for another address: it is then a plain client with the node's address.
+    [Fact]
+    public async Task In_a_request_with_several_messages_the_recipient_gets_only_its_own()
+    {
+        await using var recipient = await RecipientAsync();
+        await using var sender = await HubClient.SignedInAsync(_node.PublicUrl, TestKeys.PrivateKey1);
+        var forB = _node.Pending(TestKeys.Address2);
+
+        Assert.True((await sender.Route(null, TestOnions.ForClientThroughA1, TestOnions.ForClientThroughAThenB)).Success);
+        // A later message marks the end: once it has arrived, anything pushed for the first request has arrived too.
+        Assert.True((await sender.Route(null, TestOnions.ForClientThroughA2)).Success);
+
+        List<string> Pushed() => [.. recipient.RoutedMessages
+            .SelectMany(message => message.GetProperty("payloads").EnumerateArray())
+            .Select(payload => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload.GetString()!)))];
+        Assert.True(await NodeProcess.Eventually(() => Task.FromResult(Pushed().Contains("message 2"))));
+        Assert.Equal(["message 1", "message 2"], Pushed().Order());
+        Assert.Equal(forB + 1, _node.Pending(TestKeys.Address2));
+    }
+
     [Theory]
     [InlineData(null, "One or more required properties not provided.")]
     [InlineData(-1L, "One or more properties have invalid values.")]
