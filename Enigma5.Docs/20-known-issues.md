@@ -60,6 +60,8 @@ again; this is why the numbers have gaps.
 | O8 | A list in `/etc/aenigma/appsettings.json` is combined with the default list by position, not replaced. | An own `HttpBlacklists` list can replace a default rule at the same position without a message. | Documented in Appendix A; check the rules after such a change. | 14, A |
 | O9 | If two nodes add each other as peers, each hub holds two connections for the same address and only one stays signed in. | One of the two vectors is closed and built again at every five-minute run, with error events; messages are still delivered. | Add a peer on one of the two nodes only. | 11 |
 | O10 | A peer that stops without closing its connection is noticed only after the connection times out. A node with a connected peer also takes longer to stop. | The dashboard and the map are behind for that time. | Not examined yet. | 11, 16 |
+| O11 | The upgrade to 5.1.0 finds the operator's own settings by comparing the old settings file with the defaults of the installed version. If the old version was removed (without purge) before 5.1.0 is installed, those defaults are gone. | The full old file is kept, with a warning. It pins every setting, among them the old log level, so later changes of the defaults do not reach the node. | Compare with the new defaults when the old ones are missing. Until then, reduce the file by hand to the settings that were changed. | A |
+| O12 | `aenigma-tor-auth` leaves the private part of a client key in the `authorized_clients` folder of the onion service, next to the public part. | A copy of the client's secret stays on the node, where Tor does not need it. | Hand the private part to the operator and delete it from the node. | A |
 
 ## 20.5 Technical debt
 
@@ -75,7 +77,7 @@ again; this is why the numbers have gaps.
 
 ## 20.6 Work in the client
 
-The Android app is the only client at present. Three changes on its side follow from changes in
+The Android app is the only client at present. Four points on its side follow from changes in
 the node.
 
 **Table 20.5:** Follow-up work in the client.
@@ -85,6 +87,7 @@ the node.
 | C1 | Confirm messages with `Cleanup2` and the `Id` of the last message of a page, instead of `Cleanup`. | 9 |
 | C2 | Accept `Pull2` responses of up to about 320 KiB: a page of 20 messages, each up to 16,384 characters. | 9, 15 |
 | C3 | Send no `uuid` with a call that has several payloads; such calls are rejected. | 9 |
+| C4 | Send every public key as a single PEM block with the label `PUBLIC KEY`, for an RSA key of 2,048 to 8,192 bits, in standard encoding. Any other form is refused. | 5 |
 
 ## 20.7 Summary
 
@@ -92,8 +95,9 @@ Five defects remain open: a file left over when the node stops during an upload 
 it, a second blacklist for the same endpoint that has no effect, a locked node that does not tell
 the nodes connected to it, a closed connection vector that can be started again, and a long wait
 for a peer on Tor that cannot be reached. In operation, a dashboard page must be loaded again after
-a restart of the node, lists in the settings are combined by position, and two nodes should not add
-each other as peers. The limits of the protocol concern the `uuid` of a
+a restart of the node, lists in the settings are combined by position, two nodes should not add
+each other as peers, and a settings file from a version that was removed before the upgrade must be
+reduced by hand. The limits of the protocol concern the `uuid` of a
 message, which is checked too broadly, kept too briefly and the same on the whole path, and the lack
 of limits per address. The technical debt consists of the unfinished Azure key source, code of
 the node that only the tests use, an outdated database package, the deprecated `Pull` and `Cleanup`,

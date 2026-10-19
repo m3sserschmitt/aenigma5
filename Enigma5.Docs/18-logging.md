@@ -112,7 +112,7 @@ The consequences for operators are:
 
 The passphrase of the private key is not written to the log. `SetMasterPassphraseCommand` carries
 it, but keeps it in a private field and hands it out through the method `GetPassphrase()`. The
-wrappers log public properties only, so the event of this command shows its type and nothing else. Versions of the node before 5.0.0 exposed the
+wrappers log public properties only, so the event of this command shows its type and nothing else. Versions of the node before 5.0.1 exposed the
 passphrase as a property and wrote it to the log when it was entered on the dashboard. `Debug` log
 files of such versions should be deleted.
 
@@ -138,7 +138,7 @@ can be searched in the JSON file. The names used by the node are constants in th
 | `BridgeMethodName`<br>`HubConnectionsProxyMethodName`<br>`ConnectionVectorMethodName` | Step of the network bridge that wrote the event. |
 | `ConnectionVector` | The peer connection the event is about. |
 
-Log files written by versions before 5.0.0 use two other names: `CommendResult` for the result of
+Log files written by versions before 5.1.0 use two other names: `CommendResult` for the result of
 a command, and `ConnectionIdKey` for the connection in the first event of `LogFilter`. Searches in
 such files must use the old names.
 

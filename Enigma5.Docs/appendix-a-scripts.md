@@ -7,6 +7,10 @@ images. This appendix describes what each part does, how an installed node is la
 the service is protected by systemd, and what happens when a virtual machine boots for the first
 time. Each tool also has a manual page, which gives its options in detail.
 
+This appendix describes how the packages and images are built and what they do. The steps an
+operator follows to deploy a node are kept with the published packages and images:
+[installing the Debian packages](https://github.com/m3sserschmitt/aenigma-packages/blob/gh-pages/README.md) and [using the virtual machine images](https://github.com/m3sserschmitt/aenigma-boxes/blob/gh-pages/README.md).
+
 ## A.1 Contents of the folder
 
 **Table A.1:** Contents of `Enigma5.Scripts`.
@@ -57,7 +61,8 @@ The option `-c` names a folder under `Configs/` that holds the `appsettings.json
 When the package is built, the native libraries of other processor types are removed from it. The
 package depends on `openssl` (version 3.5 or newer), which the node uses to create keys and whose
 library the native library uses, on `libkeyutils1`, which the native library needs for the kernel
-keyring, and on `jq` and `basez`, which the tools use.
+keyring, and on `jq` and `basez`, which the tools use. Because of the OpenSSL version, the package
+installs on Debian 13 and Ubuntu 26.04 or later, and not on Debian 12 or Ubuntu 24.04.
 
 ### A.3.2 Files on an installed node
 
@@ -91,6 +96,10 @@ apply. An operator who writes an own `HttpBlacklists` list must therefore check 
 rules, such as the one for `/_blazor`, are still in effect (Chapter 14).
 
 ### A.3.3 Installing and removing
+
+The published packages are installed from the project's package repository; the
+[instructions for the packages](https://github.com/m3sserschmitt/aenigma-packages/blob/gh-pages/README.md) show how to add it and install the node. This section
+describes what the package does when it is installed and removed.
 
 The script that runs after installation (`postinst`) creates the system user `aenigma` if it does
 not exist, and creates the folders of Table A.2 with their owners and modes. The user has no home
@@ -138,6 +147,12 @@ hands the file over, in three steps:
 | Earlier version, file never changed | `{}` |
 | Earlier version, file changed (for example by `aenigma-tor`) | Only the changed settings |
 | Earlier version, file is not valid JSON, or the old defaults are missing | The old file, unchanged; `postinst` prints a warning |
+
+The old defaults are missing when the earlier version was removed, without purge, before the new
+one is installed: removing deletes `/usr/lib/aenigma` and keeps the file under `/etc`. The node
+works with the full old file, but every setting in it then hides the new default. The operator
+should reduce the file to the settings that were really changed, for example to the `OnionService`
+line alone, and restart the service (Chapter 20, O11).
 
 A node of a version before 5.1.0 whose upgrade stopped at that question, and was left half
 installed, is repaired with `dpkg --configure -a --force-confdef --force-confold`.
@@ -250,6 +265,10 @@ This package holds systemd units that only the virtual machine images need. It d
 | `aenigma-auto-update.timer` and `.service` | Daily at 03:00, with a random delay of up to 30 minutes; a missed run is made up | Runs `aenigma-update`. |
 
 ## A.7 Virtual machine images
+
+The published images, and how to add and start one, are described in the
+[instructions for the images](https://github.com/m3sserschmitt/aenigma-boxes/blob/gh-pages/README.md). This section describes how an image is built and what happens
+at its first boot.
 
 ### A.7.1 Building
 

@@ -29,7 +29,7 @@ DIST_DIR="$DOCS_DIR/dist"
 WORK_DIR="$(mktemp -d)"
 OUTPUT_FILE="$DIST_DIR/aenigma-technical-documentation.pdf"
 TITLE="Aenigma"
-SUBTITLE="Technical Documentation of the Node Software"
+SUBTITLE="Technical Documentation of the Aenigma Node"
 DATE="$(date +%Y-%m-%d)"
 
 trap 'rm -rf "$WORK_DIR"' EXIT

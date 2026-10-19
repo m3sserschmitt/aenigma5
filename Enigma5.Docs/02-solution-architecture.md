@@ -60,8 +60,9 @@ Enigma5.App.Common
 
 Two of these references need a short explanation. `Enigma5.App.Models` needs `Enigma5.Crypto`
 because `VertexBroadcastRequestDto` separates the signed data from its signature while it is being
-read. And `Enigma5.App.Common` holds the reference to the package
-`Microsoft.AspNetCore.SignalR.Client`, which `Enigma5.Security` then uses through that project.
+read. And the package `Microsoft.AspNetCore.SignalR.Client` is referenced directly by
+`Enigma5.Security`, which uses it for the sign-in steps the node runs when it connects to a hub
+itself (Table 2.5).
 
 ## 2.3 Organization of Enigma5.App
 

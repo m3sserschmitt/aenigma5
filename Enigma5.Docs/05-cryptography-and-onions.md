@@ -22,7 +22,8 @@ Table 5.1 lists the cryptographic operations a node uses and what it uses them f
 | Key pair creation | RSA, 4096 bits | `openssl` program | The node's own key pair (Chapter 6) |
 
 `libaenigma.so` is built on OpenSSL. It does not set an RSA padding mode itself, so OpenSSL's
-defaults apply: PKCS #1 v1.5 padding, both for wrapping the AES key and for signatures.
+defaults apply: PKCS #1 v1.5 padding, both for wrapping the AES key and for signatures. The library
+loads the OpenSSL of the system; the Debian package requires version 3.5 or later (Appendix A).
 
 ## 5.2 The native library
 
