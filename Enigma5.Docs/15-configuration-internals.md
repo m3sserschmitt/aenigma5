@@ -166,8 +166,7 @@ configuration. Table 15.4 lists the most important ones.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `MessagesPageSize` | 20 | Messages per `Pull2` page; also the largest number of payloads in one `RouteMessage` call (Chapter 9). |
-| `LegacyPullMaxMessages` | 128 | Largest number of messages returned by `Pull`. |
+| `MessagesPageSize` | 20 | Messages per `Pull2` page and per `Pull` call; also the largest number of payloads in one `RouteMessage` call (Chapter 9). |
 | `MaxOnionSize` | 16,384 | Largest length of one onion, in base64 characters (Chapter 5). |
 | `SignalRMaximum`<br>`ReceiveMessageSize` | 331,776 | Largest hub message, in bytes: 20 onions of the largest size, plus 4 KiB. |
 | `MinPublicKeySize`<br>`MaxPublicKeySize` | 2,048<br>8,192 | Accepted sizes of a caller's RSA key, in bits (Chapter 5). |

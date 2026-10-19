@@ -139,7 +139,8 @@ Two rules protect messages that the recipient has not received:
 
 The older methods are still available for older clients but are deprecated:
 
-- `Pull` returns up to 128 messages at once. Messages beyond the first 128 stay pending.
+- `Pull` returns up to 20 messages at once, the page size of `Pull2`, always starting with the
+  oldest pending message. Messages beyond the first 20 stay pending.
 - `Cleanup` takes no `supId`. It confirms all messages up to the highest `Id` pulled on the same
   connection.
 

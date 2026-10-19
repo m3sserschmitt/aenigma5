@@ -88,9 +88,6 @@ public static class Constants
 
     public const int MessagesPageSize = 20;
 
-    // Maximum number of messages returned by the deprecated hub method Pull.
-    public const int LegacyPullMaxMessages = 128;
-
     // Maximum length of one base64 onion accepted by RouteMessage. Sized for 6 relay nodes plus the
     // recipient's layer (4096-bit keys) around a signed 256-character client message (~12 900 chars).
     public const int MaxOnionSize = 16 * 1024;

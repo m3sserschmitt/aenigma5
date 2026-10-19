@@ -155,20 +155,20 @@ public class PullAndCleanupTests(NodeAFixture fixture) : IClassFixture<NodeAFixt
         Assert.Equal(5, _node.Pending(Recipient));
     }
 
-    // The older methods: Pull returns at most 128 messages, and Cleanup must not confirm the rest.
+    // The older methods: Pull returns at most one page of 20 messages, and Cleanup must not confirm the rest.
     [Fact]
-    public async Task The_older_Pull_and_Cleanup_do_not_lose_messages_beyond_the_first_128()
+    public async Task The_older_Pull_and_Cleanup_do_not_lose_messages_beyond_the_first_page()
     {
-        await Store(150);
+        await Store(50);
         await using var recipient = await RecipientAsync();
 
         var pulled = await recipient.Invoke<List<PendingMessageDto>>("Pull");
         var cleaned = await recipient.Invoke<bool>("Cleanup");
 
-        Assert.Equal(128, pulled.Data!.Count);
+        Assert.Equal(20, pulled.Data!.Count);
         Assert.True(cleaned.Success);
-        Assert.Equal(22, _node.Pending(Recipient));
-        Assert.Equal(22, (await recipient.Invoke<List<PendingMessageDto>>("Pull")).Data!.Count);
+        Assert.Equal(30, _node.Pending(Recipient));
+        Assert.Equal(20, (await recipient.Invoke<List<PendingMessageDto>>("Pull")).Data!.Count);
     }
 
     [Fact]

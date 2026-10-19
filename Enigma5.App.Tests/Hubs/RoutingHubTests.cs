@@ -104,6 +104,22 @@ public class RoutingHubTests
     }
 
     [Fact]
+    public async Task Pull_returns_at_most_one_page_of_messages_starting_with_the_oldest()
+    {
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, Common.Constants.MessagesPageSize + 5);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
+
+        var first = await connection.Hub.Pull();
+        var again = await connection.Hub.Pull();
+
+        Assert.Equal(Common.Constants.MessagesPageSize, first.Data!.Count);
+        Assert.Equal(first.Data.Select(message => message.Id), first.Data.Select(message => message.Id).Order());
+        Assert.Equal(first.Data.Select(message => message.Id), again.Data!.Select(message => message.Id));
+    }
+
+    [Fact]
     public async Task Pull_and_Cleanup_fail_when_the_caller_has_no_address()
     {
         await using var node = await TestNode.StartAsync();

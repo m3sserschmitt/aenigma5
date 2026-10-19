@@ -1,3 +1,11 @@
+aenigma (5.1.1) unstable; urgency=medium
+
+  [ Romulus Ruja ]
+  * The deprecated hub method Pull returns at most 20 messages per call,
+    the page size of Pull2, instead of 128.
+
+ -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
+
 aenigma (5.1.0) unstable; urgency=medium
 
   [ Romulus Ruja ]

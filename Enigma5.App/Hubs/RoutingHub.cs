@@ -109,7 +109,7 @@ public partial class RoutingHub(
             return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
-        return Ok(await GetPendingMessagesAsync(ClientAddress, null, Constants.LegacyPullMaxMessages));
+        return Ok(await GetPendingMessagesAsync(ClientAddress, null, Constants.MessagesPageSize));
     }
 
     [Obsolete("Use Cleanup2 instead; Still here for compatibility with previous versions and will be removed in the future;")]
