@@ -66,7 +66,7 @@ request arrived. The address of the caller plays no part. The comparison is done
    (an IPv4 address written in IPv6 form is treated as the IPv4 address)
 ```
 
-Three consequences are important for operators:
+Four consequences are important for operators:
 
 - The host must be written as an IP address. A blacklist for `http://localhost:8080` never
   matches, and its rules have no effect. At startup, the node logs a warning for every blacklist
@@ -75,6 +75,9 @@ Three consequences are important for operators:
 - Only the first blacklist that matches the endpoint is used. If two blacklists name the same
   endpoint, the second one has no effect. All rules for one endpoint must be put into one
   blacklist.
+- Only `0.0.0.0` stands for every address. An endpoint written as `http://[::]:8080` is compared
+  as one address and never matches, and no warning is logged (Chapter 20, O13). The public
+  endpoint should therefore be bound to `0.0.0.0` or to a single address.
 
 When the value of `Kestrel:EndPoints:Http:Url` is changed, the `Endpoint` values of the blacklists
 must be changed with it. Otherwise the blacklists no longer match and nothing is blocked.
