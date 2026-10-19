@@ -158,7 +158,9 @@ public class SingleThreadDbWriter(
             .ExecuteUpdate(s =>
                 s.SetProperty(m => m.Sent, true)
                 .SetProperty(m => m.DateSent, now)
-                .SetProperty(m => m.SentTimestamp, utcTimestamp));
+                .SetProperty(m => m.SentTimestamp, utcTimestamp)
+                // A confirmed message is not served again; only its uuid is still needed, to recognize late copies.
+                .SetProperty(m => m.Content, (string?)null));
         }, _logger);
     }
 

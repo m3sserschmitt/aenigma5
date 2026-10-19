@@ -122,7 +122,7 @@ public class ConfigurationExtensionsTests
 
     [Theory]
     [InlineData("MessageRetentionPeriod", "nonsense", "14.00:00:00")]
-    [InlineData("SentMessageRetentionPeriod", "soon", "00:00:00")]
+    [InlineData("SentMessageRetentionPeriod", "soon", "14.00:00:00")]
     [InlineData("SharedDataRetentionPeriod", "two weeks", "14.00:00:00")]
     [InlineData("FilesRetentionPeriod", "3 days", "3.00:00:00")]
     [InlineData("VertexLifetime", "half an hour", "00:30:00")]

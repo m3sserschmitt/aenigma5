@@ -35,7 +35,8 @@ public static class Constants
 
     public static readonly TimeSpan DefaultMessageRetentionPeriod = TimeSpan.FromDays(14);
 
-    public static readonly TimeSpan DefaultSentMessageRetentionPeriod = TimeSpan.Zero;
+    // As long as an unconfirmed message is kept: a relay may send a copy again for that long.
+    public static readonly TimeSpan DefaultSentMessageRetentionPeriod = DefaultMessageRetentionPeriod;
 
     public static readonly TimeSpan DefaultSharedDataRetentionPeriod = TimeSpan.FromDays(14);
 

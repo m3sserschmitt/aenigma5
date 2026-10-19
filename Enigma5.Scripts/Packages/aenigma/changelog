@@ -12,6 +12,9 @@ aenigma (5.1.1) unstable; urgency=medium
   * The bridge confirms the messages it moves page by page, so that a
     broken connection repeats at most one page instead of the whole
     backlog. Peers without Cleanup2 are still confirmed once, at the end.
+  * A delivered message loses its content at once and keeps its uuid
+    for 14 days (SentMessageRetentionPeriod, default 0 before), so a
+    copy that a relay sends again later is not delivered twice.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 

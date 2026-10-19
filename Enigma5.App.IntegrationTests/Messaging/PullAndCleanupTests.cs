@@ -171,6 +171,30 @@ public class PullAndCleanupTests(NodeAFixture fixture) : IClassFixture<NodeAFixt
         Assert.Equal(20, (await recipient.Invoke<List<PendingMessageDto>>("Pull")).Data!.Count);
     }
 
+    // A copy that arrives after the recipient confirmed the message, as a relay may send it, is recognized by its uuid.
+    [Fact]
+    public async Task A_message_that_arrives_again_after_it_was_confirmed_is_not_delivered_again()
+    {
+        var uuid = Guid.NewGuid().ToString();
+        await using var sender = await HubClient.SignedInAsync(_node.PublicUrl, TestKeys.PrivateKey2);
+        Assert.True((await sender.Route(uuid, TestOnions.ForClientThroughA1)).Success);
+        await using (var recipient = await RecipientAsync())
+        {
+            var page = await recipient.Pull2();
+            Assert.Equal(uuid, Assert.Single(page.Data!).Uuid);
+            Assert.True((await recipient.Invoke<bool>("Cleanup2", new CleanupRequestDto(page.Data![0].Id))).Success);
+        }
+
+        var again = await sender.Route(uuid, TestOnions.ForClientThroughA1);
+
+        Assert.True(again.Success);
+        Assert.Equal(0, _node.Pending(Recipient));
+        Assert.Equal(1, _node.Count("SELECT COUNT(*) FROM Messages WHERE Uuid = $u", ("$u", uuid)));
+        Assert.Equal(1, _node.Count("SELECT COUNT(*) FROM Messages WHERE Uuid = $u AND Sent = 1 AND Content IS NULL", ("$u", uuid)));
+        await using var later = await RecipientAsync();
+        Assert.Empty((await later.Pull2()).Data!);
+    }
+
     [Fact]
     public async Task A_connected_recipient_gets_the_message_at_once_and_it_stays_stored_until_confirmed()
     {

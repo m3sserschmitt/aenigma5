@@ -327,11 +327,13 @@ permanently deleted. Default is 14 days.
 ---
 
 ```json
-"SentMessageRetentionPeriod": "00:00:00"
+"SentMessageRetentionPeriod": "14.00:00:00"
 ```
 
-Controls for how long delivered messages will be retained in database until permanently
-deleted. By default all delivered messages are scheduled for immediate removal.
+Controls for how long delivered messages are kept in the database before they are permanently
+deleted. The content of a message is removed as soon as it is delivered; what is kept is its
+identifier, so that a copy that arrives again later is recognized and not delivered twice. The
+default is 14 days, as long as an undelivered message may be kept.
 
 ---
 

@@ -95,7 +95,7 @@ with this default and with the value in the shipped `appsettings.json`.
 | `AzureVaultUrl`,<br>`PassphrasePath` | Not set | Not set | Used by the Azure key source only (Chapter 6) |
 | `WebContentDirectory` | `./` | `./` | At each use |
 | `MessageRetentionPeriod` | 14 days | 14 days | At startup |
-| `SentMessageRetentionPeriod` | 0 | 0 | At startup |
+| `SentMessageRetentionPeriod` | 14 days | 14 days | At startup |
 | `SharedDataRetentionPeriod` | 14 days | 14 days | At startup, and for each `validUntil` value |
 | `FilesRetentionPeriod` | 3 days | 3 days | At startup, and for each `validUntil` value |
 | `SharedDataMaxSize` | 16 KiB | 16 KiB | At startup |

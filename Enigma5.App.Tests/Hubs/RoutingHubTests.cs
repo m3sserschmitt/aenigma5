@@ -302,6 +302,37 @@ public class RoutingHubTests
         Assert.Equal(uuid, (await node.Database(context => context.Messages.SingleAsync())).Uuid);
     }
 
+    // A relay may send a message again after its recipient confirmed it. The confirmed row, kept without its
+    // content, still holds the uuid, so the late copy is neither stored again nor delivered again.
+    [Fact]
+    public async Task RouteMessage_does_not_store_or_deliver_again_a_message_that_was_already_confirmed()
+    {
+        await using var node = await TestNode.StartAsync();
+        var uuid = Guid.NewGuid().ToString();
+        await using (var first = new HubConnection(node, Connection))
+        {
+            first.Hub.Next = TestKeys.Address3;
+            first.Hub.Content = [1, 2, 3];
+            first.Hub.Uuid = uuid;
+            Assert.True((await first.Hub.RouteMessage(new RoutingRequestDto(["unused"], uuid))).Success);
+        }
+        Assert.Equal(1, (await node.Send(new MarkMessagesAsDeliveredCommand(TestKeys.Address3, null))).Value);
+        await using var late = new HubConnection(node, Connection);
+        late.Hub.Next = TestKeys.Address3;
+        late.Hub.Content = [1, 2, 3];
+        late.Hub.Uuid = uuid;
+        late.Hub.DestinationConnectionId = OtherConnection;
+
+        var result = await late.Hub.RouteMessage(new RoutingRequestDto(["unused"], uuid));
+
+        Assert.True(result.Success);
+        var stored = await node.Database(context => context.Messages.SingleAsync());
+        Assert.True(stored.Sent);
+        Assert.Null(stored.Content);
+        await Task.Delay(100);
+        Assert.Empty(late.Sent);
+    }
+
     [Fact]
     public async Task RouteMessage_also_sends_the_message_with_its_uuid_to_a_connected_destination()
     {

@@ -136,7 +136,10 @@ signatures of callers (Chapter 18). The passphrase is not logged. A node with re
 with the `Warning` limit or a higher one, as the Debian package does.
 
 **The database.** It holds the pending messages with their next address, in encrypted form, and
-the peers. It needs the same file protection as the key.
+the peers. A confirmed message loses its content at once, but its destination, `uuid` and times stay
+for `SentMessageRetentionPeriod` (14 days by default), so that late copies are recognized. The
+database therefore records which address received a message, and when, for that long. It needs the
+same file protection as the key.
 
 ## 19.7 Duties of an operator
 
