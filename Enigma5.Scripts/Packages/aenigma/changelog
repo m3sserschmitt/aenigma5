@@ -25,6 +25,9 @@ aenigma (5.1.1) unstable; urgency=medium
     and aenigma-vpn-dns takes the interface from the server's
     configuration, so -f is optional there. Servers set up before keep
     "dev tun"; aenigma-vpn-dns(8) explains how to give them a fixed name.
+  * The dependencies are updated to their latest versions (MediatR to
+    12.5.0, its last version under the Apache license), which removes
+    three packages with known vulnerabilities.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 
