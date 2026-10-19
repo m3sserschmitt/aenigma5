@@ -25,32 +25,15 @@ using Enigma5.App.Models.HubInvocation;
 using Enigma5.App.Resources.Commands;
 using Enigma5.Tests.Base;
 using Microsoft.EntityFrameworkCore;
+using static Enigma5.App.Tests.Hubs.HubTesting;
 
 namespace Enigma5.App.Tests.Hubs;
 
 // The node has key 1. The filters of the hub have tests of their own; here the methods are called directly.
+// These are the methods of RoutingHub.cs; the methods of the second generation are tested in RoutingHub2Tests.
+#pragma warning disable CS0618 // Pull and Cleanup are deprecated, and still served to older clients.
 public class RoutingHubTests
 {
-    private const string Connection = "connection-1";
-
-    private const string OtherConnection = "connection-2";
-
-    private static string SingleError<T>(InvocationResultDto<T> result)
-    {
-        Assert.False(result.Success);
-        return Assert.Single(result.Errors).Message!;
-    }
-
-    private static async Task Store(TestNode node, string destination, int count)
-    {
-        for (var index = 0; index < count; index++)
-        {
-            Assert.True((await node.Send(new CreatePendingMessageCommand(destination, $"content {index}", null))).Success);
-        }
-    }
-
-    private static Task<int> Confirmed(TestNode node) => node.Database(context => context.Messages.CountAsync(message => message.Sent));
-
     private static Task<List<string>> NeighborsOfTheNode(TestNode node)
     => node.Database(async context => (await node.Send(new Enigma5.App.Resources.Queries.GetNeighborAddressesQuery())).Value!.ToList());
 
@@ -106,7 +89,7 @@ public class RoutingHubTests
     }
 
     [Fact]
-    public async Task Pull_and_Pull2_return_the_messages_of_the_caller_only()
+    public async Task Pull_returns_the_messages_of_the_caller_only()
     {
         await using var node = await TestNode.StartAsync();
         await Store(node, TestKeys.Address3, 3);
@@ -114,42 +97,20 @@ public class RoutingHubTests
         await using var connection = new HubConnection(node, Connection);
         connection.Hub.ClientAddress = TestKeys.Address3;
 
-#pragma warning disable CS0618 // The old method is still served to old clients.
-        var all = await connection.Hub.Pull();
-#pragma warning restore CS0618
-        var page = await connection.Hub.Pull2(new PullRequestDto());
+        var result = await connection.Hub.Pull();
 
-        Assert.Equal(3, all.Data!.Count);
-        Assert.Equal(3, page.Data!.Count);
-        Assert.All(page.Data, message => Assert.Equal(TestKeys.Address3, message.Destination));
+        Assert.Equal(3, result.Data!.Count);
+        Assert.All(result.Data, message => Assert.Equal(TestKeys.Address3, message.Destination));
     }
 
     [Fact]
-    public async Task Pull2_continues_after_the_given_message()
-    {
-        await using var node = await TestNode.StartAsync();
-        await Store(node, TestKeys.Address3, 3);
-        await using var connection = new HubConnection(node, Connection);
-        connection.Hub.ClientAddress = TestKeys.Address3;
-        var first = await connection.Hub.Pull2(new PullRequestDto());
-
-        var rest = await connection.Hub.Pull2(new PullRequestDto(first.Data![0].Id));
-
-        Assert.Equal(first.Data.Skip(1).Select(message => message.Id), rest.Data!.Select(message => message.Id));
-    }
-
-    [Fact]
-    public async Task Pull_Pull2_Cleanup_and_Cleanup2_fail_when_the_caller_has_no_address()
+    public async Task Pull_and_Cleanup_fail_when_the_caller_has_no_address()
     {
         await using var node = await TestNode.StartAsync();
         await using var connection = new HubConnection(node, Connection);
 
-#pragma warning disable CS0618
         Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Pull()));
         Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Cleanup()));
-#pragma warning restore CS0618
-        Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Pull2(new PullRequestDto())));
-        Assert.Equal(InvocationErrors.INTERNAL_ERROR, SingleError(await connection.Hub.Cleanup2(new CleanupRequestDto())));
     }
 
     [Fact]
@@ -160,13 +121,9 @@ public class RoutingHubTests
         await using var connection = new HubConnection(node, Connection);
         connection.Hub.ClientAddress = TestKeys.Address3;
 
-#pragma warning disable CS0618
-        var old = await connection.Hub.Cleanup();
-#pragma warning restore CS0618
-        var current = await connection.Hub.Cleanup2(new CleanupRequestDto(long.MaxValue));
+        var result = await connection.Hub.Cleanup();
 
-        Assert.True(old.Success);
-        Assert.True(current.Success);
+        Assert.True(result.Success);
         Assert.Equal(0, await Confirmed(node));
     }
 
@@ -177,43 +134,27 @@ public class RoutingHubTests
         await Store(node, TestKeys.Address3, 2);
         await using var connection = new HubConnection(node, Connection);
         connection.Hub.ClientAddress = TestKeys.Address3;
+        await connection.Hub.Pull();
+        await Store(node, TestKeys.Address3, 1);
+
+        var result = await connection.Hub.Cleanup();
+
+        Assert.True(result.Success);
+        Assert.Equal(2, await Confirmed(node));
+    }
+
+    // A client may collect with the newer method and still confirm with the older one.
+    [Fact]
+    public async Task Cleanup_also_confirms_what_the_connection_has_pulled_with_Pull2()
+    {
+        await using var node = await TestNode.StartAsync();
+        await Store(node, TestKeys.Address3, 2);
+        await using var connection = new HubConnection(node, Connection);
+        connection.Hub.ClientAddress = TestKeys.Address3;
         await connection.Hub.Pull2(new PullRequestDto());
         await Store(node, TestKeys.Address3, 1);
 
-#pragma warning disable CS0618
         var result = await connection.Hub.Cleanup();
-#pragma warning restore CS0618
-
-        Assert.True(result.Success);
-        Assert.Equal(2, await Confirmed(node));
-    }
-
-    [Fact]
-    public async Task Cleanup2_confirms_up_to_the_given_message()
-    {
-        await using var node = await TestNode.StartAsync();
-        await Store(node, TestKeys.Address3, 3);
-        await using var connection = new HubConnection(node, Connection);
-        connection.Hub.ClientAddress = TestKeys.Address3;
-        var pulled = await connection.Hub.Pull2(new PullRequestDto());
-
-        var result = await connection.Hub.Cleanup2(new CleanupRequestDto(pulled.Data![1].Id));
-
-        Assert.True(result.Success);
-        Assert.Equal(2, await Confirmed(node));
-    }
-
-    [Fact]
-    public async Task Cleanup2_never_confirms_beyond_what_the_connection_has_pulled()
-    {
-        await using var node = await TestNode.StartAsync();
-        await Store(node, TestKeys.Address3, 2);
-        await using var connection = new HubConnection(node, Connection);
-        connection.Hub.ClientAddress = TestKeys.Address3;
-        await connection.Hub.Pull2(new PullRequestDto());
-        await Store(node, TestKeys.Address3, 2);
-
-        var result = await connection.Hub.Cleanup2(new CleanupRequestDto(long.MaxValue));
 
         Assert.True(result.Success);
         Assert.Equal(2, await Confirmed(node));

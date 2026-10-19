@@ -10,9 +10,18 @@ from the caller's side; this chapter describes the machinery behind them.
 
 ## 7.1 The hub
 
-The hub is the class `RoutingHub`, mapped to the path `/OnionRouting`. The class is split over two
-files: `Enigma5.App/Hubs/RoutingHub.cs` contains the public hub methods and the connection events,
-and `RoutingHub2.cs` contains private helpers.
+The hub is the class `RoutingHub`, mapped to the path `/OnionRouting`. The class is split over three
+files in `Enigma5.App/Hubs`:
+
+- `RoutingHub.cs` declares the class and contains the first hub methods (`GenerateToken`,
+  `Authenticate`, `GetLocalVertex`, `Pull`, `Cleanup`, `RouteMessage`, `Broadcast`,
+  `TriggerBroadcast`) and the connection events;
+- `RoutingHub2.cs` contains the methods of the second generation, `Pull2` and `Cleanup2`, which
+  replace the deprecated `Pull` and `Cleanup`;
+- `RoutingHubHelpers.cs` contains the private helpers that both use.
+
+The split only orders the code. The hub has one set of methods and no versions: a client calls
+`Pull2` on the same hub and connection as `Authenticate`.
 
 SignalR creates a new `RoutingHub` object for every hub method call. Besides the SignalR `Hub` base
 class, `RoutingHub` implements four interfaces:
@@ -216,8 +225,10 @@ of the hub method that has the `[OnionRouting]` attribute.
 
 A new hub method should be added in these steps:
 
-1. Add the method to `IEnigmaHub` and implement it in `RoutingHub.cs`, returning an
-   `InvocationResultDto<T>`.
+1. Add the method to `IEnigmaHub` and implement it, returning an `InvocationResultDto<T>`. A new
+   method goes into `RoutingHub.cs`; a method that replaces an existing one takes its name with the
+   next number and goes into the file of that number, as `Pull2` did in `RoutingHub2.cs`. Shared
+   code goes into `RoutingHubHelpers.cs`.
 2. Add `[BlacklistAuthorization]`, so that operators can block it per endpoint.
 3. Add `[Authenticated]` if only signed-in callers may use it. `ClientAddress` is then set.
 4. If it takes an argument, make the argument class implement `IValidatable` and add
