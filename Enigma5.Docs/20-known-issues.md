@@ -34,7 +34,7 @@ again; this is why the numbers have gaps.
 | ID | Matter | Effect | Possible change | Chapter |
 |---|---|---|---|---|
 | P1 | The check for a `uuid` that is already stored looks at all messages, whatever their destination. | A caller that reuses a `uuid` of another message has its own message dropped, while the call reports success. | Limit the check to messages for the same destination. | 9 |
-| P2 | The check works only while the earlier copy is stored. Confirmed messages are deleted at the next cleanup run by default. | A copy that arrives later is stored again. The recipient must recognize it by its `uuid`. | Keep the `uuid` values of confirmed messages for some time. | 9 |
+| P2 | The check works only while the earlier copy is stored. Confirmed messages are deleted at the next cleanup run by default. | A copy that arrives later is stored again. The recipient must recognize it by its `uuid`. The bridge confirms each page it moves, so after a break it repeats at most one page (Chapter 11). | Keep the `uuid` values of confirmed messages for some time. | 9 |
 | P3 | A call with several payloads has no `uuid` values from the caller. | If a client repeats such a call after a lost answer, all its messages are stored twice. | Let clients give one `uuid` per payload. | 9 |
 | P4 | A message keeps the same `uuid` on its whole path. | Nodes that work together can recognize the message (Chapter 19). | Use a new `uuid` for each hop, and keep the mapping only on the node. | 9, 19 |
 | P5 | Calls from the node to a client always count as delivered. The node does not wait for an answer. | A message that is lost on the way stays pending and reaches the client with its next `Pull2`. | Accepted for now. | 7, 9 |

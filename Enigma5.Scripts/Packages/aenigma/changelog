@@ -9,6 +9,9 @@ aenigma (5.1.1) unstable; urgency=medium
     of 331776 bytes, so that a full batch of onions also fits when a
     client escapes characters of base64 in JSON. The limit of one onion
     is unchanged.
+  * The bridge confirms the messages it moves page by page, so that a
+    broken connection repeats at most one page instead of the whole
+    backlog. Peers without Cleanup2 are still confirmed once, at the end.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 
