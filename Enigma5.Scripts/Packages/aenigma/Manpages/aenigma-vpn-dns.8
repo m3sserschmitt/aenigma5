@@ -73,6 +73,12 @@ Network interface
 .BR dnsmasq (8)
 should bind to and serve DNS on, e.g.
 .IR tun0 .
+The interface does not have to exist yet:
+.B dnsmasq
+is configured with
+.BR bind-dynamic ,
+so it starts listening on the interface when OpenVPN creates it, and again
+each time OpenVPN restarts and creates it anew.
 Required.
 .TP
 .BI \-c " CNAME"

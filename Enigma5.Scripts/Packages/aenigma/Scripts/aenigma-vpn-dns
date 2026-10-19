@@ -70,11 +70,13 @@ apt-get install -y dnsmasq
 # aenigma-vpn-server-host with per-client hostname entries.
 touch "$DNSMASQ_HOSTS"
 
-# Build dnsmasq config
+# Build dnsmasq config. bind-dynamic, not bind-interfaces: the tunnel interface is created by OpenVPN,
+# usually after dnsmasq has started, and created again whenever OpenVPN restarts. With bind-dynamic,
+# dnsmasq binds it whenever it appears; with bind-interfaces it would fail to start without it.
 DNSMASQ_CONF="/etc/dnsmasq.d/$DOMAIN.conf"
 cat > "$DNSMASQ_CONF" << CONF
 interface=$INTERFACE
-bind-interfaces
+bind-dynamic
 addn-hosts=$DNSMASQ_HOSTS
 CONF
 
@@ -103,4 +105,7 @@ echo "  dnsmasq config: $DNSMASQ_CONF"
 echo "  Hosts file:     $DNSMASQ_HOSTS"
 echo "  Pushed DNS:     $DNS_IP"
 echo "  Interface:      $INTERFACE"
-[[ -v CNAME ]] && echo "  CNAME:          $DOMAIN -> $CNAME"
+# An "if", not "&&": as the last command, a false test would make the script exit with 1.
+if [[ -v CNAME ]]; then
+    echo "  CNAME:          $DOMAIN -> $CNAME"
+fi

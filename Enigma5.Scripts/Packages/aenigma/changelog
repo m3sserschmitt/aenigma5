@@ -15,6 +15,11 @@ aenigma (5.1.1) unstable; urgency=medium
   * A delivered message loses its content at once and keeps its uuid
     for 14 days (SentMessageRetentionPeriod, default 0 before), so a
     copy that a relay sends again later is not delivered twice.
+  * aenigma-vpn-dns configures dnsmasq with bind-dynamic, so DNS inside
+    the VPN works whether dnsmasq or OpenVPN starts first, and after an
+    OpenVPN restart. Run aenigma-vpn-dns again on existing VPN servers.
+    aenigma-vpn-dns no longer ends with exit status 1 when no CNAME is
+    given.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 
