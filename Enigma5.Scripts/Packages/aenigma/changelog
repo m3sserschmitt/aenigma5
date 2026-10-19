@@ -5,6 +5,10 @@ aenigma (5.1.1) unstable; urgency=medium
     the page size of Pull2, instead of 128.
   * Public keys of more than 4096 bits are refused; the size limits of
     the protocol are calculated for keys of 4096 bits.
+  * The largest accepted hub message is 356 KiB (364544 bytes) instead
+    of 331776 bytes, so that a full batch of onions also fits when a
+    client escapes characters of base64 in JSON. The limit of one onion
+    is unchanged.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 

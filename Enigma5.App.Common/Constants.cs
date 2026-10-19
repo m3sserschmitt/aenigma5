@@ -88,9 +88,13 @@ public static class Constants
 
     public const int MessagesPageSize = 20;
 
-    // Maximum length of one base64 onion accepted by RouteMessage. Sized for 6 relay nodes plus the
-    // recipient's layer (4096-bit keys) around a signed 256-character client message (~12 900 chars).
+    // Maximum length of one base64 onion accepted by RouteMessage. The largest message of the client,
+    // on a path of 6 nodes with 4096-bit keys, is 12,888 characters (Enigma5.Docs, Chapter 5).
     public const int MaxOnionSize = 16 * 1024;
+
+    // Largest incoming hub message. A full batch of MessagesPageSize onions of MaxOnionSize takes at most
+    // 358,660 bytes in the worst case of JSON serialization (Enigma5.Docs, Chapter 5).
+    public const long SignalRMaximumReceiveMessageSize = 356 * 1024;
 
     // RSA key sizes, in bits, that are accepted for a public key received from a caller. The largest is
     // the size MaxOnionSize is calculated for.
@@ -101,8 +105,6 @@ public static class Constants
     // Longest text of a public key in PEM form, in characters; a key of the largest size needs about 800.
     public const int MaxPublicKeyLength = 2048;
 
-    // Largest incoming hub message: a full batch of maximum-size onions plus room for JSON framing.
-    public const long SignalRMaximumReceiveMessageSize = MessagesPageSize * MaxOnionSize + 4 * 1024;
 
     public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
 

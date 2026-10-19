@@ -177,9 +177,32 @@ The 2-byte prefix limits a layer to 65 535 bytes. The node accepts much less: an
 
 - a path of 6 relay nodes plus a final layer for the recipient, which the client removes itself
   with `UnsealOnion`: 7 layers of 574 bytes with 4096-bit keys;
-- inside it, a signed message object of at most about 5 600 bytes: 256 characters of text in the
+- inside it, a signed message object of at most 5 646 bytes: 256 characters of text in the
   worst JSON encoding, a 64-character sender name, URLs with 253-character domain names, and the
   sender's 4096-bit public key and signature.
+
+**Listing 5.4a:** How the size limits were calculated.
+
+```text
+layer overhead         = 2 + 4 096 / 8 + 12 + 16 + 32                     =     574
+largest payload        = worst case of the client's signed message        =   5 646
+largest onion, bytes   = 5 646 + 7 * 574                                  =   9 664
+largest onion, base64  = base64 length of 9 664 bytes                     =  12 888
+MaxOnionSize           = 16 KiB, the next multiple of 4 KiB               =  16 384
+
+one onion in JSON      = 16 384 + 16 384 / 64 * (1 + 5) + 2 * 5 + 3       =  17 933
+full batch in JSON     = 20 * 17 933                                      = 358 660
+SignalRMaximumReceiveMessageSize
+                       = 356 KiB                                          = 364 544
+```
+
+The two limits are plain values in `Constants.cs`; the listing shows where they come from. The line
+"one onion in JSON" is the worst case of serialization. An onion is ciphertext, so each of the 64
+characters of base64 makes up about 1/64 of it. A serializer may write `/` as `\/` (one byte more)
+and `+` as `\u002B` (five bytes more), and each of the up to two `=` at the end as `\u003D`; the
+quotes and the comma of a payload are three more bytes. The largest accepted public key
+(`MaxPublicKeySize`) is 4 096 bits, so no accepted key is larger than the one these limits were
+calculated for.
 
 Such an onion is at most 9 664 bytes, or 12 888 base64 characters, so the limit leaves about 27%
 of room. Chapter 7 describes the check and the matching size limit of the hub.

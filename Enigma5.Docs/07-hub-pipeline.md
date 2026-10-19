@@ -71,14 +71,14 @@ Table 7.2 lists the SignalR settings of the hub. The values set by the node are 
 | Client timeout | 90 s without a message from the client | Node |
 | Handshake timeout | 15 s | Node |
 | Stateful reconnect | On; up to 1 MiB of messages kept for a reconnecting client | Node |
-| Maximum size of one incoming message | 331 776 bytes (324 KiB) | Node |
+| Maximum size of one incoming message | 364 544 bytes (356 KiB) | Node |
 | Transports | WebSockets, Server-Sent Events, long polling | Framework default (not changed) |
 
 The maximum message size applies to a whole hub call, including all its arguments. A larger message
 is dropped by SignalR before any node code runs, and the caller gets no reply. The value is
-computed from two constants, so that a full batch always fits: 20 onions
-(`Constants.MessagesPageSize`) of the maximum size of 16 384 characters (`Constants.MaxOnionSize`),
-plus 4 KiB for the JSON around them. A single onion that is too long is rejected by validation, with an error, before
+chosen so that a full batch always fits: 20 onions (`Constants.MessagesPageSize`) of the maximum
+size of 16 384 characters (`Constants.MaxOnionSize`) take at most 358 660 bytes in the worst case
+of JSON serialization (Listing 5.4a). A single onion that is too long is rejected by validation, with an error, before
 it is processed (Table 7.4). Chapter 5 explains how the maximum onion size was chosen.
 
 ## 7.3 Filters
@@ -245,7 +245,7 @@ in a fixed order: logging, sign-in check, blacklist check, validation, onion par
 routing. A filter runs only if the hub method has its marker attribute and the call's arguments fit
 the filter, and otherwise it is skipped. Filters pass their results to the hub method through
 properties of the hub object. Every method returns a result object with data, a success flag and a
-list of errors. A hub message may be at most 324 KiB, and one onion at most 16 384 base64
+list of errors. A hub message may be at most 356 KiB, and one onion at most 16 384 base64
 characters. A call with several onions runs the rest of the
 chain once per onion, and reports failure if any onion fails, even when others were stored. Calls
 from the server to clients are not waited for.

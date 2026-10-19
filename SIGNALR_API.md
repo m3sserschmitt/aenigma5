@@ -28,7 +28,7 @@ message delivery, and network graph updates.
 | Timeout | 90 seconds of silence from either side |
 | Handshake timeout | 15 seconds |
 | Reconnect backoff | 2s → 4s → 8s → 16s |
-| Maximum incoming message size | 331,776 bytes (324 KiB); larger messages are dropped without a reply |
+| Maximum incoming message size | 364,544 bytes (356 KiB); larger messages are dropped without a reply |
 
 ---
 

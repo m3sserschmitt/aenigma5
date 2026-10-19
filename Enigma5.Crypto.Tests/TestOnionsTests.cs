@@ -26,6 +26,21 @@ namespace Enigma5.Crypto.Tests;
 // The onions that other tests send to a node: each must open with the keys it was made for.
 public class TestOnionsTests
 {
+    // The stored onions were made by SealOnion of the native library. Their sizes show what one layer adds:
+    // the length prefix, the wrapped key (as long as the RSA key), the nonce, the tag and the next address.
+    // The limit of one onion (Constants.MaxOnionSize) is calculated with this figure.
+    [Theory]
+    [InlineData(TestOnions.ForClientThroughA1, "message 1", 1)]
+    [InlineData(TestOnions.ForClientThroughB, "message for B", 1)]
+    [InlineData(TestOnions.ForClientThroughAThenB, "from A to B", 2)]
+    public void A_layer_adds_the_size_of_the_key_and_62_bytes(string onion, string content, int layers)
+    {
+        var keySize = SealProvider.GetPKeySize(TestKeys.PublicKey1);
+        var perLayer = (Convert.FromBase64String(onion).Length - content.Length) / layers;
+
+        Assert.Equal(keySize + 62, perLayer);
+    }
+
     private static (string? Next, byte[]? Content) Open(string onion, string privateKey)
     {
         using var unsealer = SealProvider.Factory.CreateUnsealer(privateKey, TestKeys.PublicKeyOf(privateKey));
