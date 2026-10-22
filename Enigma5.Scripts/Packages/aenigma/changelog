@@ -37,6 +37,10 @@ aenigma (5.1.1) unstable; urgency=medium
     content of a failed command or the data of a failed bridge call, so a
     packaged node (log level Warning) keeps onions, addresses and keys out
     of its log. The arguments remain in the Debug event before each call.
+  * aenigma-keys asks before replacing an existing key pair, and writes
+    the new pair through temporary files, so a failed or cancelled run
+    (for example, passphrases that do not match) leaves the old pair
+    intact; before, it overwrote the node's key at once.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 

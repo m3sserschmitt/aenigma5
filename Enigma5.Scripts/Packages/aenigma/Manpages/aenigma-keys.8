@@ -29,6 +29,15 @@ Because the private key is AES-256 encrypted,
 will interactively prompt for a passphrase (and its confirmation) during
 generation. This script is not suitable for unattended/non-interactive
 use as written.
+.PP
+If a key pair already exists,
+.B aenigma-keys
+asks before replacing it, since a new key pair gives the node a new
+address. The new pair is written to temporary files in
+.I /var/lib/aenigma
+and moved into place only when both files are complete, so a failed or
+cancelled run leaves the existing pair unchanged and removes the
+temporary files.
 .SH FILES
 .TP
 .I /var/lib/aenigma
@@ -50,26 +59,20 @@ mode 0600.
 Success; both keys were generated and their ownership/permissions set.
 .TP
 .B 1
-The script was not invoked as root.
+The script was not invoked as root, or replacing the existing key pair
+was declined.
 .PP
 Any failure from
 .BR openssl (1)
 (for example, a mismatched or empty passphrase) causes the script to abort
 immediately, since it runs with
-.B set -e
-and does not trap or ignore command failures.
+.BR "set -e" ;
+the existing key pair is then unchanged.
 .SH NOTES
 .IP \(bu 2
-.B aenigma-keys
-does not check whether
-.I private-key.pem
-or
-.I public-key.pem
-already exist before generating new ones.
-.BR openssl (1)
-will overwrite existing files at those paths without prompting for
-confirmation. Back up any existing keypair before re-running this script
-if it must be preserved.
+Replacing the key pair changes the node's address. Peers and clients that
+know the old address must be told the new one. Keep a copy of the old pair
+if it may be needed again; the script does not keep one.
 .IP \(bu 2
 The private key passphrase is supplied interactively at the OpenSSL
 prompt and is never written to disk, logged, or accepted as a command-line

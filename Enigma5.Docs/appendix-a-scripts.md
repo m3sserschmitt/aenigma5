@@ -214,7 +214,7 @@ The package installs the tools of Table A.4 to `/usr/bin`. Each has a manual pag
 | `aenigma-config` | Sets one value in `/etc/aenigma/appsettings.json` with `jq`, for example `aenigma-config -p Hostname -v https://node.example.com`. The value `null` clears a setting. The file is created if it is missing. |
 | `aenigma-update` | Installs the newest version of the package with `apt-get`. |
 | **Keys** | |
-| `aenigma-keys` | Creates a new 4096-bit key pair in `/var/lib/aenigma`, with the private key encrypted; asks for the passphrase. |
+| `aenigma-keys` | Creates a new 4096-bit key pair in `/var/lib/aenigma`, with the private key encrypted; asks for the passphrase, and asks before replacing an existing pair. |
 | `aenigma-lock-key` | Encrypts the existing private key with a passphrase. |
 | `aenigma-unlock-key` | Removes the encryption from the private key. |
 | **Tor** | |
