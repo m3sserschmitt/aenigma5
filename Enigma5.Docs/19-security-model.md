@@ -67,7 +67,7 @@ address is another node or the recipient, except by looking it up in the network
 | Sign-in by signing a random challenge | A caller proves control of an address before it can collect or route messages. | 8 |
 | One-time challenges, created by a secure random source | A recorded sign-in cannot be replayed. | 8 |
 | Messages are returned only to the signed-in address | A caller can collect and confirm only its own messages. | 9 |
-| Confirmation limited to what the connection has pulled | A caller cannot make the node drop messages it never received. | 9 |
+| Confirmation limited to what the connection has pulled | A caller cannot make the node drop messages it never received, unless it changes its address on the same connection (Chapter 20, P11). | 9 |
 | Signed vertices, with checks of key, address, age and signature | Nobody can publish or alter the vertex of another node. Old vertices cannot be replayed for long. | 10 |
 | Neighbors only with a live session | A node lists only parties that are connected to it right now. | 10 |
 | Sign-in on behalf of a peer only with the node's own key | Only the node's own bridge can act for a peer address. | 8, 11 |

@@ -439,8 +439,7 @@ Controls the delay between peer connection retries.
         "Args": {
           "path": "logs/logs-.txt",
           "rollingInterval": "Day",
-          "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter,
-          Serilog.Formatting.Compact"
+          "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter,Serilog.Formatting.Compact"
         }
       }
     ]

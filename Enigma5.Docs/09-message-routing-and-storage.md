@@ -136,7 +136,8 @@ Two rules protect messages that the recipient has not received:
   have higher `Id` values and stay pending.
 - The node remembers, per connection, the highest `Id` that `Pull` or `Pull2` returned on that
   connection, and never confirms beyond it. A `supId` that is too high is reduced to that value.
-  If nothing was pulled on the connection, nothing is confirmed.
+  If nothing was pulled on the connection, nothing is confirmed. The value belongs to the
+  connection, not to the address: signing in again does not reset it (Chapter 20, P11).
 
 The older methods are still available for older clients but are deprecated:
 

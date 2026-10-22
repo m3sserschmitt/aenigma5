@@ -43,6 +43,7 @@ again; this is why the numbers have gaps.
 | P8 | There is no limit on the number of messages stored for one address. | Storage can be filled by a caller, within the retention period. | A limit per destination. | 9, 19 |
 | P9 | The size of an onion shows how many layers are left. | See Chapter 19. | Padding to a common size. | 5, 19 |
 | P10 | Key wrapping and signatures use PKCS#1 v1.5 padding. | See Chapter 19. | OAEP and PSS, in a new version of the native library and of the protocol. | 5, 19 |
+| P11 | The highest `Id` pulled on a connection is kept for the connection, not for the address it was pulled under, and signing in again does not reset it. `Id` values are shared by all addresses. | A connection that pulls as one address, signs in on the same connection as another address and confirms, confirms that address's messages up to the first address's highest `Id`, also those it never pulled; they lose their content at once. Only addresses whose keys the caller holds are affected, and only a client that changes its address on one connection does this. | Keep the value together with the address it was pulled under, and use it only for that address. | 9, 19 |
 
 ## 20.4 Operation
 
