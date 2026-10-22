@@ -41,6 +41,9 @@ aenigma (5.1.1) unstable; urgency=medium
     the new pair through temporary files, so a failed or cancelled run
     (for example, passphrases that do not match) leaves the old pair
     intact; before, it overwrote the node's key at once.
+  * The Keyboard passphrase source takes up to 256 characters, the limit
+    of the dashboard, and ignores further characters and keys that give
+    no character; before, it failed at the 129th character.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 

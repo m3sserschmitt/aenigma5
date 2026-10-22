@@ -75,7 +75,7 @@ is.
 | `PassphraseSource` | Class | Behavior |
 |---|---|---|
 | `Dashboard` (default) | `DummyPassphraseProvider` | Returns an empty passphrase. The operator enters the passphrase on the dashboard. |
-| `Keyboard` | `CommandLinePassphraseReader` | Asks for the passphrase on the console. The typed characters are not shown. At most 128 characters are accepted. |
+| `Keyboard` | `CommandLinePassphraseReader` | Asks for the passphrase on the console. The typed characters are not shown. As on the dashboard, at most 256 characters are taken; further characters, and keys that give no character, are ignored. |
 | `Azure` (planned for removal) | `AzurePassphraseReader` | Reads the Azure Key Vault secret named by `PassphrasePath`. |
 
 ## 6.5 The kernel keyring
