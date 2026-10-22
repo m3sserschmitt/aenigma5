@@ -79,7 +79,7 @@ VIRTUAL_HOST_CONF=$(cat <<EOF
     ProxyPreserveHost On
     ProxyRequests Off
 
-    # allow for upgrading to websockets
+    # These two rules proxy every request: WebSocket upgrades (SignalR, /OnionRouting) to ws://, all others to http://.
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
     RewriteRule /(.*)           ws://$LOCAL_ADDRESS/\$1 [P,L]
     RewriteCond %{HTTP:Upgrade} !=websocket [NC]
@@ -88,10 +88,6 @@ VIRTUAL_HOST_CONF=$(cat <<EOF
     # Proxy for HTTP requests
     ProxyPass "/" "http://$LOCAL_ADDRESS/"
     ProxyPassReverse "/" "http://$LOCAL_ADDRESS/"
-
-    # Proxy for WebSocket (SignalR) requests
-    ProxyPass "/OnionRouting" "ws://$LOCAL_ADDRESS/OnionRouting"
-    ProxyPassReverse "/OnionRouting" "ws://$LOCAL_ADDRESS/OnionRouting"
 
     ErrorLog ${LOG_DIR}/$SERVICE_NAME-error.log
     CustomLog ${LOG_DIR}/$SERVICE_NAME-access.log combined
@@ -111,7 +107,7 @@ a2enmod proxy_wstunnel
 
 # Create Apache virtual host configuration
 echo "Creating virtual host configuration for $DOMAIN..."
-echo "$VIRTUAL_HOST_CONF" | sudo tee $APACHE_CONF
+echo "$VIRTUAL_HOST_CONF" | tee "$APACHE_CONF"
 
 # Enable the new site configuration
 a2ensite $SERVICE_NAME.conf
