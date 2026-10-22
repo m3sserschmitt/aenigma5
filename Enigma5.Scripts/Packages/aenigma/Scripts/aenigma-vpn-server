@@ -101,18 +101,34 @@ mkdir -p "$SERVER_DIRECTORY"
 mkdir -p "$CLIENT_CONFIGS_DIRECTORY"
 mkdir -p "$LOG_DIRECTORY"
 
-# First run: initialise PKI, build CA and generate DH params
+# First run: initialise PKI and build CA. Each step is checked on its own, so a run that stopped half-way
+# (for example, CA passphrases that do not match, or Ctrl+C during gen-dh) is completed by the next run.
 if [[ ! -f "${EASYRSA_PKI}/ca.crt" ]]; then
+    # Without a CA certificate nothing can have been signed: what an unfinished first run left is removed.
+    # A CA that was completed once (its certificate was copied to $OPENVPN_DIRECTORY) or that has issued
+    # certificates is never removed.
+    if [[ -d "$EASYRSA_DIRECTORY" ]]; then
+        if [[ -f "$OPENVPN_DIRECTORY/ca.crt" ]] || compgen -G "${EASYRSA_PKI}/issued/*.crt" > /dev/null; then
+            echo "ERROR: ${EASYRSA_PKI}/ca.crt is missing, but $EASYRSA_DIRECTORY belongs to a CA that was completed before."
+            echo "Check it by hand; it is left unchanged."
+            exit 1
+        fi
+        echo "An earlier first run did not finish; removing $EASYRSA_DIRECTORY and building the CA again."
+        rm -rf "$EASYRSA_DIRECTORY"
+    fi
     make-cadir "$EASYRSA_DIRECTORY"
     "$EASYRSA" --batch init-pki
     # CA private key is passphrase-protected: you will be prompted to set
     # and confirm it now, and prompted again to unlock it every time a new
     # domain's server certificate is signed in the future.
     "$EASYRSA" --batch build-ca
-    "$EASYRSA" --batch gen-dh
-    cp -v "${EASYRSA_PKI}/ca.crt" "$OPENVPN_DIRECTORY/"
-    cp -v "${EASYRSA_PKI}/dh.pem" "$OPENVPN_DIRECTORY/"
 fi
+if [[ ! -f "${EASYRSA_PKI}/dh.pem" ]]; then
+    "$EASYRSA" --batch gen-dh
+fi
+# Copied only when missing, so that files an operator replaced are kept.
+[[ -f "$OPENVPN_DIRECTORY/ca.crt" ]] || cp -v "${EASYRSA_PKI}/ca.crt" "$OPENVPN_DIRECTORY/"
+[[ -f "$OPENVPN_DIRECTORY/dh.pem" ]] || cp -v "${EASYRSA_PKI}/dh.pem" "$OPENVPN_DIRECTORY/"
 
 # Refuse to regenerate an already-issued server certificate: re-running
 # gen-req for an existing DOMAIN would silently overwrite its private key

@@ -44,6 +44,10 @@ aenigma (5.1.1) unstable; urgency=medium
   * The Keyboard passphrase source takes up to 256 characters, the limit
     of the dashboard, and ignores further characters and keys that give
     no character; before, it failed at the 129th character.
+  * aenigma-vpn-server can be run again after a run that stopped
+    half-way: an unfinished first run's easy-rsa directory is removed and
+    the CA built again, and missing DH parameters are generated; before,
+    every later run failed until the directory was removed by hand.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 
