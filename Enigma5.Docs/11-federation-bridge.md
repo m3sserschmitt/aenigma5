@@ -209,7 +209,8 @@ Chapter 20 lists the change that would remove it.
 ## 11.7 Peers on Tor
 
 If a peer's `Host` is a `.onion` URL, the target connection goes through the SOCKS5 proxy given by
-the setting `Socks5Proxy`. By default, this is the local Tor service at `127.0.0.1:9050`. The code
+the setting `Socks5Proxy`. By default, this is the local Tor service at `127.0.0.1:9050`; a missing
+or empty value falls back to this default, so the proxy cannot be turned off. The code
 limits such connections to the long polling transport. The source connection always goes directly to the node's own
 endpoint.
 

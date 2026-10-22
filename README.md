@@ -236,10 +236,12 @@ required because it controls how other peers will connect to your local instance
 "Socks5Proxy": "socks5://127.0.0.1:9050"
 ```
 
-This property is used to configure local address for listening socks5 TOR proxy. This
-property is mainly used in scenarios when configuring federation over TOR. The proxy will
-be used to connect to other app instances through TOR network. When running a single
-instance in isolation this property is of no use and can be null.
+This property is used to configure local address for listening socks5 TOR proxy. The
+network bridge uses the proxy only to connect to peers whose host is a `.onion` address;
+peers with any other host are reached directly. When the property is missing, null or
+empty, the default `socks5://127.0.0.1:9050` is used; the proxy cannot be turned off,
+since an onion address can only be reached through Tor. A node without onion peers does
+not use it.
 
 ---
 
