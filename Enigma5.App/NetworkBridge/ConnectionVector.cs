@@ -584,7 +584,8 @@ public class ConnectionVector : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Exception while invoking {{{Constants.Serilog.HubMethodNameKey}}} with the following data {{@{Constants.Serilog.HubMethodArgumentsKey}}}.", method, data);
+            // Without the data, which can be an onion: Error events are written also on packaged nodes.
+            _logger.LogError(ex, $"Exception while invoking {{{Constants.Serilog.HubMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", method, this);
             return false;
         }
     }

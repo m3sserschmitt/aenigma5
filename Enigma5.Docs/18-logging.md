@@ -72,12 +72,12 @@ Three places write most events.
 **The hub log filter.** `LogFilter` is the first filter of the hub pipeline (Chapter 7). It writes
 one `Debug` event before each hub call, with the method name, the connection and the arguments, and
 one after it, with success or the list of errors. If a call throws an exception or returns nothing,
-it writes an `Error` event, again with the arguments.
+it writes an `Error` event with the method name and the connection, without the arguments.
 
 **The command log behavior.** `RequestResponseLoggingBehavior` wraps every MediatR command and
 query (Chapter 2). It writes one `Debug` event with the command before the handler runs, and one
 with the command and its result after it. If the handler throws an exception, it writes an `Error`
-event with the command and returns a failed result.
+event with the type of the command, not its content, and returns a failed result.
 
 **The components.** The network bridge and its connection vectors log each step (Chapter 11). The
 other filters log their decisions. The single-thread runner logs every exception of a work item
@@ -98,8 +98,9 @@ useful for finding errors. It also means that the log holds whatever these objec
 | Pending messages returned to a recipient | Command log (result of the pending messages query) | The same, for the receiving side. |
 | Vertices, shared data and peers | Hub log, command log | Mostly public data. |
 
-The events of the `Error` level can contain the same data for the one call that failed, because
-`LogFilter` and the command log behavior add the arguments to their error events.
+Events of the `Warning`, `Error` and `Critical` levels carry none of this data: they name the hub
+method, the command type or the peer connection, and the exception. The arguments of a failed call
+are in the `Debug` event written before it, so they are in the log only at the `Debug` limit.
 
 The consequences for operators are:
 
@@ -135,6 +136,7 @@ can be searched in the JSON file. The names used by the node are constants in th
 | `DestinationConnectionId` | Connection a message was passed on to. |
 | `Address` | An address. |
 | `Command`, `CommandResult` | A MediatR command and its result, as structured data. |
+| `CommandType` | The type name of a command whose handler threw an exception. |
 | `BridgeMethodName`<br>`HubConnectionsProxyMethodName`<br>`ConnectionVectorMethodName` | Step of the network bridge that wrote the event. |
 | `ConnectionVector` | The peer connection the event is about. |
 
@@ -169,8 +171,8 @@ jq -c 'select(.CommandResult.Success == false) | .Command' logs/logs-20261001.tx
 - Log through `ILogger<T>` and with message templates. Use the property names of
   `Constants.Serilog`, and add a new constant for a new property.
 - Use `Debug` for the normal course of events, `Warning` for a setup that is probably a mistake,
-  and `Error` for failures. A `Warning` event is written on packaged nodes, so it must not carry
-  data about calls or callers.
+  and `Error` for failures. `Warning` and `Error` events are written on packaged nodes, so they must
+  not carry data about calls or callers; such data belongs in a `Debug` event.
 - Do not put secrets into objects that the two wrappers log. A command that carries a secret must
   not expose it as a public property. `SetMasterPassphraseCommand` shows the pattern: a private
   field and a method that returns it.

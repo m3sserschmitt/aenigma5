@@ -48,4 +48,15 @@ public class RequestResponseLoggingBehaviorTests
         Assert.False(result.Success);
         Assert.IsType<InvalidOperationException>(Assert.Single(_logger.Errors).Exception);
     }
+
+    // A command can hold message data, and error events are written also on packaged nodes.
+    [Fact]
+    public async Task The_error_event_names_the_type_of_the_command_but_not_its_content()
+    {
+        await Behavior.Handle(new CleanupGraphCommand(), _ => throw new InvalidOperationException("broken"), default);
+
+        var error = Assert.Single(_logger.Errors);
+        Assert.Equal(nameof(CleanupGraphCommand), error.Properties[Common.Constants.Serilog.CommandTypeKey]);
+        Assert.DoesNotContain(error.Properties.Keys, key => key.TrimStart('@') == Common.Constants.Serilog.CommandKey);
+    }
 }

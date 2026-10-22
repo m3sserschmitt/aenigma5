@@ -33,6 +33,10 @@ aenigma (5.1.1) unstable; urgency=medium
     connection found for an earlier onion of the same request.
   * A vertex without a time, or dated more than 5 minutes ahead of the
     node's clock, is refused; before, it was accepted and never expired.
+  * Error events no longer carry the arguments of a failed hub call, the
+    content of a failed command or the data of a failed bridge call, so a
+    packaged node (log level Warning) keeps onions, addresses and keys out
+    of its log. The arguments remain in the Debug event before each call.
 
  -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
 
