@@ -208,8 +208,7 @@ public class RoutingHubTests
 
         Assert.True(result.Success);
         Assert.Empty(await NeighborsOfTheNode(node));
-        await Task.Delay(100);
-        Assert.Empty(connection.Sent);
+        Assert.Empty(connection.Addressed);
     }
 
     [Fact]
@@ -249,8 +248,7 @@ public class RoutingHubTests
 
         Assert.True(result.Success);
         Assert.Empty(await NeighborsOfTheNode(node));
-        await Task.Delay(100);
-        Assert.Empty(connection.Sent);
+        Assert.Empty(connection.Addressed);
     }
 
     [Fact]
@@ -263,7 +261,7 @@ public class RoutingHubTests
 
         Assert.Equal(InvocationErrors.BROADCAST_TRIGGERING_WARNING, SingleError(result));
         Assert.True(result.Data);
-        Assert.Empty(connection.Sent);
+        Assert.Empty(connection.Addressed);
     }
 
     [Fact]
@@ -281,7 +279,7 @@ public class RoutingHubTests
         Assert.Equal(TestKeys.Address3, stored.Destination);
         Assert.Equal(Convert.ToBase64String([1, 2, 3]), stored.Content);
         Assert.False(stored.Sent);
-        Assert.Empty(connection.Sent);
+        Assert.Empty(connection.Addressed);
     }
 
     [Fact]
@@ -329,8 +327,7 @@ public class RoutingHubTests
         var stored = await node.Database(context => context.Messages.SingleAsync());
         Assert.True(stored.Sent);
         Assert.Null(stored.Content);
-        await Task.Delay(100);
-        Assert.Empty(late.Sent);
+        Assert.Empty(late.Addressed);
     }
 
     [Fact]

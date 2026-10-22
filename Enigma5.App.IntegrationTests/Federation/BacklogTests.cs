@@ -18,6 +18,7 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+using System.Text.RegularExpressions;
 using Enigma5.Tests.Base;
 
 namespace Enigma5.App.IntegrationTests.Federation;
@@ -76,14 +77,32 @@ public class BacklogTests(BacklogFixture fixture) : IClassFixture<BacklogFixture
         Assert.Equal(BacklogFixture.Messages, _a.Count("SELECT COUNT(*) FROM Messages WHERE Destination = $d AND Sent = 1", ("$d", TestKeys.Address2)));
     }
 
-    // The bridge of B confirms each page on A as soon as it has routed it, not once after the last page.
+    // The bridge of B confirms each page on A as soon as it has routed it, not once after the last page. A logs
+    // every hub call with its argument: Pull2 with InfId, the last id before the page, and Cleanup2 with SupId.
     [Fact]
     public async Task The_backlog_is_confirmed_page_by_page()
     {
         Assert.True(await BacklogMoved());
 
+        var calls = Regex.Matches(_a.Log, @"Invoking (Pull2|Cleanup2) for connectionId \S+ with the following data: \[\{""(?:InfId|SupId)"":(null|\d+)")
+            .Select(match => (Method: match.Groups[1].Value, Id: match.Groups[2].Value == "null" ? (long?)null : long.Parse(match.Groups[2].Value)))
+            .ToList();
+        var confirmed = calls.Where(call => call.Method == "Cleanup2").Select(call => call.Id).ToList();
+
+        // The last message of each page, from A's own records: ids 20, 40 and 45 on a fresh database.
         var pages = (BacklogFixture.Messages + Common.Constants.MessagesPageSize - 1) / Common.Constants.MessagesPageSize;
-        var confirmations = _a.Log.Split('\n').Count(line => line.Contains("Invoking Cleanup2 for connectionId"));
-        Assert.True(confirmations >= pages, $"{confirmations} confirmations for {pages} pages");
+        var lastOfEachPage = Enumerable.Range(1, pages)
+            .Select(page => (long?)_a.Count("SELECT Id FROM Messages WHERE Destination = $d ORDER BY Id LIMIT 1 OFFSET $o",
+                ("$d", TestKeys.Address2), ("$o", Math.Min(page * Common.Constants.MessagesPageSize, BacklogFixture.Messages) - 1)))
+            .ToList();
+        Assert.Equal(lastOfEachPage, confirmed);
+
+        // Each page is confirmed before the next one is pulled: every Cleanup2 is followed by a Pull2 that continues
+        // after the confirmed page.
+        Assert.All(calls.Select((call, index) => (call, index)).Where(item => item.call.Method == "Cleanup2"), item =>
+        {
+            Assert.True(item.index + 1 < calls.Count, $"Nothing was pulled after the confirmation of {item.call.Id}.");
+            Assert.Equal(("Pull2", item.call.Id), calls[item.index + 1]);
+        });
     }
 }
