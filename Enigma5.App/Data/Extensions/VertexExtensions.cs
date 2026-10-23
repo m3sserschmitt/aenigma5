@@ -27,8 +27,14 @@ public static class VertexExtensions
     public static VertexBroadcastRequestDto ToVertexBroadcast(this Vertex? vertex)
     => new(vertex?.PublicKey ?? string.Empty, vertex?.SignedData ?? string.Empty);
 
+    // A vertex without a time has no age; it counts as expired, so that it is refused and removed.
     public static bool LastUpdateExceeded(this Vertex? vertex, TimeSpan lifetime)
-    => vertex is not null && DateTimeOffset.UtcNow - vertex.Neighborhood.LastUpdate > lifetime;
+    => vertex is not null
+    && (vertex.Neighborhood.LastUpdate is null || DateTimeOffset.UtcNow - vertex.Neighborhood.LastUpdate > lifetime);
+
+    // The clocks of nodes differ a little; a time further ahead would keep the vertex for longer than its lifetime.
+    public static bool LastUpdateInFuture(this Vertex vertex)
+    => vertex.Neighborhood.LastUpdate > DateTimeOffset.UtcNow + Common.Constants.MaxVertexClockSkew;
 
     public static bool ShouldReplace(this Vertex vertex, Vertex previous)
     {

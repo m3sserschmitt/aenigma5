@@ -83,10 +83,11 @@ failed for some vectors.
                sign in with the node's key, and call TriggerBroadcast
                with the addresses of all signed-in peers
 5. Synchronize for each vector, in both directions:
-                 pull all stored messages page by page (Pull2) from one side
-                 and route each of them to the other side (RouteMessage)
-6. Confirm     for each direction, confirm the forwarded messages with Cleanup2,
-               up to the last Id that was pulled
+                 pull the stored messages page by page (Pull2) from one side,
+                 route each of them to the other side (RouteMessage), and
+                 confirm each page with Cleanup2 once all its messages are routed
+6. Confirm     only for a side without Cleanup2: confirm the forwarded messages
+               with Cleanup, after the last page
 ```
 
 Step 4 adds the peers as neighbors of this node, signs a new local vertex and sends it to the
@@ -97,8 +98,15 @@ Step 5 moves messages that were stored while a peer was not connected. Messages 
 vector is connected are forwarded at once (Listing 11.1) and also stored. Step 5 of a later run finds
 them again, and the receiving node recognizes them by their `uuid` (Chapter 9).
 
-In step 6, a peer that runs an older version without `Cleanup2` answers that the method does not
-exist. The bridge then calls `Cleanup` instead, so that federation with older nodes keeps working.
+Each page is confirmed as soon as all of its messages have been routed, and only then. If the
+connection breaks in the middle of a synchronization, the pages that were moved before stay
+confirmed, and the next run repeats at most the page that was in progress. A message counts as routed
+only when the other node has stored it, so confirming a page never loses a message.
+
+A peer that runs an older version without `Cleanup2` answers the first confirmation with an error
+that the method does not exist. For that side, the bridge stops confirming pages and calls `Cleanup`
+once, in step 6, after the last page. Page by page would not be safe there: in 5.0.0, `Cleanup`
+confirms every stored message of the address, also those not moved yet.
 
 ## 11.5 When the bridge runs
 
@@ -201,7 +209,8 @@ Chapter 20 lists the change that would remove it.
 ## 11.7 Peers on Tor
 
 If a peer's `Host` is a `.onion` URL, the target connection goes through the SOCKS5 proxy given by
-the setting `Socks5Proxy`. By default, this is the local Tor service at `127.0.0.1:9050`. The code
+the setting `Socks5Proxy`. By default, this is the local Tor service at `127.0.0.1:9050`; a missing
+or empty value falls back to this default, so the proxy cannot be turned off. The code
 limits such connections to the long polling transport. The source connection always goes directly to the node's own
 endpoint.
 

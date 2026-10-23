@@ -44,6 +44,10 @@ internal sealed class HubConnection : IAsyncDisposable
     // What the hub has sent to any connection: the receiving connection, the method and its argument.
     public ConcurrentQueue<(string ConnectionId, string Method, object? Argument)> Sent { get; } = new();
 
+    // Every connection the hub chose to send to. The hub chooses before its call returns and sends a moment
+    // later, so a test can tell at once, without waiting, that nothing will be sent.
+    public ConcurrentQueue<string> Addressed { get; } = new();
+
     public HubConnection(TestNode node, string connectionId)
     {
         ConnectionId = connectionId;
@@ -62,6 +66,7 @@ internal sealed class HubConnection : IAsyncDisposable
         clients.Client(Arg.Any<string>()).Returns(call =>
         {
             var receiver = call.Arg<string>();
+            Addressed.Enqueue(receiver);
             var proxy = Substitute.For<ISingleClientProxy>();
             proxy.SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>()).Returns(sending =>
             {

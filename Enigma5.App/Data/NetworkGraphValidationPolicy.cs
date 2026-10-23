@@ -83,7 +83,8 @@ public class NetworkGraphValidationPolicy(IConfiguration configuration)
     public static bool ValidateNeighborsAddresses(Vertex vertex)
     => vertex.Neighborhood.Neighbors.All(address => address.IsValidAddress());
 
-    public bool IsNotExpired(Vertex vertex) => !vertex.LastUpdateExceeded(_configuration.GetVertexLifetime());
+    public bool IsNotExpired(Vertex vertex)
+    => !vertex.LastUpdateExceeded(_configuration.GetVertexLifetime()) && !vertex.LastUpdateInFuture();
 
     public bool Validate(Vertex vertex)
     => IsNotExpired(vertex)

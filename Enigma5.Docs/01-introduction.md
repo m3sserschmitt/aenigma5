@@ -25,7 +25,9 @@ The system has two kinds of software:
 - **Nodes** are servers that pass messages on and store them for a while. The software in this
   repository, `Enigma5.App`, is a node. Anyone can run one.
 - **Clients** are the apps people use to send and receive messages. Today, the only client is
-  the Aenigma Android app.
+  the Aenigma Android app. It is available on
+  [Google Play](https://play.google.com/store/apps/details?id=ro.aenigma) and as an
+  [APK file](https://github.com/m3sserschmitt/aenigma-android/releases/latest/download/aenigma.apk).
 
 Each node is run by its own *operator*, who decides which other nodes it connects to. Connected
 nodes form a network and pass messages to each other, so users of different nodes can still reach
@@ -145,14 +147,16 @@ A node is a single Linux service with everything it needs included. It runs on `
 machines. There are three ways to deploy it:
 
 - a Debian package, which also installs command-line tools for managing keys, Tor onion services,
-  reverse proxies and VPNs;
+  reverse proxies and VPNs. The package repository and how to install from it are described in
+  the [instructions for the packages](https://github.com/m3sserschmitt/aenigma-packages/blob/gh-pages/README.md);
 - ready-made virtual machine images for VirtualBox and QEMU/libvirt, which set themselves up on
-  first boot, including onion services for the node and its dashboard;
+  first boot, including onion services for the node and its dashboard. Where to get them and how
+  to start one is described in the [instructions for the images](https://github.com/m3sserschmitt/aenigma-boxes/blob/gh-pages/README.md);
 - building and running it from source, as described in [`README.md`](../README.md).
 
 Every node has two HTTP endpoints: a *public endpoint* for clients and peer nodes, and a *control
-endpoint* for the dashboard and for calls the node makes to itself. Packages and images are
-described in [Appendix A](appendix-a-scripts.md).
+endpoint* for the dashboard and for calls the node makes to itself. How the packages and the images
+are built, and what they do on a machine, is described in [Appendix A](appendix-a-scripts.md).
 
 ## 1.8 Scope and organization of this document
 

@@ -5,9 +5,32 @@
 ![Platform](https://img.shields.io/badge/platform-linux%20amd64%20%7C%20arm64-lightgrey)
 [![Build and test](https://github.com/m3sserschmitt/aenigma5/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/m3sserschmitt/aenigma5/actions/workflows/build-and-test.yml)
 
+Aenigma is a federated messaging system: separately run nodes pass onion-encrypted messages on
+behalf of clients. This repository holds the node.
+
+### Running a node
+
+A node can be deployed without building it from source:
+
+- **Debian packages:** see the [instructions for the packages](https://github.com/m3sserschmitt/aenigma-packages/blob/gh-pages/README.md).
+- **Virtual machine images:** see the [instructions for the images](https://github.com/m3sserschmitt/aenigma-boxes/blob/gh-pages/README.md).
+
+### Client app
+
+The Aenigma Android app is available on
+[Google Play](https://play.google.com/store/apps/details?id=ro.aenigma) and as an
+[APK file](https://github.com/m3sserschmitt/aenigma-android/releases/latest/download/aenigma.apk).
+
+### Documentation
+
+- [`API.md`](API.md): the HTTP endpoints of a node.
+- [`SIGNALR_API.md`](SIGNALR_API.md): the hub methods.
+- [`Enigma5.Docs`](Enigma5.Docs/README.md): the technical documentation of the node.
+
 ### Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine.
+These instructions will get you a copy of the project up and running on your local machine,
+built from source.
 
 ### Prerequisites
 
@@ -213,10 +236,12 @@ required because it controls how other peers will connect to your local instance
 "Socks5Proxy": "socks5://127.0.0.1:9050"
 ```
 
-This property is used to configure local address for listening socks5 TOR proxy. This
-property is mainly used in scenarios when configuring federation over TOR. The proxy will
-be used to connect to other app instances through TOR network. When running a single
-instance in isolation this property is of no use and can be null.
+This property is used to configure local address for listening socks5 TOR proxy. The
+network bridge uses the proxy only to connect to peers whose host is a `.onion` address;
+peers with any other host are reached directly. When the property is missing, null or
+empty, the default `socks5://127.0.0.1:9050` is used; the proxy cannot be turned off,
+since an onion address can only be reached through Tor. A node without onion peers does
+not use it.
 
 ---
 
@@ -304,11 +329,13 @@ permanently deleted. Default is 14 days.
 ---
 
 ```json
-"SentMessageRetentionPeriod": "00:00:00"
+"SentMessageRetentionPeriod": "14.00:00:00"
 ```
 
-Controls for how long delivered messages will be retained in database until permanently
-deleted. By default all delivered messages are scheduled for immediate removal.
+Controls for how long delivered messages are kept in the database before they are permanently
+deleted. The content of a message is removed as soon as it is delivered; what is kept is its
+identifier, so that a copy that arrives again later is recognized and not delivered twice. The
+default is 14 days, as long as an undelivered message may be kept.
 
 ---
 
@@ -414,8 +441,7 @@ Controls the delay between peer connection retries.
         "Args": {
           "path": "logs/logs-.txt",
           "rollingInterval": "Day",
-          "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter,
-          Serilog.Formatting.Compact"
+          "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter,Serilog.Formatting.Compact"
         }
       }
     ]

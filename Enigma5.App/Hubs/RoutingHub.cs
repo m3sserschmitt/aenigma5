@@ -109,23 +109,7 @@ public partial class RoutingHub(
             return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
-        return Ok(await GetPendingMessagesAsync(ClientAddress, null, Constants.LegacyPullMaxMessages));
-    }
-
-    [Authenticated]
-    [ValidateModel]
-    [BlacklistAuthorization]
-    public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull2(PullRequestDto request)
-    {
-        if (ClientAddress is null)
-        {
-            _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
-            nameof(Pull2),
-            Context.ConnectionId);
-            return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
-        }
-
-        return Ok(await GetPendingMessagesAsync(ClientAddress, request.InfId, Constants.MessagesPageSize));
+        return Ok(await GetPendingMessagesAsync(ClientAddress, null, Constants.MessagesPageSize));
     }
 
     [Obsolete("Use Cleanup2 instead; Still here for compatibility with previous versions and will be removed in the future;")]
@@ -133,12 +117,6 @@ public partial class RoutingHub(
     [BlacklistAuthorization]
     public Task<InvocationResultDto<bool>> Cleanup()
     => ConfirmDeliveryAsync(nameof(Cleanup), null);
-
-    [Authenticated]
-    [ValidateModel]
-    [BlacklistAuthorization]
-    public Task<InvocationResultDto<bool>> Cleanup2(CleanupRequestDto request)
-    => ConfirmDeliveryAsync(nameof(Cleanup2), request.SupId);
 
     [ValidateModel]
     [BlacklistAuthorization]

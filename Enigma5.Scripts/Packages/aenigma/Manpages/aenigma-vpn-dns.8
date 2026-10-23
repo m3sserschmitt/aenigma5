@@ -1,4 +1,4 @@
-.TH AENIGMA-VPN-DNS 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.TH AENIGMA-VPN-DNS 8 "2026-10-19" "aenigma 5.1.1" "Aenigma Administration Scripts"
 .SH NAME
 aenigma-vpn-dns \- configure DNS resolution and push directives for a VPN server instance
 .SH SYNOPSIS
@@ -7,8 +7,8 @@ aenigma-vpn-dns \- configure DNS resolution and push directives for a VPN server
 .I DOMAIN
 .B \-i
 .I DNS_IP
-.B \-f
-.I INTERFACE
+.RB [ \-f
+.IR INTERFACE ]
 .RB [ \-c
 .IR CNAME ]
 .br
@@ -71,9 +71,24 @@ Required.
 .BI \-f " INTERFACE"
 Network interface
 .BR dnsmasq (8)
-should bind to and serve DNS on, e.g.
-.IR tun0 .
-Required.
+should bind to and serve DNS on. Optional: by default it is the interface
+named by the
+.B dev
+line of the server's configuration, which
+.BR aenigma-vpn-server (8)
+gives a fixed name. If
+.I INTERFACE
+is given, it is used even when it differs from the server's interface, with a
+warning; DNS then works for the server's clients only if they reach
+.I DNS_IP
+through
+.IR INTERFACE .
+The interface does not have to exist yet:
+.B dnsmasq
+is configured with
+.BR bind-dynamic ,
+so it starts listening on the interface when OpenVPN creates it, and again
+each time OpenVPN restarts and creates it anew.
 .TP
 .BI \-c " CNAME"
 Optional. If given, makes
@@ -123,6 +138,29 @@ configuration. Created empty if missing; populated separately by
 .BR aenigma-vpn-server-host (8).
 .SH NOTES
 .IP \(bu 2
+A server set up before
+.BR aenigma-vpn-server (8)
+gave the tunnel interface a fixed name has the line
+.B dev tun
+in its configuration, and the kernel names its interface
+.BR tun0 ,
+.B tun1
+and so on, in the order the servers start. For such a server
+.I INTERFACE
+must be given. To give it a fixed name instead, replace that line in
+.IB /etc/openvpn/ DOMAIN .conf
+with the two lines
+.B dev
+.I NAME
+and
+.BR "dev-type tun" ,
+restart
+.BI openvpn@ DOMAIN\fR,
+and run
+.B aenigma-vpn-dns
+again without
+.BR \-f .
+.IP \(bu 2
 Both the
 .B dhcp-option DOMAIN
 and
@@ -139,7 +177,7 @@ out between runs is restored to active rather than silently left disabled.
 The generated
 .BR dnsmasq (8)
 configuration file is fully rewritten on each run, so changing
-.I INTERFACE
+the interface
 or adding/removing
 .B \-c
 .I CNAME

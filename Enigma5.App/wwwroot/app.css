@@ -24,6 +24,12 @@ h1:focus {
     outline: none;
 }
 
+/* The icon before a card title, as high as the title's letters. */
+.card-title-icon {
+    height: 1em;
+    width: 1em;
+}
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }

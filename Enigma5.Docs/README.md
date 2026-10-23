@@ -49,11 +49,8 @@ Appendix A. [Packaging, deployment and VM images (`Enigma5.Scripts`)](appendix-a
 
 ## Conventions
 
-The chapters follow the structure of an academic report and are written in an impersonal
-register.
-
 - Every chapter opens with a paragraph beginning `**Abstract.**` and closes with a section titled
-  *Summary*.
+  `Summary`.
 - Sections are numbered hierarchically within their chapter (`4.2`, `4.2.1`), with the number
   written in the heading itself.
 - Tables and listings are numbered per chapter and captioned. The caption is a paragraph placed
@@ -63,8 +60,9 @@ register.
 - Protocols and data formats are specified in listings with a compact notation; `‖` denotes
   concatenation, and each listing defines its remaining symbols.
 - Paths are relative to the repository root, for example `Enigma5.App/Hubs/RoutingHub.cs`.
-- "Node" denotes one running instance of `Enigma5.App`; "client" denotes an end-user application
-  (currently the Aenigma Android app) that connects to a node.
+- *Node* denotes one running instance of `Enigma5.App`; *client* denotes an end-user application
+  (currently the Aenigma Android app, available on
+  [Google Play](https://play.google.com/store/apps/details?id=ro.aenigma)) that connects to a node.
 - Examples use the default ports: `8080` for the public endpoint and `8081` for the control
   endpoint.
 

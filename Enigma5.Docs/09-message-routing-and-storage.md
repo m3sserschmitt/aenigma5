@@ -108,9 +108,10 @@ The check has two limits, both listed as future improvements in Chapter 20:
 - It looks for the `uuid` among all stored messages, whatever their destination. If a caller gives
   a `uuid` that already belongs to another message on the node, its message is not stored, although
   the call reports success. Callers must therefore use new random values.
-- It only works while the earlier copy is still stored. Confirmed messages are deleted by the next
-  cleanup run by default (Section 9.6), so a copy that arrives after that is stored again. The final
-  recipient then recognizes the duplicate by its `uuid`.
+- It only works while the earlier copy is still stored. A confirmed message keeps its row, without
+  its content, for `SentMessageRetentionPeriod` (14 days by default, as long as an unconfirmed
+  message may be kept and a relay may send a copy again). A copy that arrives later than that is
+  stored again, and the final recipient recognizes the duplicate by its `uuid`.
 
 ## 9.5 Collecting and confirming messages
 
@@ -135,11 +136,13 @@ Two rules protect messages that the recipient has not received:
   have higher `Id` values and stay pending.
 - The node remembers, per connection, the highest `Id` that `Pull` or `Pull2` returned on that
   connection, and never confirms beyond it. A `supId` that is too high is reduced to that value.
-  If nothing was pulled on the connection, nothing is confirmed.
+  If nothing was pulled on the connection, nothing is confirmed. The value belongs to the
+  connection, not to the address: signing in again does not reset it (Chapter 20, P11).
 
 The older methods are still available for older clients but are deprecated:
 
-- `Pull` returns up to 128 messages at once. Messages beyond the first 128 stay pending.
+- `Pull` returns up to 20 messages at once, the page size of `Pull2`, always starting with the
+  oldest pending message. Messages beyond the first 20 stay pending.
 - `Cleanup` takes no `supId`. It confirms all messages up to the highest `Id` pulled on the same
   connection.
 
@@ -152,8 +155,10 @@ A background job runs every five minutes (Chapter 17) and deletes:
 
 - pending messages older than `MessageRetentionPeriod` (14 days by default), whether they were
   ever collected or not;
-- delivered messages confirmed longer ago than `SentMessageRetentionPeriod` (0 by default, so they
-  are deleted by the next run).
+- delivered messages confirmed longer ago than `SentMessageRetentionPeriod` (14 days by default).
+
+When a message is confirmed, its content is removed at once, in the same step. The row keeps its
+destination, its `uuid` and its times, which is all the check of Section 9.4.3 needs.
 
 There is no limit on the number or size of messages stored for one address, other than these
 retention times and the size limit of one onion (Chapter 5).
@@ -180,5 +185,6 @@ path and makes repeated routing harmless, so a caller must use new values. Only 
 several onions in one call, without a `uuid`; relays send one message per call, with its `uuid`.
 Recipients collect messages in pages with `Pull2` and confirm them with `Cleanup2`. The node never
 confirms more than a connection has actually pulled, so messages that arrive in between are not
-lost. A background job deletes old pending messages after 14 days and confirmed ones right away by
-default.
+lost. Confirmed messages lose their content at once and keep their `uuid` for 14 days by default, so
+that copies that arrive late are recognized; a background job deletes both kinds when their period
+has passed.

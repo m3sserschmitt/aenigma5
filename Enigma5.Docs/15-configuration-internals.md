@@ -95,7 +95,7 @@ with this default and with the value in the shipped `appsettings.json`.
 | `AzureVaultUrl`,<br>`PassphrasePath` | Not set | Not set | Used by the Azure key source only (Chapter 6) |
 | `WebContentDirectory` | `./` | `./` | At each use |
 | `MessageRetentionPeriod` | 14 days | 14 days | At startup |
-| `SentMessageRetentionPeriod` | 0 | 0 | At startup |
+| `SentMessageRetentionPeriod` | 14 days | 14 days | At startup |
 | `SharedDataRetentionPeriod` | 14 days | 14 days | At startup, and for each `validUntil` value |
 | `FilesRetentionPeriod` | 3 days | 3 days | At startup, and for each `validUntil` value |
 | `SharedDataMaxSize` | 16 KiB | 16 KiB | At startup |
@@ -166,12 +166,11 @@ configuration. Table 15.4 lists the most important ones.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `MessagesPageSize` | 20 | Messages per `Pull2` page; also the largest number of payloads in one `RouteMessage` call (Chapter 9). |
-| `LegacyPullMaxMessages` | 128 | Largest number of messages returned by `Pull`. |
-| `MaxOnionSize` | 16,384 | Largest length of one onion, in base64 characters (Chapter 5). |
-| `SignalRMaximum`<br>`ReceiveMessageSize` | 331,776 | Largest hub message, in bytes: 20 onions of the largest size, plus 4 KiB. |
-| `MinPublicKeySize`<br>`MaxPublicKeySize` | 2,048<br>8,192 | Accepted sizes of a caller's RSA key, in bits (Chapter 5). |
-| `MaxPublicKeyLength` | 4,096 | Longest text of a public key, in characters. |
+| `MessagesPageSize` | 20 | Messages per `Pull2` page and per `Pull` call; also the largest number of payloads in one `RouteMessage` call (Chapter 9). |
+| `MaxOnionSize` | 16,384 | Largest length of one onion that is accepted, in base64 characters (Chapter 5). |
+| `SignalRMaximum`<br>`ReceiveMessageSize` | 364,544 | Largest hub message, in bytes (356 KiB): room for `MessagesPageSize` onions of `MaxOnionSize` in the worst case of JSON serialization (Chapter 5). |
+| `MinPublicKeySize`<br>`MaxPublicKeySize` | 2,048<br>4,096 | Accepted sizes of a caller's RSA key, in bits; the largest is the size `MaxOnionSize` is calculated for (Chapter 5). |
+| `MaxPublicKeyLength` | 2,048 | Longest text of a public key, in characters. |
 | `AuthTokenSize` | 64 | Size of the sign-in nonce, in bytes (Chapter 8). |
 | `DefaultVertexBroadcast`<br>`MinimumPeriod` | 6 minutes | Shortest time before an unchanged vertex is accepted again (Chapter 10). |
 | `SignalRKeepAliveInterval`<br>`SignalRClientTimeoutInterval`<br>`SignalRHandshakeTimeout` | 20 s<br>90 s<br>15 s | Timing of hub connections. |

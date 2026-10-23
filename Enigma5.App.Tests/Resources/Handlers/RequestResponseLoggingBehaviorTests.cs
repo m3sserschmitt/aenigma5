@@ -33,7 +33,7 @@ public class RequestResponseLoggingBehaviorTests
     [Fact]
     public async Task The_result_of_the_handler_is_passed_on()
     {
-        var result = await Behavior.Handle(new CleanupGraphCommand(), () => Task.FromResult(CommandResult.CreateResultSuccess(3)), default);
+        var result = await Behavior.Handle(new CleanupGraphCommand(), _ => Task.FromResult(CommandResult.CreateResultSuccess(3)), default);
 
         Assert.True(result.Success);
         Assert.Equal(3, result.Value);
@@ -43,9 +43,20 @@ public class RequestResponseLoggingBehaviorTests
     [Fact]
     public async Task An_exception_in_the_handler_becomes_a_failure_and_is_logged()
     {
-        var result = await Behavior.Handle(new CleanupGraphCommand(), () => throw new InvalidOperationException("broken"), default);
+        var result = await Behavior.Handle(new CleanupGraphCommand(), _ => throw new InvalidOperationException("broken"), default);
 
         Assert.False(result.Success);
         Assert.IsType<InvalidOperationException>(Assert.Single(_logger.Errors).Exception);
+    }
+
+    // A command can hold message data, and error events are written also on packaged nodes.
+    [Fact]
+    public async Task The_error_event_names_the_type_of_the_command_but_not_its_content()
+    {
+        await Behavior.Handle(new CleanupGraphCommand(), _ => throw new InvalidOperationException("broken"), default);
+
+        var error = Assert.Single(_logger.Errors);
+        Assert.Equal(nameof(CleanupGraphCommand), error.Properties[Common.Constants.Serilog.CommandTypeKey]);
+        Assert.DoesNotContain(error.Properties.Keys, key => key.TrimStart('@') == Common.Constants.Serilog.CommandKey);
     }
 }

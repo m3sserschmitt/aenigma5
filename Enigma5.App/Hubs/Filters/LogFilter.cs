@@ -37,6 +37,8 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
             invocationContext.HubMethodArguments
         );
 
+        // Error events are written also on packaged nodes, so they carry no arguments: onions, addresses and keys
+        // stay in the Debug event above.
         object? result = null;
         try
         {
@@ -46,20 +48,18 @@ public class LogFilter(ILogger<LogFilter> logger) : IHubFilter
         {
             _logger.LogError(
                 ex,
-                $"Exception encountered while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} method on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} with the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
+                $"Exception encountered while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} method on connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
                 invocationContext.HubMethodName,
-                invocationContext.Context.ConnectionId,
-                invocationContext.HubMethodArguments
+                invocationContext.Context.ConnectionId
                 );
         }
 
         if (result is null)
         {
             _logger.LogError(
-                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with null result having the following data: {{@{Common.Constants.Serilog.HubMethodArgumentsKey}}}.",
+                $"Invocation of {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}} completed with null result.",
                 invocationContext.HubMethodName,
-                invocationContext.Context.ConnectionId,
-                invocationContext.HubMethodArguments
+                invocationContext.Context.ConnectionId
                 );
             return ErrorResultDto.Create(InvocationErrors.INTERNAL_ERROR);
         }

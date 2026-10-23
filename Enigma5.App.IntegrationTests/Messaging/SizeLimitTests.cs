@@ -71,7 +71,7 @@ public class SizeLimitTests(NodeAFixture fixture) : IClassFixture<NodeAFixture>
     {
         await using var sender = await SenderAsync();
 
-        await Assert.ThrowsAnyAsync<Exception>(() => sender.Route(null, Repeat(new string('A', 17000), 20)));
+        await Assert.ThrowsAnyAsync<Exception>(() => sender.Route(null, Repeat(new string('A', 19000), 20)));
 
         await using var next = await SenderAsync();
         Assert.True((await next.Route(null, TestOnions.ForClientThroughA1)).Success);

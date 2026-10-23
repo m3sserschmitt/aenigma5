@@ -44,9 +44,11 @@ public class OnionRoutingFilter(ISessionManager sessionManager, ILogger<OnionRou
             var onionRouterHub = new OnionRoutingHubAdapter(invocationContext.Hub);
 
             var connectionId = await _sessionManager.TryGetConnectionIdAsync(onionParserHub.Next);
+            // Set for every onion, also to null: OnionParsingFilter runs this filter once per onion of a request on
+            // the same hub object, and a connection found for an earlier onion must not be used for a later one.
+            onionRouterHub.DestinationConnectionId = connectionId;
             if(connectionId != null)
             {
-                onionRouterHub.DestinationConnectionId = connectionId;
                 _logger.LogDebug(
                     $"{{{Common.Constants.Serilog.AddressKey}}} address resolved to connectionId {{{Common.Constants.Serilog.DestinationConnectionIdKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
                     onionParserHub.Next,

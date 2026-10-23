@@ -49,7 +49,8 @@ public class RequestResponseLoggingBehavior<TRequest, TResponse>(ILogger<Request
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Exception occurred while handling command {{@{Common.Constants.Serilog.CommandKey}}}.", request);
+            // Only the type: the command can hold message data, and Error events are written also on packaged nodes.
+            _logger.LogError(ex, $"Exception occurred while handling command {{{Common.Constants.Serilog.CommandTypeKey}}}.", typeof(TRequest).Name);
             var response = new TResponse();
             response.ToFailure();
             return response;

@@ -1,4 +1,4 @@
-.TH AENIGMA-VPN-SERVER 8 "2026-08-17" "aenigma 5.0.0" "Aenigma Administration Scripts"
+.TH AENIGMA-VPN-SERVER 8 "2026-10-22" "aenigma 5.1.1" "Aenigma Administration Scripts"
 .SH NAME
 aenigma-vpn-server \- provision and start an OpenVPN server instance
 .SH SYNOPSIS
@@ -11,6 +11,8 @@ aenigma-vpn-server \- provision and start an OpenVPN server instance
 .I ADDRESS
 .B \-n
 .I NETMASK
+.RB [ \-f
+.IR INTERFACE ]
 .br
 .B aenigma-vpn-server
 .B \-h
@@ -73,6 +75,25 @@ Netmask of the VPN's virtual subnet, e.g.
 .IR 255.255.255.0 .
 Required.
 .TP
+.BI \-f " INTERFACE"
+Optional. Name of the tunnel interface OpenVPN creates for this server, at
+most 15 letters, digits,
+.BR . ,
+.B _
+or
+.BR \- .
+By default it is
+.B tun\-
+followed by the first 11 characters of the SHA\-256 hash of
+.IR DOMAIN ,
+so that every server has a fixed interface of its own; the name is written
+to the configuration as
+.B dev
+and shown at the end of the setup. The script refuses a name that the
+configuration of another server in
+.I /etc/openvpn
+already uses.
+.TP
 .B \-h
 Display usage information and exit.
 .SH INTERACTIVE PROMPTS
@@ -89,6 +110,24 @@ new certificate.
 .PP
 Running this script non-interactively (e.g. from unattended automation)
 requires supplying the CA passphrase to these prompts by some other means.
+.PP
+A run that stops half-way, for example because the CA passphrases do not
+match, the CA passphrase is wrong, or the run is interrupted while the DH
+parameters are generated, can simply be run again with the same options.
+If no CA certificate was created, the next run removes the unfinished
+.I /etc/openvpn/easy-rsa
+directory and builds the CA again; otherwise it keeps the CA and completes
+the missing steps. A CA that was completed before (its certificate is in
+.IR /etc/openvpn/ca.crt ,
+or it has issued certificates) is never removed: if its certificate is
+missing from the PKI, the script stops and leaves it to be checked by hand.
+.I /etc/openvpn/ca.crt
+and
+.I /etc/openvpn/dh.pem
+are copied from the PKI only when they are missing, so files replaced by
+the operator are kept. Running the script again for a domain whose server
+certificate is already issued stops with an error before anything is
+changed.
 .SH EXIT STATUS
 .TP
 .B 0

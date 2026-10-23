@@ -47,9 +47,9 @@ public class ConnectionVector : IDisposable
     private bool _targetToSourceSynchronized;
 
     // Highest message id pulled from each side during the last synchronization (null: none).
-    private long? _sourceLastPulledId;
+    private long? _sourceUnconfirmedUpToId;
 
-    private long? _targetLastPulledId;
+    private long? _targetUnconfirmedUpToId;
 
     // Error text of a SignalR hub when the invoked method does not exist on it.
     private const string HubMethodMissingMessage = "Method does not exist";
@@ -241,7 +241,25 @@ public class ConnectionVector : IDisposable
     public async Task<bool> StopAsync(CancellationToken cancellationToken = default)
     => await StopAsync(_target, cancellationToken) && await StopAsync(_source, cancellationToken);
 
-    // Confirms the messages pulled from the connection, up to supId (null: nothing was pulled).
+    // Result of confirming one page of messages on the hub it was pulled from.
+    private enum PageConfirmation { Confirmed, NotSupported, Failed }
+
+    // Confirms the messages pulled from the connection up to supId with Cleanup2 only. Cleanup is never used
+    // here: on a peer without Cleanup2 it may confirm messages that were not pulled yet.
+    private static async Task<PageConfirmation> ConfirmPageAsync(HubConnection connection, long supId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await connection.InvokeAsync<InvocationResultDto<bool>>(nameof(IEnigmaHub.Cleanup2), new CleanupRequestDto(supId), cancellationToken);
+            return result.Success ? PageConfirmation.Confirmed : PageConfirmation.Failed;
+        }
+        catch (HubException ex) when (ex.Message.Contains(HubMethodMissingMessage))
+        {
+            return PageConfirmation.NotSupported;
+        }
+    }
+
+    // Confirms the messages pulled from the connection, up to supId (null: nothing is left to confirm).
     private async Task<bool> CleanupAsync(HubConnection connection, long? supId, CancellationToken cancellationToken = default)
     {
         if (!Authenticated || !Connected)
@@ -279,9 +297,9 @@ public class ConnectionVector : IDisposable
     public async Task<bool> CleanupAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug($"Cleaning up source for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, _sourceLastPulledId, cancellationToken);
+        var result1 = _sourceToTargetSynchronized && await CleanupAsync(_source, _sourceUnconfirmedUpToId, cancellationToken);
         _logger.LogDebug($"Cleaning up target for connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, _targetLastPulledId, cancellationToken);
+        var result2 = _targetToSourceSynchronized && await CleanupAsync(_target, _targetUnconfirmedUpToId, cancellationToken);
         var result = result1 && result2;
         if (!result)
         {
@@ -290,8 +308,11 @@ public class ConnectionVector : IDisposable
         return result;
     }
 
-    // Pulls all pending messages from c1 and routes them to c2; returns the highest id pulled.
-    private async Task<(bool Success, long? LastPulledId)> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
+    // Pulls the pending messages of c1 page by page and routes them to c2. Each page is confirmed on c1 once
+    // all of its messages are routed, so that a break repeats at most the page in progress. A peer without
+    // Cleanup2 is confirmed only after the last page, by CleanupAsync: its Cleanup may confirm messages that
+    // were never pulled. Returns the highest id that is still to be confirmed that way, if any.
+    private async Task<(bool Success, long? UnconfirmedUpToId)> SyncMessagesAsync(HubConnection c1, HubConnection c2, CancellationToken cancellationToken = default)
     {
         if (!Authenticated || !Connected)
         {
@@ -302,6 +323,7 @@ public class ConnectionVector : IDisposable
         try
         {
             long? lastPulledId = null;
+            var confirmEachPage = true;
             var pendingMessages = new List<PendingMessageDto>();
             do
             {
@@ -323,9 +345,22 @@ public class ConnectionVector : IDisposable
                     lastPulledId = message.Id;
                 }
 
+                if (confirmEachPage && lastPulledId is long routedUpToId && pendingMessages.Count > 0)
+                {
+                    switch (await ConfirmPageAsync(c1, routedUpToId, cancellationToken))
+                    {
+                        case PageConfirmation.NotSupported:
+                            _logger.LogDebug($"Hub of connection vector {{{Constants.Serilog.ConnectionVectorKey}}} has no {nameof(IEnigmaHub.Cleanup2)}; the messages are confirmed after the last page.", this);
+                            confirmEachPage = false;
+                            break;
+                        case PageConfirmation.Failed:
+                            _logger.LogError($"Failed to confirm pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}", this);
+                            return (false, null);
+                    }
+                }
             } while (pendingMessages.Count > 0);
             _logger.LogDebug($"Pending messages synchronized on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-            return (true, lastPulledId);
+            return (true, confirmEachPage ? null : lastPulledId);
         }
         catch (Exception ex)
         {
@@ -337,9 +372,9 @@ public class ConnectionVector : IDisposable
     public async Task<bool> SyncMessagesAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug($"Syncing source to target pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        (_sourceToTargetSynchronized, _sourceLastPulledId) = await SyncMessagesAsync(_source, _target, cancellationToken);
+        (_sourceToTargetSynchronized, _sourceUnconfirmedUpToId) = await SyncMessagesAsync(_source, _target, cancellationToken);
         _logger.LogDebug($"Syncing target to source pending messages on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", this);
-        (_targetToSourceSynchronized, _targetLastPulledId) = await SyncMessagesAsync(_target, _source, cancellationToken);
+        (_targetToSourceSynchronized, _targetUnconfirmedUpToId) = await SyncMessagesAsync(_target, _source, cancellationToken);
         var result = _sourceToTargetSynchronized && _targetToSourceSynchronized;
         if (!result)
         {
@@ -549,7 +584,8 @@ public class ConnectionVector : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Exception while invoking {{{Constants.Serilog.HubMethodNameKey}}} with the following data {{@{Constants.Serilog.HubMethodArgumentsKey}}}.", method, data);
+            // Without the data, which can be an onion: Error events are written also on packaged nodes.
+            _logger.LogError(ex, $"Exception while invoking {{{Constants.Serilog.HubMethodNameKey}}} on connection vector {{{Constants.Serilog.ConnectionVectorKey}}}.", method, this);
             return false;
         }
     }

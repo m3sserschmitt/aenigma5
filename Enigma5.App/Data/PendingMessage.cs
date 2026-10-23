@@ -33,7 +33,7 @@ public class PendingMessage : Entity
     [Required]
     public string? Destination { get; set; }
 
-    [Required]
+    // Cleared when the message is confirmed; the row is kept for its uuid (SentMessageRetentionPeriod).
     public string? Content { get; set; }
 
     [Required]

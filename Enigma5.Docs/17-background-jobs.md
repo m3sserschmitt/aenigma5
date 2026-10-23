@@ -116,8 +116,9 @@ without a restart. The other three jobs work on the database. Their comparisons 
 data jobs each delete with one SQL statement. The file job first reads the records that are too
 old, and then deletes each file from disk and its record, one after another.
 
-A retention period of 0 means "delete at the next run". This is the default for confirmed messages:
-once a recipient has confirmed a message, the node has no reason to keep it.
+A retention period of 0 means "delete at the next run". Confirmed messages are kept 14 days by
+default, without their content: their `uuid` lets the node recognize a copy that a relay sends again
+later (Chapter 9).
 
 ## 17.6 The network bridge job
 

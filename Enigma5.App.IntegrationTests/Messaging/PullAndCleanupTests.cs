@@ -155,20 +155,44 @@ public class PullAndCleanupTests(NodeAFixture fixture) : IClassFixture<NodeAFixt
         Assert.Equal(5, _node.Pending(Recipient));
     }
 
-    // The older methods: Pull returns at most 128 messages, and Cleanup must not confirm the rest.
+    // The older methods: Pull returns at most one page of 20 messages, and Cleanup must not confirm the rest.
     [Fact]
-    public async Task The_older_Pull_and_Cleanup_do_not_lose_messages_beyond_the_first_128()
+    public async Task The_older_Pull_and_Cleanup_do_not_lose_messages_beyond_the_first_page()
     {
-        await Store(150);
+        await Store(50);
         await using var recipient = await RecipientAsync();
 
         var pulled = await recipient.Invoke<List<PendingMessageDto>>("Pull");
         var cleaned = await recipient.Invoke<bool>("Cleanup");
 
-        Assert.Equal(128, pulled.Data!.Count);
+        Assert.Equal(20, pulled.Data!.Count);
         Assert.True(cleaned.Success);
-        Assert.Equal(22, _node.Pending(Recipient));
-        Assert.Equal(22, (await recipient.Invoke<List<PendingMessageDto>>("Pull")).Data!.Count);
+        Assert.Equal(30, _node.Pending(Recipient));
+        Assert.Equal(20, (await recipient.Invoke<List<PendingMessageDto>>("Pull")).Data!.Count);
+    }
+
+    // A copy that arrives after the recipient confirmed the message, as a relay may send it, is recognized by its uuid.
+    [Fact]
+    public async Task A_message_that_arrives_again_after_it_was_confirmed_is_not_delivered_again()
+    {
+        var uuid = Guid.NewGuid().ToString();
+        await using var sender = await HubClient.SignedInAsync(_node.PublicUrl, TestKeys.PrivateKey2);
+        Assert.True((await sender.Route(uuid, TestOnions.ForClientThroughA1)).Success);
+        await using (var recipient = await RecipientAsync())
+        {
+            var page = await recipient.Pull2();
+            Assert.Equal(uuid, Assert.Single(page.Data!).Uuid);
+            Assert.True((await recipient.Invoke<bool>("Cleanup2", new CleanupRequestDto(page.Data![0].Id))).Success);
+        }
+
+        var again = await sender.Route(uuid, TestOnions.ForClientThroughA1);
+
+        Assert.True(again.Success);
+        Assert.Equal(0, _node.Pending(Recipient));
+        Assert.Equal(1, _node.Count("SELECT COUNT(*) FROM Messages WHERE Uuid = $u", ("$u", uuid)));
+        Assert.Equal(1, _node.Count("SELECT COUNT(*) FROM Messages WHERE Uuid = $u AND Sent = 1 AND Content IS NULL", ("$u", uuid)));
+        await using var later = await RecipientAsync();
+        Assert.Empty((await later.Pull2()).Data!);
     }
 
     [Fact]
@@ -184,6 +208,28 @@ public class PullAndCleanupTests(NodeAFixture fixture) : IClassFixture<NodeAFixt
         Assert.Equal("message 1", System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(pushed.GetProperty("payloads")[0].GetString()!)));
         Assert.True(Guid.TryParse(pushed.GetProperty("uuid").GetString(), out _));
         Assert.Equal(1, _node.Pending(Recipient));
+    }
+
+    // The onion for node B, which is not connected, comes after one for the connected recipient in the same request.
+    // The sender must not use key 2, the key of node B, which would then be connected. It uses key 1, the node's own
+    // key, without asking to act for another address: it is then a plain client with the node's address.
+    [Fact]
+    public async Task In_a_request_with_several_messages_the_recipient_gets_only_its_own()
+    {
+        await using var recipient = await RecipientAsync();
+        await using var sender = await HubClient.SignedInAsync(_node.PublicUrl, TestKeys.PrivateKey1);
+        var forB = _node.Pending(TestKeys.Address2);
+
+        Assert.True((await sender.Route(null, TestOnions.ForClientThroughA1, TestOnions.ForClientThroughAThenB)).Success);
+        // A later message marks the end: once it has arrived, anything pushed for the first request has arrived too.
+        Assert.True((await sender.Route(null, TestOnions.ForClientThroughA2)).Success);
+
+        List<string> Pushed() => [.. recipient.RoutedMessages
+            .SelectMany(message => message.GetProperty("payloads").EnumerateArray())
+            .Select(payload => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload.GetString()!)))];
+        Assert.True(await NodeProcess.Eventually(() => Task.FromResult(Pushed().Contains("message 2"))));
+        Assert.Equal(["message 1", "message 2"], Pushed().Order());
+        Assert.Equal(forB + 1, _node.Pending(TestKeys.Address2));
     }
 
     [Theory]

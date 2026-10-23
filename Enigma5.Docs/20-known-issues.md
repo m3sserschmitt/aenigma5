@@ -34,7 +34,7 @@ again; this is why the numbers have gaps.
 | ID | Matter | Effect | Possible change | Chapter |
 |---|---|---|---|---|
 | P1 | The check for a `uuid` that is already stored looks at all messages, whatever their destination. | A caller that reuses a `uuid` of another message has its own message dropped, while the call reports success. | Limit the check to messages for the same destination. | 9 |
-| P2 | The check works only while the earlier copy is stored. Confirmed messages are deleted at the next cleanup run by default. | A copy that arrives later is stored again. The recipient must recognize it by its `uuid`. | Keep the `uuid` values of confirmed messages for some time. | 9 |
+| P2 | The check works only while the earlier copy is stored. A confirmed message keeps its `uuid` for `SentMessageRetentionPeriod`, 14 days by default. | A copy that arrives later than that, or at a node of an older version, is stored again. The recipient must recognize it by its `uuid`. The bridge confirms each page it moves, so after a break it repeats at most one page (Chapter 11). | Keep only the `uuid` of a confirmed message, not its destination and times. | 9 |
 | P3 | A call with several payloads has no `uuid` values from the caller. | If a client repeats such a call after a lost answer, all its messages are stored twice. | Let clients give one `uuid` per payload. | 9 |
 | P4 | A message keeps the same `uuid` on its whole path. | Nodes that work together can recognize the message (Chapter 19). | Use a new `uuid` for each hop, and keep the mapping only on the node. | 9, 19 |
 | P5 | Calls from the node to a client always count as delivered. The node does not wait for an answer. | A message that is lost on the way stays pending and reaches the client with its next `Pull2`. | Accepted for now. | 7, 9 |
@@ -43,6 +43,7 @@ again; this is why the numbers have gaps.
 | P8 | There is no limit on the number of messages stored for one address. | Storage can be filled by a caller, within the retention period. | A limit per destination. | 9, 19 |
 | P9 | The size of an onion shows how many layers are left. | See Chapter 19. | Padding to a common size. | 5, 19 |
 | P10 | Key wrapping and signatures use PKCS#1 v1.5 padding. | See Chapter 19. | OAEP and PSS, in a new version of the native library and of the protocol. | 5, 19 |
+| P11 | The highest `Id` pulled on a connection is kept for the connection, not for the address it was pulled under, and signing in again does not reset it. `Id` values are shared by all addresses. | A connection that pulls as one address, signs in on the same connection as another address and confirms, confirms that address's messages up to the first address's highest `Id`, also those it never pulled; they lose their content at once. Only addresses whose keys the caller holds are affected, and only a client that changes its address on one connection does this. | Keep the value together with the address it was pulled under, and use it only for that address. | 9, 19 |
 
 ## 20.4 Operation
 
@@ -60,6 +61,9 @@ again; this is why the numbers have gaps.
 | O8 | A list in `/etc/aenigma/appsettings.json` is combined with the default list by position, not replaced. | An own `HttpBlacklists` list can replace a default rule at the same position without a message. | Documented in Appendix A; check the rules after such a change. | 14, A |
 | O9 | If two nodes add each other as peers, each hub holds two connections for the same address and only one stays signed in. | One of the two vectors is closed and built again at every five-minute run, with error events; messages are still delivered. | Add a peer on one of the two nodes only. | 11 |
 | O10 | A peer that stops without closing its connection is noticed only after the connection times out. A node with a connected peer also takes longer to stop. | The dashboard and the map are behind for that time. | Not examined yet. | 11, 16 |
+| O11 | The upgrade to 5.1.0 finds the operator's own settings by comparing the old settings file with the defaults of the installed version. If the old version was removed (without purge) before 5.1.0 is installed, those defaults are gone. | The full old file is kept, with a warning. It pins every setting, among them the old log level, so later changes of the defaults do not reach the node. | Compare with the new defaults when the old ones are missing. Until then, reduce the file by hand to the settings that were changed. | A |
+| O12 | `aenigma-tor-auth` leaves the private part of a client key in the `authorized_clients` folder of the onion service, next to the public part. | A copy of the client's secret stays on the node, where Tor does not need it. | Hand the private part to the operator and delete it from the node. | A |
+| O13 | A blacklist `Endpoint` written as `http://[::]:port` never matches: only `0.0.0.0` stands for every address, and no warning is logged, because the endpoint is an IP address. | If the public endpoint is bound to `[::]`, the dashboard, `/_blazor` and `TriggerBroadcast` are open on it. | Treat `[::]` like `0.0.0.0`, and warn about a blacklist `Endpoint` that is not one of the node's endpoints. | 14 |
 
 ## 20.5 Technical debt
 
@@ -69,13 +73,12 @@ again; this is why the numbers have gaps.
 |---|---|---|---|
 | T1 | The Azure key source (`AzureClient`, `AzureKeysReader`, `AzurePassphraseReader`, the settings `AzureVaultUrl` and `PassphrasePath`) is only partly implemented. | Planned to be removed. | 6 |
 | T2 | Code of the node that only the tests use: `IEnvelopeSealer` with `Seal` and `Factory.CreateSealer`, the factories that take a key instead of a key file (`CreateSigner`, `CreateUnsealer`) and the envelope `Unseal`; `SignatureRequestDto`; `GetPrivateKeyAsync` and the blocking `ReadPrivateKey` and `ReadPublicKey` of the key reader; the views `Authenticated` and `Pending` of `SessionManager`, and the set of signed-in connections behind the first. | Kept on purpose, as long as the tests use them. | 5, 6, 8, 21 |
-| T4 | The build reports a known vulnerability in `SQLitePCLRaw.lib.e_sqlite3` 2.1.6, which comes with the Entity Framework Core packages of version 8.0.0. The project itself targets .NET 10. | Upgrade the Entity Framework Core packages, then run the migrations and the federation test again. | 13 |
 | T7 | Some parts have no automated test and are checked by hand: connections through Tor, the Debian package with its upgrade and its systemd unit, and the dashboard in a browser. The connection vectors of the bridge, the start-up code and the dashboard components are run only by the integration tests, whose nodes are separate processes, so a coverage report shows them as not covered. | Accepted for now; Section 21.4 lists the manual checks. | 21 |
 | T6 | The hub methods `Pull` and `Cleanup` are deprecated. | Remove them when all clients use `Pull2` and `Cleanup2`. The bridge then no longer needs its fallback to `Cleanup`. | 9, 11 |
 
 ## 20.6 Work in the client
 
-The Android app is the only client at present. Three changes on its side follow from changes in
+The Android app is the only client at present. Four points on its side follow from changes in
 the node.
 
 **Table 20.5:** Follow-up work in the client.
@@ -83,8 +86,9 @@ the node.
 | ID | Matter | Chapter |
 |---|---|---|
 | C1 | Confirm messages with `Cleanup2` and the `Id` of the last message of a page, instead of `Cleanup`. | 9 |
-| C2 | Accept `Pull2` responses of up to about 320 KiB: a page of 20 messages, each up to 16,384 characters. | 9, 15 |
+| C2 | Accept hub messages of up to 364,544 bytes (356 KiB), the node's own limit: a `Pull2` or `Pull` response holds at most 20 messages and stays below it. | 9, 15 |
 | C3 | Send no `uuid` with a call that has several payloads; such calls are rejected. | 9 |
+| C4 | Send every public key as a single PEM block with the label `PUBLIC KEY`, for an RSA key of 2,048 to 4,096 bits, in standard encoding. Any other form is refused. | 5 |
 
 ## 20.7 Summary
 
@@ -92,8 +96,9 @@ Five defects remain open: a file left over when the node stops during an upload 
 it, a second blacklist for the same endpoint that has no effect, a locked node that does not tell
 the nodes connected to it, a closed connection vector that can be started again, and a long wait
 for a peer on Tor that cannot be reached. In operation, a dashboard page must be loaded again after
-a restart of the node, lists in the settings are combined by position, and two nodes should not add
-each other as peers. The limits of the protocol concern the `uuid` of a
+a restart of the node, lists in the settings are combined by position, two nodes should not add
+each other as peers, and a settings file from a version that was removed before the upgrade must be
+reduced by hand. The limits of the protocol concern the `uuid` of a
 message, which is checked too broadly, kept too briefly and the same on the whole path, and the lack
 of limits per address. The technical debt consists of the unfinished Azure key source, code of
 the node that only the tests use, an outdated database package, the deprecated `Pull` and `Cleanup`,

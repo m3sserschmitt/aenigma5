@@ -67,7 +67,7 @@ address is another node or the recipient, except by looking it up in the network
 | Sign-in by signing a random challenge | A caller proves control of an address before it can collect or route messages. | 8 |
 | One-time challenges, created by a secure random source | A recorded sign-in cannot be replayed. | 8 |
 | Messages are returned only to the signed-in address | A caller can collect and confirm only its own messages. | 9 |
-| Confirmation limited to what the connection has pulled | A caller cannot make the node drop messages it never received. | 9 |
+| Confirmation limited to what the connection has pulled | A caller cannot make the node drop messages it never received, unless it changes its address on the same connection (Chapter 20, P11). | 9 |
 | Signed vertices, with checks of key, address, age and signature | Nobody can publish or alter the vertex of another node. Old vertices cannot be replayed for long. | 10 |
 | Neighbors only with a live session | A node lists only parties that are connected to it right now. | 10 |
 | Sign-in on behalf of a peer only with the node's own key | Only the node's own bridge can act for a peer address. | 8, 11 |
@@ -136,7 +136,10 @@ signatures of callers (Chapter 18). The passphrase is not logged. A node with re
 with the `Warning` limit or a higher one, as the Debian package does.
 
 **The database.** It holds the pending messages with their next address, in encrypted form, and
-the peers. It needs the same file protection as the key.
+the peers. A confirmed message loses its content at once, but its destination, `uuid` and times stay
+for `SentMessageRetentionPeriod` (14 days by default), so that late copies are recognized. The
+database therefore records which address received a message, and when, for that long. It needs the
+same file protection as the key.
 
 ## 19.7 Duties of an operator
 

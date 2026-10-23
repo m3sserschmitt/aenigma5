@@ -37,7 +37,8 @@ public class CleanupMessagesHandlerTests
     private static PendingMessage Message(TimeSpan age, TimeSpan? deliveredAgo = null) => new()
     {
         Destination = TestKeys.Address2,
-        Content = "dGVzdC1zdHJpbmc=",
+        // A delivered message has no content any more.
+        Content = deliveredAgo is null ? "dGVzdC1zdHJpbmc=" : null,
         Timestamp = SecondsAgo(age),
         Sent = deliveredAgo is not null,
         SentTimestamp = deliveredAgo is null ? null : SecondsAgo(deliveredAgo.Value)
@@ -91,6 +92,22 @@ public class CleanupMessagesHandlerTests
 
         var result = await node.Send(new CleanupMessagesCommand(Retention, TimeSpan.Zero));
 
+        Assert.Equal(1, result.Value);
+        Assert.Equal([ids[1]], await Left(node));
+    }
+
+    // With the default period, a delivered message is kept as long as an undelivered one may be.
+    [Fact]
+    public async Task With_the_default_period_delivered_messages_are_kept_for_14_days()
+    {
+        await using var node = await TestNode.StartAsync();
+        var ids = await Stored(node,
+            Message(TimeSpan.FromDays(20), deliveredAgo: TimeSpan.FromDays(15)),
+            Message(TimeSpan.FromDays(20), deliveredAgo: TimeSpan.FromDays(13)));
+
+        var result = await node.Send(new CleanupMessagesCommand(Retention, Common.Constants.DefaultSentMessageRetentionPeriod));
+
+        Assert.Equal(TimeSpan.FromDays(14), Common.Constants.DefaultSentMessageRetentionPeriod);
         Assert.Equal(1, result.Value);
         Assert.Equal([ids[1]], await Left(node));
     }

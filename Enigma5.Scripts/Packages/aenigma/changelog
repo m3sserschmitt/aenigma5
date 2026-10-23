@@ -1,3 +1,64 @@
+aenigma (5.1.1) unstable; urgency=medium
+
+  [ Romulus Ruja ]
+  * The deprecated hub method Pull returns at most 20 messages per call,
+    the page size of Pull2, instead of 128.
+  * Public keys of more than 4096 bits are refused; the size limits of
+    the protocol are calculated for keys of 4096 bits.
+  * The largest accepted hub message is 356 KiB (364544 bytes) instead
+    of 331776 bytes, so that a full batch of onions also fits when a
+    client escapes characters of base64 in JSON. The limit of one onion
+    is unchanged.
+  * The bridge confirms the messages it moves page by page, so that a
+    broken connection repeats at most one page instead of the whole
+    backlog. Peers without Cleanup2 are still confirmed once, at the end.
+  * A delivered message loses its content at once and keeps its uuid
+    for 14 days (SentMessageRetentionPeriod, default 0 before), so a
+    copy that a relay sends again later is not delivered twice.
+  * aenigma-vpn-dns configures dnsmasq with bind-dynamic, so DNS inside
+    the VPN works whether dnsmasq or OpenVPN starts first, and after an
+    OpenVPN restart. Run aenigma-vpn-dns again on existing VPN servers.
+    aenigma-vpn-dns no longer ends with exit status 1 when no CNAME is
+    given.
+  * aenigma-vpn-server gives the tunnel interface a fixed name (option -f;
+    by default tun- and 11 characters of the SHA-256 hash of the domain),
+    and aenigma-vpn-dns takes the interface from the server's
+    configuration, so -f is optional there. Servers set up before keep
+    "dev tun"; aenigma-vpn-dns(8) explains how to give them a fixed name.
+  * The dependencies are updated to their latest versions (MediatR to
+    12.5.0, its last version under the Apache license), which removes
+    three packages with known vulnerabilities.
+  * In a request with several onions, an onion whose next address is not
+    connected is only stored; before, it was also pushed to the
+    connection found for an earlier onion of the same request.
+  * A vertex without a time, or dated more than 5 minutes ahead of the
+    node's clock, is refused; before, it was accepted and never expired.
+  * Error events no longer carry the arguments of a failed hub call, the
+    content of a failed command or the data of a failed bridge call, so a
+    packaged node (log level Warning) keeps onions, addresses and keys out
+    of its log. The arguments remain in the Debug event before each call.
+  * aenigma-keys asks before replacing an existing key pair, and writes
+    the new pair through temporary files, so a failed or cancelled run
+    (for example, passphrases that do not match) leaves the old pair
+    intact; before, it overwrote the node's key at once.
+  * The Keyboard passphrase source takes up to 256 characters, the limit
+    of the dashboard, and ignores further characters and keys that give
+    no character; before, it failed at the 129th character.
+  * aenigma-vpn-server can be run again after a run that stopped
+    half-way: an unfinished first run's easy-rsa directory is removed and
+    the CA built again, and missing DH parameters are generated; before,
+    every later run failed until the directory was removed by hand.
+  * aenigma-proxy no longer calls sudo, which it does not need as root,
+    and no longer writes a proxy rule for /OnionRouting that Apache never
+    used; the hub is proxied by the general rules, as before.
+  * The dashboard has a favicon, and shows the Aenigma icon before the
+    title of the passphrase card.
+  * The help text of aenigma-tor describes the v3 client authorization
+    that -u sets up through aenigma-tor-auth, not the old v2 option. The
+    man pages name version 5.1.1.
+
+ -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Fri, 23 Oct 2026 11:08:28 +0300
+
 aenigma (5.1.0) unstable; urgency=medium
 
   [ Romulus Ruja ]

@@ -52,7 +52,7 @@ A vertex received from another node is accepted only if it passes all checks of
 
 | Check | Rule |
 |---|---|
-| Not expired | `LastUpdate` is less than `VertexLifetime` (30 minutes by default) ago. |
+| Not expired | `LastUpdate` is given, is less than `VertexLifetime` (30 minutes by default) ago, and is at most 5 minutes ahead of the node's clock. |
 | Public key | `PublicKey` is a PEM public key. |
 | Address | `Address` is valid and equals the address computed from `PublicKey`. |
 | No self-loop | The node does not list itself as its own neighbor. |
@@ -61,6 +61,13 @@ A vertex received from another node is accepted only if it passes all checks of
 
 Because each vertex is signed by its own node, the nodes that pass it on cannot change it without
 the change being detected.
+
+The signature does not make `LastUpdate` true: a node signs whatever time it puts in. A vertex
+without a time, or with a time far ahead, would therefore never expire. Such vertices are refused,
+and a vertex without a time is also removed by the cleanup (Section 10.7). The 5 minutes
+(`MaxVertexClockSkew` in `Constants.cs`) allow for clocks that differ a little; nodes need a
+synchronized clock, since a vertex from a node whose clock is more than `VertexLifetime` behind is
+already expired when it arrives.
 
 ## 10.4 Accepting a vertex
 
@@ -123,7 +130,8 @@ the vertices of more distant nodes over time, as they refresh and pass on their 
 The graph removes old vertices with one cleanup routine. It removes every vertex, except the node's
 own, that matches one of two rules:
 
-- **Expired:** its `LastUpdate` is more than `VertexLifetime` (30 minutes by default) ago.
+- **Expired:** its `LastUpdate` is missing, or more than `VertexLifetime` (30 minutes by default)
+  ago.
 - **Unlisted:** no vertex in the graph lists it as a neighbor, and its `LastUpdate` is more than
   `UnlistedVertexGracePeriod` (6 minutes by default) ago.
 

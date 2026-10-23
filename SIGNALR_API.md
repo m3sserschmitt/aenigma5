@@ -28,7 +28,7 @@ message delivery, and network graph updates.
 | Timeout | 90 seconds of silence from either side |
 | Handshake timeout | 15 seconds |
 | Reconnect backoff | 2s → 4s → 8s → 16s |
-| Maximum incoming message size | 331,776 bytes (324 KiB); larger messages are dropped without a reply |
+| Maximum incoming message size | 364,544 bytes (356 KiB); larger messages are dropped without a reply |
 
 ---
 
@@ -144,8 +144,9 @@ Returns this server's own entry in the network graph.
 
 > Use `Pull2` instead. Will be removed in a future version.
 
-Retrieves up to 128 pending messages for the signed-in identity, ordered by `id`. Requires
-sign-in. Messages beyond the first 128 stay pending and are returned by later calls.
+Retrieves up to 20 pending messages for the signed-in identity, ordered by `id`, the same page
+size as `Pull2`. Requires sign-in. Messages beyond the first 20 stay pending and are returned by
+later calls, once the earlier ones are confirmed with `Cleanup`.
 
 **Request Payload** — none
 

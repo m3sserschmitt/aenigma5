@@ -136,6 +136,11 @@ Code coverage has one blind spot. The nodes of the integration tests are separat
 the code that only they run is shown as not covered: the connection vectors of the bridge, the
 start-up code and the dashboard components (Chapter 20, T7).
 
+On GitHub, the workflow `.github/workflows/build-and-test.yml` builds the solution and runs all
+tests for every push to a branch, for that branch only. It runs in a Debian 13 container, the
+system of the packages, and stops if the OpenSSL of the container is older than 3.5. The badge at
+the top of [`README.md`](../README.md) shows the result for `main`.
+
 ### 21.4.2 Checks on running nodes
 
 Three areas have no automated test: connections through Tor, the Debian package with its upgrade
@@ -226,8 +231,8 @@ not break them.
 ## 21.8 Checklist for a change
 
 1. The solution builds without new warnings.
-2. All tests pass (`dotnet test enigma5.sln`), and the change has tests of its own, including
-   invalid input.
+2. All tests pass (`dotnet test enigma5.sln`), locally and in the run on GitHub, and the change
+   has tests of its own, including invalid input.
 3. If it affects Tor, the package or the dashboard, it was also checked by hand, as in
    Section 21.4.2.
 4. The log of a manual check contains no new errors.

@@ -24,52 +24,42 @@ namespace Enigma5.Security;
 
 public class CommandLinePassphraseReader : IPassphraseProvider
 {
-    private static readonly int PASSPHRASE_MAX_LENGTH = 128;
-
-    private static char[]? ReadPassphrase()
+    public Task<char[]?> ProvidePassphraseAsync() => Task.Run<char[]?>(() =>
     {
-        var i = 0;
-        var password = new char[PASSPHRASE_MAX_LENGTH];
-        ConsoleKeyInfo key;
-
         Console.Write("Private key passkey (will not be echoed): ");
-
-        do
-        {
-            key = Console.ReadKey(true);
-
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                if (i == 0)
-                {
-                    continue;
-                }
-
-                i -= 1;
-
-                continue;
-            }
-
-            if (key.Key != ConsoleKey.Enter)
-            {
-                password[i] = key.KeyChar;
-                i += 1;
-            }
-        } while (key.Key != ConsoleKey.Enter);
-
+        var passphrase = Read(() => Console.ReadKey(true), Crypto.Constants.KernelKeyMaxSize);
         Console.WriteLine();
+        return passphrase;
+    });
 
-        var validChars = new char[i];
-
-        for (int j = 0; j < i; j++)
+    // Reads keys up to Enter. Like the passphrase field of the dashboard, it takes at most maxLength characters
+    // and ignores further ones; Backspace still works. Keys that give no character (arrows, function keys) are ignored.
+    public static char[] Read(Func<ConsoleKeyInfo> readKey, int maxLength)
+    {
+        var buffer = new char[maxLength];
+        var length = 0;
+        try
         {
-            validChars[j] = password[j];
+            for (var key = readKey(); key.Key != ConsoleKey.Enter; key = readKey())
+            {
+                if (key.Key == ConsoleKey.Backspace)
+                {
+                    if (length > 0)
+                    {
+                        length -= 1;
+                    }
+                }
+                else if (key.KeyChar != '\0' && length < maxLength)
+                {
+                    buffer[length] = key.KeyChar;
+                    length += 1;
+                }
+            }
+            return buffer[..length];
         }
-
-        Array.Clear(password);
-
-        return validChars;
+        finally
+        {
+            Array.Clear(buffer);
+        }
     }
-
-    public Task<char[]?> ProvidePassphraseAsync() => Task.Run(ReadPassphrase);
 }

@@ -93,6 +93,7 @@ fails, the error is logged and the node stops.
 | `DbRefactoring` | Renames `DateReceived` to `DateCreated` and adds the `Timestamp` columns. |
 | `AddPeersTable` | Creates `Peers`, removes `AuthorizedServices`, and removes the file content from `Files`. |
 | `AddIndicesOnDestinationAndUuidForPendingMessages` | Adds the two indexes on `Messages`. |
+| `ClearContentOfConfirmedMessages` | Allows `Content` of `Messages` to be empty, as it is after confirmation. SQLite rebuilds the table for it once. |
 
 ## 13.5 Reading
 
@@ -151,7 +152,7 @@ into a failed `CommandResult` (Chapter 2).
 | Operation | Change | Used by |
 |---|---|---|
 | `CreatePendingMessageAsync` | Adds one message. On request, first looks for a stored message with the same `uuid` and returns that one instead (Section 13.6.3). | `RouteMessage` (Chapter 9) |
-| `MarkMessagesAsDeliveredAsync` | Marks all messages that match a condition as delivered, with one statement. | `Cleanup`, `Cleanup2` |
+| `MarkMessagesAsDeliveredAsync` | Marks all messages that match a condition as delivered and removes their content, with one statement. | `Cleanup`, `Cleanup2` |
 | `RemoveMessagesAsync` | Deletes all messages that match a condition, with one statement. | Cleanup job (Chapter 17) |
 | `CreateSharedDataAsync` | Adds one shared data record. | `POST /Share` |
 | `IncrementSharedDataAccessCountAsync` | Reads the record by its tag and adds one to the access count, or deletes the record when the maximum is reached (Section 13.6.3). | `PUT /IncrementSharedDataAccessCount` |

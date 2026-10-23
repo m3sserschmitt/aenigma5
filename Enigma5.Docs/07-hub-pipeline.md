@@ -10,9 +10,18 @@ from the caller's side; this chapter describes the machinery behind them.
 
 ## 7.1 The hub
 
-The hub is the class `RoutingHub`, mapped to the path `/OnionRouting`. The class is split over two
-files: `Enigma5.App/Hubs/RoutingHub.cs` contains the public hub methods and the connection events,
-and `RoutingHub2.cs` contains private helpers.
+The hub is the class `RoutingHub`, mapped to the path `/OnionRouting`. The class is split over three
+files in `Enigma5.App/Hubs`:
+
+- `RoutingHub.cs` declares the class and contains the first hub methods (`GenerateToken`,
+  `Authenticate`, `GetLocalVertex`, `Pull`, `Cleanup`, `RouteMessage`, `Broadcast`,
+  `TriggerBroadcast`) and the connection events;
+- `RoutingHub2.cs` contains the methods of the second generation, `Pull2` and `Cleanup2`, which
+  replace the deprecated `Pull` and `Cleanup`;
+- `RoutingHubHelpers.cs` contains the private helpers that both use.
+
+The split only orders the code. The hub has one set of methods and no versions: a client calls
+`Pull2` on the same hub and connection as `Authenticate`.
 
 SignalR creates a new `RoutingHub` object for every hub method call. Besides the SignalR `Hub` base
 class, `RoutingHub` implements four interfaces:
@@ -62,14 +71,14 @@ Table 7.2 lists the SignalR settings of the hub. The values set by the node are 
 | Client timeout | 90 s without a message from the client | Node |
 | Handshake timeout | 15 s | Node |
 | Stateful reconnect | On; up to 1 MiB of messages kept for a reconnecting client | Node |
-| Maximum size of one incoming message | 331 776 bytes (324 KiB) | Node |
+| Maximum size of one incoming message | 364 544 bytes (356 KiB) | Node |
 | Transports | WebSockets, Server-Sent Events, long polling | Framework default (not changed) |
 
 The maximum message size applies to a whole hub call, including all its arguments. A larger message
 is dropped by SignalR before any node code runs, and the caller gets no reply. The value is
-computed from two constants, so that a full batch always fits: 20 onions
-(`Constants.MessagesPageSize`) of the maximum size of 16 384 characters (`Constants.MaxOnionSize`),
-plus 4 KiB for the JSON around them. A single onion that is too long is rejected by validation, with an error, before
+chosen so that a full batch always fits: 20 onions (`Constants.MessagesPageSize`) of the maximum
+size of 16 384 characters (`Constants.MaxOnionSize`) take at most 358 660 bytes in the worst case
+of JSON serialization (Listing 5.4a). A single onion that is too long is rejected by validation, with an error, before
 it is processed (Table 7.4). Chapter 5 explains how the maximum onion size was chosen.
 
 ## 7.3 Filters
@@ -131,7 +140,10 @@ A filter cannot change the arguments of a call, so it passes data to the hub met
 object instead. The *adapter* classes in `Hubs/Adapters` do this. Each adapter takes the hub object,
 checks that it implements the matching interface, and sets properties on it. For example,
 `AuthenticatedFilter` runs `new IdentityHubAdapter(hub) { ClientAddress = address }`. Since SignalR
-creates a new hub object for every call, these values belong to one call only.
+creates a new hub object for every call, these values belong to one call only. Within a call with
+several onions, `OnionParsingFilter` runs the rest of the chain once per onion on the same hub
+object, so the values are set again for each onion; `OnionRoutingFilter` sets
+`DestinationConnectionId` to null when the next address of that onion is not connected.
 
 ## 7.4 Results and errors
 
@@ -216,8 +228,10 @@ of the hub method that has the `[OnionRouting]` attribute.
 
 A new hub method should be added in these steps:
 
-1. Add the method to `IEnigmaHub` and implement it in `RoutingHub.cs`, returning an
-   `InvocationResultDto<T>`.
+1. Add the method to `IEnigmaHub` and implement it, returning an `InvocationResultDto<T>`. A new
+   method goes into `RoutingHub.cs`; a method that replaces an existing one takes its name with the
+   next number and goes into the file of that number, as `Pull2` did in `RoutingHub2.cs`. Shared
+   code goes into `RoutingHubHelpers.cs`.
 2. Add `[BlacklistAuthorization]`, so that operators can block it per endpoint.
 3. Add `[Authenticated]` if only signed-in callers may use it. `ClientAddress` is then set.
 4. If it takes an argument, make the argument class implement `IValidatable` and add
@@ -234,7 +248,7 @@ in a fixed order: logging, sign-in check, blacklist check, validation, onion par
 routing. A filter runs only if the hub method has its marker attribute and the call's arguments fit
 the filter, and otherwise it is skipped. Filters pass their results to the hub method through
 properties of the hub object. Every method returns a result object with data, a success flag and a
-list of errors. A hub message may be at most 324 KiB, and one onion at most 16 384 base64
+list of errors. A hub message may be at most 356 KiB, and one onion at most 16 384 base64
 characters. A call with several onions runs the rest of the
 chain once per onion, and reports failure if any onion fails, even when others were stored. Calls
 from the server to clients are not waited for.

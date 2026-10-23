@@ -99,6 +99,10 @@ public class SingleThreadDbWriterTests
         var messages = await node.Database(context => context.Messages.OrderBy(message => message.Id).ToListAsync());
         Assert.True(messages[0].Sent);
         Assert.NotNull(messages[0].DateSent);
+        // A confirmed message keeps its uuid, to recognize late copies, but not its content.
+        Assert.Null(messages[0].Content);
+        Assert.Equal(first!.Uuid, messages[0].Uuid);
+        Assert.NotNull(messages[1].Content);
         Assert.InRange(messages[0].SentTimestamp!.Value, before, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         Assert.False(messages[1].Sent);
         Assert.Null(messages[1].SentTimestamp);

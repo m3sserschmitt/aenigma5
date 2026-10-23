@@ -30,12 +30,16 @@ public static class Constants
 
     public static readonly TimeSpan DefaultVertexLifetime = TimeSpan.FromMinutes(30);
 
+    // How far ahead of the node's clock the time of a received vertex may be (Enigma5.Docs, Chapter 10).
+    public static readonly TimeSpan MaxVertexClockSkew = TimeSpan.FromMinutes(5);
+
     // How long a vertex that no other vertex lists is kept before a cleanup may remove it.
     public static readonly TimeSpan DefaultUnlistedVertexGracePeriod = TimeSpan.FromMinutes(6);
 
     public static readonly TimeSpan DefaultMessageRetentionPeriod = TimeSpan.FromDays(14);
 
-    public static readonly TimeSpan DefaultSentMessageRetentionPeriod = TimeSpan.Zero;
+    // As long as an unconfirmed message is kept: a relay may send a copy again for that long.
+    public static readonly TimeSpan DefaultSentMessageRetentionPeriod = DefaultMessageRetentionPeriod;
 
     public static readonly TimeSpan DefaultSharedDataRetentionPeriod = TimeSpan.FromDays(14);
 
@@ -88,23 +92,23 @@ public static class Constants
 
     public const int MessagesPageSize = 20;
 
-    // Maximum number of messages returned by the deprecated hub method Pull.
-    public const int LegacyPullMaxMessages = 128;
-
-    // Maximum length of one base64 onion accepted by RouteMessage. Sized for 6 relay nodes plus the
-    // recipient's layer (4096-bit keys) around a signed 256-character client message (~12 900 chars).
+    // Maximum length of one base64 onion accepted by RouteMessage. The largest message of the client,
+    // on a path of 6 nodes with 4096-bit keys, is 12,888 characters (Enigma5.Docs, Chapter 5).
     public const int MaxOnionSize = 16 * 1024;
 
-    // RSA key sizes, in bits, that are accepted for a public key received from a caller.
+    // Largest incoming hub message. A full batch of MessagesPageSize onions of MaxOnionSize takes at most
+    // 358,660 bytes in the worst case of JSON serialization (Enigma5.Docs, Chapter 5).
+    public const long SignalRMaximumReceiveMessageSize = 356 * 1024;
+
+    // RSA key sizes, in bits, that are accepted for a public key received from a caller. The largest is
+    // the size MaxOnionSize is calculated for.
     public const int MinPublicKeySize = 2048;
 
-    public const int MaxPublicKeySize = 8192;
+    public const int MaxPublicKeySize = 4096;
 
-    // Longest text of a public key in PEM form, in characters; a key of the largest size needs about 1500.
-    public const int MaxPublicKeyLength = 4096;
+    // Longest text of a public key in PEM form, in characters; a key of the largest size needs about 800.
+    public const int MaxPublicKeyLength = 2048;
 
-    // Largest incoming hub message: a full batch of maximum-size onions plus room for JSON framing.
-    public const long SignalRMaximumReceiveMessageSize = MessagesPageSize * MaxOnionSize + 4 * 1024;
 
     public const string XImpersonateServiceHeaderKey = "X-Impersonate-Service";
 
@@ -188,6 +192,8 @@ public static class Constants
         public const string DestinationConnectionIdKey = "DestinationConnectionId";
 
         public const string CommandKey = "Command";
+
+        public const string CommandTypeKey = "CommandType";
 
         public const string CommandResultKey = "CommandResult";
 

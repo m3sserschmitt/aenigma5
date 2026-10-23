@@ -1,4 +1,4 @@
-﻿/*
+/*
     Aenigma - Federated messaging system
     Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
@@ -18,193 +18,36 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-using System.Reflection;
 using Enigma5.App.Attributes;
+using Enigma5.App.Common;
 using Enigma5.App.Models;
 using Enigma5.App.Models.HubInvocation;
-using Enigma5.App.Resources.Commands;
-using Enigma5.App.Resources.Handlers;
-using Enigma5.App.Resources.Queries;
-using Enigma5.Crypto;
-using Microsoft.AspNetCore.SignalR;
 
 namespace Enigma5.App.Hubs;
 
+// The second generation of hub methods, which replace methods of the same name without the number.
+// The earlier methods are in RoutingHub.cs, and what both share is in RoutingHubHelpers.cs.
 public partial class RoutingHub
 {
-    private async Task<bool> IsLocalAddress(string publicKey)
-    => await _certificateManager.GetAddressAsync() == CertificateHelper.GetHexAddressFromPublicKey(publicKey);
-
-    private async Task<bool> Authenticate(string publicKey, string signature)
-    => await _sessionManager.AuthenticateAsync(
-            Context.ConnectionId,
-            publicKey!,
-            signature!,
-            await IsLocalAddress(publicKey!) ? Context.Items[Common.Constants.XImpersonateServiceHeaderKey] as string : null);
-
-    private Task<bool> SendAsync(string connectionId, string method, object? arg1)
-    {
-        try
-        {
-            var clientProxy = Clients.Client(connectionId);
-            Task.Run(() => clientProxy.SendAsync(method, arg1));
-            return Task.FromResult(true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
-            nameof(SendAsync),
-            Context.ConnectionId);
-            return Task.FromResult(false);
-        }
-    }
-
-    private async Task<bool> RouteMessages(string connectionId, List<string?> payloads, string? uuid)
-    {
-        try
-        {
-            var routingMethod = typeof(RoutingHub).GetMethods()
-                    .SingleOrDefault(m => m.GetCustomAttribute<OnionRoutingAttribute>() != null)
-                    ?? throw new Exception($"Type {nameof(RoutingHub)} should contain exactly one method with {nameof(OnionRoutingAttribute)}.");
-
-            return await SendAsync(connectionId, routingMethod.Name, new RoutingRequestDto(payloads, uuid));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error encountered while calling {{{nameof(HubInvocationContext.HubMethodName)}}} for {{{nameof(Context.ConnectionId)}}}.",
-            nameof(RouteMessage),
-            Context.ConnectionId);
-            return false;
-        }
-    }
-
-    private async Task<bool> RouteMessage(string connectionId, byte[] data, string? uuid)
-    => await RouteMessages(connectionId, [Convert.ToBase64String(data)], uuid);
-
-    private async Task<VertexBroadcastRequestDto?> AddNewAdjacencies(List<string> addresses)
-    => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, true))).Value;
-
-
-    private async Task<VertexBroadcastRequestDto?> RemoveAdjacencies(List<string> addresses)
-    => (await _commandRouter.Send(new UpdateLocalAdjacencyCommand(addresses, false))).Value;
-
-    private async Task<IEnumerable<Task<bool>>> GenerateBroadcastTask(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
-    {
-        var tasks = new List<Task<bool>>();
-        var result = await _commandRouter.Send(new GetNeighborAddressesQuery());
-
-        if (!result.IsSuccessNotNullResultValue())
-        {
-            return tasks;
-        }
-
-        foreach (var address in result.Value ?? [])
-        {
-            var connectionId = await _sessionManager.TryGetConnectionIdAsync(address);
-            if (connectionId != null)
-            {
-                foreach (var adjacencyList in adjacencyLists)
-                {
-                    tasks.Add(SendAsync(connectionId!, nameof(Broadcast), adjacencyList));
-                }
-            }
-        }
-        return tasks;
-    }
-
-    private async Task<bool> SendBroadcast(IEnumerable<VertexBroadcastRequestDto> adjacencyLists)
-    => (await Task.WhenAll(await GenerateBroadcastTask(adjacencyLists))).All(success => success);
-
-    private async Task<CommandResult<PendingMessageDto>> CreatePendingMessage()
-    {
-        if (Content != null)
-        {
-            _logger.LogDebug($"Saving onion for connectionId {{{nameof(Context.ConnectionId)}}}.", Context.ConnectionId);
-            var encodedContent = Convert.ToBase64String(Content);
-            if (encodedContent is null)
-            {
-                _logger.LogError($"Could not base64 onion content for connectionId {{{nameof(Context.ConnectionId)}}}", Context.ConnectionId);
-                return CommandResult.CreateResultFailure<PendingMessageDto>();
-            }
-            return await _commandRouter.Send(new CreatePendingMessageCommand(Next!, encodedContent, Uuid));
-        }
-        _logger.LogDebug($"Could not save pending message for connectionId {{{nameof(Context.ConnectionId)}}} because the content is null.", Context.ConnectionId);
-        return CommandResult.CreateResultFailure<PendingMessageDto>();
-    }
-
-    private async Task<List<PendingMessageDto>> GetPendingMessagesAsync(string address, long? infId, int pageSize)
-    {
-        var result = await _commandRouter.Send(new GetPendingMessagesByDestinationQuery(address, infId, pageSize));
-        if (!result.IsSuccessNotNullResultValue())
-        {
-            return [];
-        }
-        var messages = result.Value ?? [];
-        RecordPulledMessages(messages);
-        return messages;
-    }
-
-    // Highest message id returned by Pull or Pull2 on this connection; Cleanup never confirms beyond it.
-    private long? LastPulledMessageId
-    => Context.Items.TryGetValue(Common.Constants.HubConnectionLastPulledMessageIdKey, out var value) ? value as long? : null;
-
-    private void RecordPulledMessages(List<PendingMessageDto> messages)
-    {
-        if (messages.Count == 0)
-        {
-            return;
-        }
-
-        var highestId = messages.Max(message => message.Id);
-        if (LastPulledMessageId is not long lastPulled || highestId > lastPulled)
-        {
-            Context.Items[Common.Constants.HubConnectionLastPulledMessageIdKey] = highestId;
-        }
-    }
-
-    private async Task<InvocationResultDto<bool>> ConfirmDeliveryAsync(string methodName, long? requestedSupId)
+    [Authenticated]
+    [ValidateModel]
+    [BlacklistAuthorization]
+    public async Task<InvocationResultDto<List<PendingMessageDto>>> Pull2(PullRequestDto request)
     {
         if (ClientAddress is null)
         {
-            _logger.LogError($"ClientAddress null while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}.",
-            methodName,
+            _logger.LogError($"ClientAddress null while invoking {{{Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Constants.Serilog.ConnectionIdKey}}}.",
+            nameof(Pull2),
             Context.ConnectionId);
-            return Error<bool>(InvocationErrors.INTERNAL_ERROR);
+            return Error<List<PendingMessageDto>>(InvocationErrors.INTERNAL_ERROR);
         }
 
-        // Only messages this connection has actually received can be confirmed.
-        if (LastPulledMessageId is not long lastPulled)
-        {
-            return Ok(true);
-        }
-        var supId = requestedSupId is long requested ? Math.Min(requested, lastPulled) : lastPulled;
-
-        var result = await _commandRouter.Send(new MarkMessagesAsDeliveredCommand(ClientAddress, supId));
-        if (result.IsSuccessNotNullResultValue())
-        {
-            return Ok(true);
-        }
-
-        _logger.LogError($"Could not clean up pending messages while invoking {{{Common.Constants.Serilog.HubMethodNameKey}}} for connectionId {{{Common.Constants.Serilog.ConnectionIdKey}}}; Command result: {{@{Common.Constants.Serilog.CommandResultKey}}}.",
-        methodName,
-        Context.ConnectionId,
-        result);
-        return Error<bool>(InvocationErrors.INTERNAL_ERROR);
+        return Ok(await GetPendingMessagesAsync(ClientAddress, request.InfId, Constants.MessagesPageSize));
     }
 
-    private async Task<bool> SendBroadcast(VertexBroadcastRequestDto adjacencyLists)
-    => await SendBroadcast([adjacencyLists]);
-
-    private static InvocationResultDto<T> Ok<T>(T response) => new SuccessResultDto<T>(response);
-
-    private static Task<InvocationResultDto<T>> OkAsync<T>(T response) => Task.FromResult(Ok(response));
-
-    private static InvocationResultDto<T> Error<T>(T? response, string error) => ErrorResultDto<T>.Create(response, error);
-
-    private static Task<InvocationResultDto<T>> ErrorAsync<T>(T? response, string error) => Task.FromResult(Error(response, error));
-
-    private static InvocationResultDto<T> Error<T>(string error) => Error<T>(default, error);
-
-    private static Task<InvocationResultDto<T>> ErrorAsync<T>(string error)
-    => Task.FromResult(Error<T>(error));
+    [Authenticated]
+    [ValidateModel]
+    [BlacklistAuthorization]
+    public Task<InvocationResultDto<bool>> Cleanup2(CleanupRequestDto request)
+    => ConfirmDeliveryAsync(nameof(Cleanup2), request.SupId);
 }

@@ -28,13 +28,15 @@ EASYRSA_PKI="$EASYRSA_DIRECTORY/pki"
 export EASYRSA_PKI
 
 show_help() {
-    echo "Usage: $0 -d DOMAIN -p PORT -a ADDRESS -n NETMASK"
+    echo "Usage: $0 -d DOMAIN -p PORT -a ADDRESS -n NETMASK [-f INTERFACE]"
     echo ""
     echo "Options:"
     echo "  -d DOMAIN       The domain name for the server (e.g., example.com)"
     echo "  -p PORT         VPN port (e.g., 1194)"
     echo "  -a ADDRESS      VPN network address (e.g., 10.8.0.0)"
     echo "  -n NETMASK      VPN network netmask (e.g., 255.255.255.0)"
+    echo "  [-f INTERFACE]  (Optional) Name of the tunnel interface, at most 15 characters"
+    echo "                  (default: tun- and 11 characters of the SHA-256 hash of DOMAIN)"
     echo ""
     echo "Example:"
     echo "  sudo $0 -d example.com -p 1194 -a 10.8.0.0 -n 255.255.255.0"
@@ -47,12 +49,13 @@ if [ "$#" -lt 8 ]; then
     show_help
 fi
 
-while getopts "d:p:a:n:h" opt; do
+while getopts "d:p:a:n:f:h" opt; do
     case $opt in
         d) DOMAIN=$OPTARG ;;
         p) PORT=$OPTARG ;;
         a) ADDRESS=$OPTARG ;;
         n) NETMASK=$OPTARG ;;
+        f) INTERFACE=$OPTARG ;;
         h) show_help ;;
         *) show_help ;;
     esac
@@ -62,6 +65,23 @@ if [[ ! -v DOMAIN || ! -v PORT || ! -v ADDRESS || ! -v NETMASK ]]; then
     echo "Error: DOMAIN, PORT, ADDRESS, NETMASK are required."
     show_help
 fi
+
+# The tunnel interface gets a fixed name, so that other tools (aenigma-vpn-dns) and the operator can refer
+# to it. With "dev tun" the kernel would number the interfaces of all servers in the order they start.
+if [[ ! -v INTERFACE ]]; then
+    INTERFACE="tun-$(printf '%s' "$DOMAIN" | sha256sum | cut -c1-11)"
+fi
+if [[ ${#INTERFACE} -gt 15 || ! "$INTERFACE" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    echo "ERROR: '$INTERFACE' is not a valid interface name: at most 15 letters, digits, '.', '_' or '-'."
+    exit 1
+fi
+for OTHER_CONF in "$OPENVPN_DIRECTORY"/*.conf; do
+    [[ -f "$OTHER_CONF" && "$OTHER_CONF" != "$OPENVPN_DIRECTORY/$DOMAIN.conf" ]] || continue
+    if grep -qx "dev $INTERFACE" "$OTHER_CONF"; then
+        echo "ERROR: The interface name '$INTERFACE' is already used by $OTHER_CONF. Choose another one with -f."
+        exit 1
+    fi
+done
 
 LOG_DIRECTORY="/var/log/openvpn/$DOMAIN"
 CLIENT_CONFIGS_DIRECTORY="$OPENVPN_DIRECTORY/ccd/$DOMAIN"
@@ -81,18 +101,34 @@ mkdir -p "$SERVER_DIRECTORY"
 mkdir -p "$CLIENT_CONFIGS_DIRECTORY"
 mkdir -p "$LOG_DIRECTORY"
 
-# First run: initialise PKI, build CA and generate DH params
+# First run: initialise PKI and build CA. Each step is checked on its own, so a run that stopped half-way
+# (for example, CA passphrases that do not match, or Ctrl+C during gen-dh) is completed by the next run.
 if [[ ! -f "${EASYRSA_PKI}/ca.crt" ]]; then
+    # Without a CA certificate nothing can have been signed: what an unfinished first run left is removed.
+    # A CA that was completed once (its certificate was copied to $OPENVPN_DIRECTORY) or that has issued
+    # certificates is never removed.
+    if [[ -d "$EASYRSA_DIRECTORY" ]]; then
+        if [[ -f "$OPENVPN_DIRECTORY/ca.crt" ]] || compgen -G "${EASYRSA_PKI}/issued/*.crt" > /dev/null; then
+            echo "ERROR: ${EASYRSA_PKI}/ca.crt is missing, but $EASYRSA_DIRECTORY belongs to a CA that was completed before."
+            echo "Check it by hand; it is left unchanged."
+            exit 1
+        fi
+        echo "An earlier first run did not finish; removing $EASYRSA_DIRECTORY and building the CA again."
+        rm -rf "$EASYRSA_DIRECTORY"
+    fi
     make-cadir "$EASYRSA_DIRECTORY"
     "$EASYRSA" --batch init-pki
     # CA private key is passphrase-protected: you will be prompted to set
     # and confirm it now, and prompted again to unlock it every time a new
     # domain's server certificate is signed in the future.
     "$EASYRSA" --batch build-ca
-    "$EASYRSA" --batch gen-dh
-    cp -v "${EASYRSA_PKI}/ca.crt" "$OPENVPN_DIRECTORY/"
-    cp -v "${EASYRSA_PKI}/dh.pem" "$OPENVPN_DIRECTORY/"
 fi
+if [[ ! -f "${EASYRSA_PKI}/dh.pem" ]]; then
+    "$EASYRSA" --batch gen-dh
+fi
+# Copied only when missing, so that files an operator replaced are kept.
+[[ -f "$OPENVPN_DIRECTORY/ca.crt" ]] || cp -v "${EASYRSA_PKI}/ca.crt" "$OPENVPN_DIRECTORY/"
+[[ -f "$OPENVPN_DIRECTORY/dh.pem" ]] || cp -v "${EASYRSA_PKI}/dh.pem" "$OPENVPN_DIRECTORY/"
 
 # Refuse to regenerate an already-issued server certificate: re-running
 # gen-req for an existing DOMAIN would silently overwrite its private key
@@ -123,7 +159,8 @@ chmod -v 600 "$SERVER_DIRECTORY/ta.key"
 cat > "$OPENVPN_DIRECTORY/$DOMAIN.conf" << CONF
 port $PORT
 proto udp
-dev tun
+dev $INTERFACE
+dev-type tun
 tun-mtu 1378
 
 ca   $OPENVPN_DIRECTORY/ca.crt
@@ -164,3 +201,4 @@ echo "  Cert/key/ta.key:  $SERVER_DIRECTORY/"
 echo "  CCD directory:    $CLIENT_CONFIGS_DIRECTORY/"
 echo "  Logs/status:      $LOG_DIRECTORY/"
 echo "  Service:          openvpn@${DOMAIN}"
+echo "  Tunnel interface: $INTERFACE"

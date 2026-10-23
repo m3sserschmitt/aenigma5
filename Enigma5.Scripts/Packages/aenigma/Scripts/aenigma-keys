@@ -32,27 +32,40 @@ KEY_SIZE="4096"
 
 mkdir -pv "$KEYS_DIR"
 
-# Generate the private key with the given size and file name
+# A new key pair gives the node a new address, so an existing pair is replaced only on request.
+if [[ -e "$PRIVATE_KEY_FILE" || -e "$PUBLIC_KEY_FILE" ]]; then
+    echo "A key pair already exists in $KEYS_DIR."
+    echo "Replacing it gives this node a new address; peers and clients that know the old one must be told."
+    read -r -p "Replace the existing key pair? [y/N] " ANSWER
+    [[ "$ANSWER" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled; the existing key pair is unchanged."; exit 1; }
+fi
+
+# The new pair is written to temporary files next to the keys and moved into place only when both are
+# complete, so a failed or cancelled run (for example, passphrases that do not match) leaves the old pair intact.
+NEW_PRIVATE_KEY_FILE=$(mktemp "$KEYS_DIR/.private-key.XXXXXX")
+NEW_PUBLIC_KEY_FILE=$(mktemp "$KEYS_DIR/.public-key.XXXXXX")
+trap 'rm -f "$NEW_PRIVATE_KEY_FILE" "$NEW_PUBLIC_KEY_FILE"' EXIT
+
+# Generate the private key with the given size
 echo "Generating private key ... "
-openssl genrsa -aes256 -out "$PRIVATE_KEY_FILE" "$KEY_SIZE"
+openssl genrsa -aes256 -out "$NEW_PRIVATE_KEY_FILE" "$KEY_SIZE"
 echo "Done."
 
-# Extract the public key from the private key and save it to the specified file
+# Extract the public key from the private key
 echo "Exporting public key ... "
-openssl rsa -in "$PRIVATE_KEY_FILE" -outform PEM -pubout -out "$PUBLIC_KEY_FILE"
+openssl rsa -in "$NEW_PRIVATE_KEY_FILE" -outform PEM -pubout -out "$NEW_PUBLIC_KEY_FILE"
 echo "Done."
+
+# Changing ownership for generated files
+echo "Changing keys ownership to $SERVICE_USER ..."
+chown -v "$SERVICE_USER":"$SERVICE_USER" "$NEW_PRIVATE_KEY_FILE" "$NEW_PUBLIC_KEY_FILE"
+chmod -v 600 "$NEW_PRIVATE_KEY_FILE" "$NEW_PUBLIC_KEY_FILE"
+
+# Both files are complete: put them in place.
+mv "$NEW_PRIVATE_KEY_FILE" "$PRIVATE_KEY_FILE"
+mv "$NEW_PUBLIC_KEY_FILE" "$PUBLIC_KEY_FILE"
 
 echo "Keys generated successfully:"
 echo "Private key: $PRIVATE_KEY_FILE"
 echo "Public key: $PUBLIC_KEY_FILE"
-
-# Changing ownership for generated files
-echo "Changing keys ownership to $SERVICE_USER ..."
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$PRIVATE_KEY_FILE"
-chown -v "$SERVICE_USER":"$SERVICE_USER" "$PUBLIC_KEY_FILE"
-
-chmod -v 600 "$PRIVATE_KEY_FILE"
-chmod -v 600 "$PUBLIC_KEY_FILE"
-
-echo "Done."
 exit 0

@@ -171,10 +171,14 @@ public class StringExtensionsTests
         Assert.False(Pem([1, 2, 3, 4]).IsValidPublicKey());
     }
 
+    // A key of 8192 bits, above the largest accepted size.
+    private const string LargePublicKey = "-----BEGIN PUBLIC KEY-----\nMIIEIjANBgkqhkiG9w0BAQEFAAOCBA8AMIIECgKCBAEAn82H0yloaZLRZOUJGheHS7V6QaKND3pznO4pG3GQUMlgJQ7hLsgfVoEnDrojuvlqoRrYnngM/U+uXopYnt7FQVytxY8soa0vXlGXSFxAwn2pOSGHp1VgD3ctIfubrAd9+xbkYQ6xrvTVUJ3wSgSpLSRCODpYUGxlJE8JoAxgvWulSH6iAbNT2Nmn1E787raDQxm1ZeOV5SNlP3Wv8BgD0wHPJLzk1vRmnsQHpApqk0fqzYv/s5Wa4FVMVQu9xXzFCMQiUU/tUXe6MT9FmJtPqaSO/6zaxYZZNDmrKFG1z+FI/Oawz/qDtV9lLM8ZLjEhOE1VcMPHNdEEvZrd1c6btJBn4EvlzUSGU9cSE0ZC8cW9MVYoPIQ9miMe2vzKGj+P+kNR4RgsghcwV5wnn9bpC22hx7BoOSXXTwFgTze5Kchf11Sy1suyCGJ8adw/A0IJvtkeNgMVUOlOKvV9rrxlHZtI/wqYNNNnwQY7BQW5cocLbrR3UWb9oVU18hRiOh+mJ4ATswf7EYBBFgCEloTKn/qE+IBzFC5jJLg4i+RyUiami2PyOmnIRgqa9J4AO29a/k1ZJFhP5NjzyIP/Dnpnx8UHV27yGOAT0mNUKIVQmnNIYgijZLmuwGNKwSXeQGqUZ3XfjGIeF/I2cDAZXkWwGYrPa/s7jD1+2XEAvvxmN877VkFnbDtEwQzkZuKWvhh6C1OMl8jtRZ2sEp62ocD3qjI6iLBVL+msFrqVS3ockuu6DqG5QJYJI3N0/OtZFT1O73vGaOl6vUwGUR3TXnwB0H+QPswCGtmQyj8XEvQe6kF7/u3YI3+aX8RFhqMqIR8F/rYVjbMpp8eAjrIMHuEvmeJYyTGr6IGGcDRAPDTVsJ4NUR5MbohFF9WEIoyjrupXbNn87Zmys9d7rcr2pF5LFCYmc635FLskgzAvwolifzcuQ19ZzSNr4ig3Q7IlkcMQbmcgeIUHT1QNSR8yzHZOE0iHUnW50yudEQm1IYusLGEjmw0xz+3msvxYMGECwMj7w79ee2b3+o0ziGJ+LMMb8PDW+ekLQ1rL+kraRmdHlvs2wy4g5T0kUCZhlxu9NUcowSZU3lsZl8fKhoPSUNphXG3xhdZi4P77fraPEDsyQFzYUt9sfVT0ZILIEdexIWeHPkxVdp4qkJa9OhkWn23k2T08ZQKNRRICAThSvlNvlGzErEIGjKlY1E6zh7Glsd49cRqnn/oifo2ccVWropZQeq7ljeBvM3WexUmyJqUfmsSKCLwtkBsdZztvHfdXLiP1gbP7wi88pqKmlp93sjM3YoYC+Eh3xT/Zd7DjpSLq9YBt21J9f5Gv07QlpBek6Plpjq0QnY6q3Kn83+Y+hQbU+wIDAQAB\n-----END PUBLIC KEY-----";
+
     [Fact]
-    public void A_public_key_below_the_smallest_size_or_longer_than_the_longest_text_is_refused()
+    public void A_public_key_below_the_smallest_size_above_the_largest_or_longer_than_the_longest_text_is_refused()
     {
         Assert.False(SmallPublicKey.IsValidPublicKey());
+        Assert.False(LargePublicKey.IsValidPublicKey());
         Assert.False((TestKeys.PublicKey1 + new string('\n', Constants.MaxPublicKeyLength)).IsValidPublicKey());
     }
 
