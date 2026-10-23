@@ -45,7 +45,7 @@ them.
 
 ```bash
 cd Enigma5.Scripts/Packages/aenigma
-./package-aenigma.sh -v 5.1.0 -c debian -a amd64      # or -a arm64
+./package-aenigma.sh -v 5.1.1 -c debian -a amd64      # or -a arm64
 ```
 
 The option `-c` names a folder under `Configs/` that holds the `appsettings.json` of the package;

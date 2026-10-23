@@ -51,8 +51,13 @@ aenigma (5.1.1) unstable; urgency=medium
   * aenigma-proxy no longer calls sudo, which it does not need as root,
     and no longer writes a proxy rule for /OnionRouting that Apache never
     used; the hub is proxied by the general rules, as before.
+  * The dashboard has a favicon, and shows the Aenigma icon before the
+    title of the passphrase card.
+  * The help text of aenigma-tor describes the v3 client authorization
+    that -u sets up through aenigma-tor-auth, not the old v2 option. The
+    man pages name version 5.1.1.
 
- -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Tue, 13 Oct 2026 15:50:00 +0300
+ -- Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>  Fri, 23 Oct 2026 11:08:28 +0300
 
 aenigma (5.1.0) unstable; urgency=medium
 
